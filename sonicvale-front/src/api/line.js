@@ -51,8 +51,11 @@ export function attachAudioAsset(lineId, sourcePath) {
   return request.post(`/lines/${lineId}/attach-audio`, { source_path: sourcePath })
 }
 
-export function getLineAudioUrl(lineId, version = 0) {
-  const query = version ? `?v=${encodeURIComponent(version)}` : ''
+export function getLineAudioUrl(lineId, version = 0, original = false) {
+  const params = new URLSearchParams()
+  if (version) params.set('v', version)
+  if (original) params.set('original', 'true')
+  const query = params.toString() ? `?${params}` : ''
   return `${API_BASE_URL}lines/${lineId}/audio${query}`
 }
 
@@ -66,6 +69,10 @@ export function createAudioVariant(lineId, payload) {
 
 export function deleteAudioVariant(lineId, variantId) {
   return request.delete(`/lines/${lineId}/audio-variants/${variantId}`)
+}
+
+export function activateAudioVariant(lineId, variantId) {
+  return request.put(`/lines/${lineId}/audio-variants/${variantId}/activate`)
 }
 
 export function getAudioVariantUrl(lineId, variantId, version = 0) {

@@ -252,6 +252,7 @@ async def regenerate_line_audio(
     if not line.should_speak or line.track in {"sfx", "bgm"}:
         return _error(409, "当前声音轨不能生成角色配音")
     line.production_note = dto.prompt.strip() or None
+    line.active_audio_variant_id = None
     line.status = "pending"
     line.is_done = 0
     db.commit()

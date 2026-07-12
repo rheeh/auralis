@@ -105,6 +105,8 @@ class ScriptLine(BaseModel):
             self.text = re.sub(r"[ \t]+", "", self.text).strip()
             if not self.text:
                 raise ValueError("可朗读台词不能只包含括号提示或音效标记")
+            self.emotion = (self.emotion or "平静").strip() or "平静"
+            self.strength = (self.strength or "中等").strip() or "中等"
             if self.type == "narration":
                 self.speaker = "旁白"
                 self.emotion = "平静"

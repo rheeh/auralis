@@ -139,6 +139,7 @@ class LinePO(Base):
     production_note = Column(Text, nullable=True)
     audio_events = Column(JSON, nullable=True)
     audio_variants = Column(JSON, nullable=True)
+    active_audio_variant_id = Column(String(64), nullable=True)
     # 情绪 和 强弱
     emotion_id = Column(Integer, nullable=True)
     strength_id = Column(Integer, nullable=True)

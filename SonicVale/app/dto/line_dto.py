@@ -46,6 +46,7 @@ class LineCreateDTO(BaseModel):
     production_note: Optional[str] = None
     audio_events: Optional[list[dict[str, Any]]] = None
     audio_variants: Optional[list[dict[str, Any]]] = None
+    active_audio_variant_id: Optional[str] = None
 
     emotion_id: Optional[int] = None
     strength_id: Optional[int] = None
@@ -71,6 +72,7 @@ class LineResponseDTO(BaseModel):
     production_note: Optional[str] = None
     audio_events: Optional[list[dict[str, Any]]] = None
     audio_variants: Optional[list[dict[str, Any]]] = None
+    active_audio_variant_id: Optional[str] = None
 
     emotion_id: Optional[int] = None
     strength_id: Optional[int] = None

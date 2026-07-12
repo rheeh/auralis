@@ -113,14 +113,18 @@ def get_line(line_id: int, line_service: LineService = Depends(get_line_service)
 @router.get("/{line_id}/audio",
             summary="播放台词音频",
             description="通过 HTTP 返回本机音频文件，供浏览器和桌面端统一预览")
-def get_line_audio(line_id: int, line_service: LineService = Depends(get_line_service)):
+def get_line_audio(
+        line_id: int,
+        original: bool = Query(False, description="为 true 时始终返回未经后期处理的生成原音"),
+        line_service: LineService = Depends(get_line_service),
+):
     entity = line_service.get_line(line_id)
     if not entity:
         raise HTTPException(status_code=404, detail="台词不存在")
     if not entity.audio_path:
         raise HTTPException(status_code=404, detail="该台词没有音频路径")
 
-    audio_path = os.path.abspath(os.path.expanduser(entity.audio_path))
+    audio_path = line_service.resolve_audio_path(entity, original=original)
     if not os.path.isfile(audio_path):
         raise HTTPException(status_code=404, detail=f"音频文件不存在: {entity.audio_path}")
 
@@ -171,6 +175,22 @@ def delete_line_audio_variant(
         return Res(data=line_service.delete_audio_variant(line_id, variant_id), message="音频版本已删除")
     except ValueError as exc:
         return Res(data=False, code=404, message=str(exc))
+
+
+@router.put("/{line_id}/audio-variants/{variant_id}/activate", response_model=Res[dict])
+def activate_line_audio_variant(
+        line_id: int,
+        variant_id: str,
+        line_service: LineService = Depends(get_line_service),
+):
+    try:
+        variant = line_service.activate_audio_variant(line_id, variant_id)
+        return Res(
+            data={key: value for key, value in variant.items() if key != "audio_path"},
+            message="已设为当前采用版本",
+        )
+    except (ValueError, FileNotFoundError) as exc:
+        return Res(data=None, code=404, message=str(exc))
 
 
 def _detect_audio_media_type(audio_path: str) -> str:

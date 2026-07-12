@@ -1,6 +1,7 @@
 <!-- src/components/WaveCellPro.vue -->
 <template>
   <div class="wavecell">
+    <div class="preview-note"><strong>原音处理预听</strong><span>播放会立即应用当前速度和音量；保存后生成独立版本。</span></div>
     <div class="bar">
       <!-- 替换原来的按钮 -->
       <el-button :type="isPlaying ? 'danger' : 'success'" class="play-btn" :class="{ playing: isPlaying }" circle
@@ -26,11 +27,11 @@
       </el-tooltip>
 
 
-      <span class="lbl">速度</span>
-      <el-slider v-model="rate" :min="0.5" :max="2.0" :step="0.1" class="slider" />
+      <span class="lbl">速度 <strong>{{ rate.toFixed(1) }}×</strong></span>
+      <el-slider v-model="rate" :min="0.5" :max="2.0" :step="0.1" :show-tooltip="false" class="slider" />
 
-      <span class="lbl">音量</span>
-      <el-slider v-model="vol2x" :min="0" :max="2.0" :step="0.01" class="slider" />
+      <span class="lbl">音量 <strong>{{ vol2x.toFixed(2) }}×</strong></span>
+      <el-slider v-model="vol2x" :min="0" :max="2.0" :step="0.01" :show-tooltip="false" class="slider" />
 
       <span class="lbl">添加间隔(s)</span>
       <el-input-number v-model="tailSilence" :min="0" :max="30" :step="0.1" size="small" />
@@ -341,6 +342,7 @@ async function downloadAudio() {
   flex-direction: column;
   gap: 6px;
 }
+.preview-note{display:flex;align-items:baseline;justify-content:space-between;gap:10px;color:var(--el-text-color-secondary);font-size:11px}.preview-note strong{color:var(--el-text-color-primary)}
 
 .bar {
   display: flex;
@@ -354,9 +356,12 @@ async function downloadAudio() {
   color: var(--el-text-color-regular);
   margin-left: 6px;
 }
+.lbl strong{color:var(--el-color-primary)}
 
 .slider {
   width: 140px;
+  min-width: 100px;
+  flex:1 1 120px;
 }
 
 .wave {
@@ -404,4 +409,6 @@ async function downloadAudio() {
   background: #c0c4cc;
   box-shadow: none;
 }
+@media(max-width:900px){.bar{display:grid;grid-template-columns:auto auto minmax(80px,1fr) minmax(80px,1fr);align-items:center}.bar .play-btn,.bar .download-btn{grid-row:1}.bar .lbl{margin-left:0}.bar .slider{width:100%}.bar .el-input-number{width:120px}.preview-note{align-items:flex-start;flex-direction:column;gap:2px}}
+@media(max-width:600px){.bar{grid-template-columns:auto auto 1fr}.bar .slider{grid-column:2/-1}.preview-note span{line-height:1.4}}
 </style>

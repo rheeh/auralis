@@ -16,8 +16,8 @@
             {{ uploadingId === role.draft_id ? '上传中…' : '上传头像' }}
             <input type="file" accept="image/png,image/jpeg,image/webp" :disabled="uploadingId === role.draft_id" @change="uploadAvatar(role,$event)" />
           </label>
+          <el-checkbox v-model="role.selected">保留</el-checkbox>
         </div>
-        <el-checkbox v-model="role.selected" :aria-label="`选择角色 ${role.name}`" />
         <span class="role-copy">
           <strong>{{ role.name }}</strong>
           <small>{{ role.identity || '角色身份待补充' }}</small>
@@ -34,7 +34,6 @@
           </el-select>
           <button v-if="selectedVoice(role)?.reference_path" class="selected-preview" type="button" @click="toggleVoicePreview(selectedVoice(role))"><el-icon><component :is="previewingId===role.default_voice_id?VideoPause:VideoPlay" /></el-icon>{{ previewingId===role.default_voice_id?'停止试听':`试听「${selectedVoice(role).name}」` }}</button>
           <small v-else-if="selectedVoice(role)" class="no-preview">该音色暂无试听样音</small>
-          <small>{{ role.voice_type || 'AI 声线建议' }}</small>
         </div>
       </article>
     </div>
@@ -131,12 +130,12 @@ async function uploadAvatar(role,event) {
 .confirm-card h3,.eyebrow { margin:0; }
 .eyebrow { color:var(--el-color-primary); font-size:12px; }
 .card-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--el-text-color-secondary);font-size:12px}.role-grid { display:grid; gap:10px; }
-.role-item { display:grid; grid-template-columns:70px auto minmax(0,1fr) minmax(210px,260px); align-items:center; gap:10px; padding:12px; border:1px solid color-mix(in srgb,var(--role-color) 40%,var(--el-border-color-lighter)); border-left:4px solid var(--role-color); border-radius:12px; background:var(--el-bg-color); }
+.role-item { display:grid; grid-template-columns:78px minmax(180px,1fr) minmax(220px,280px); align-items:center; gap:14px; padding:12px; border:1px solid color-mix(in srgb,var(--role-color) 40%,var(--el-border-color-lighter)); border-left:4px solid var(--role-color); border-radius:12px; background:var(--el-bg-color); min-width:0; }
 .avatar-cell{display:grid;justify-items:center;gap:5px}.avatar-cell .el-avatar{border:2px solid color-mix(in srgb,var(--role-color) 55%,white);background:color-mix(in srgb,var(--role-color) 16%,var(--el-fill-color))}.avatar-upload{color:var(--el-color-primary);font-size:10px;cursor:pointer}.avatar-upload input{display:none}.role-copy{min-width:0}
 .role-item strong,.role-item small { display:block; }
 .role-item small,.role-item p { color:var(--el-text-color-secondary); }
 .role-item p { margin:4px 0 0; line-height:1.5; }
 .voice-picker .el-select{width:100%}.voice-picker small{margin-top:5px}.option-preview{float:right;display:inline-grid;place-items:center;width:24px;height:24px;margin-top:3px;border:0;border-radius:50%;color:var(--el-color-primary);background:var(--el-fill-color-light);cursor:pointer}.option-preview:disabled{cursor:not-allowed;opacity:.35}.selected-preview{display:flex;align-items:center;gap:5px;margin-top:6px;padding:0;border:0;color:var(--el-color-primary);background:none;cursor:pointer;font-size:11px}.voice-picker .no-preview{color:var(--el-text-color-placeholder);font-size:10px}
 .confirm-card footer { justify-content:flex-end; }
-@media(max-width:760px){.role-item{grid-template-columns:62px auto minmax(0,1fr)}.voice-picker{grid-column:1/-1}.card-actions{align-items:flex-start;flex-direction:column}}
+@media(max-width:900px){.role-item{grid-template-columns:70px minmax(0,1fr)}.voice-picker{grid-column:1/-1}.card-actions{align-items:flex-start;flex-direction:column}}
 </style>

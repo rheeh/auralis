@@ -136,8 +136,8 @@ class DramaCommitService:
                         voice_profile=raw_line.get("voiceProfile") or None,
                         production_note=raw_line.get("productionNote") or None,
                         audio_events=raw_line.get("audioEvents") or raw_line.get("audio_events") or None,
-                        emotion_id=emotions.get(raw_line.get("emotion")),
-                        strength_id=strengths.get(raw_line.get("strength")),
+                        emotion_id=emotions.get(raw_line.get("emotion")) or emotions.get("平静"),
+                        strength_id=strengths.get(raw_line.get("strength")) or strengths.get("中等"),
                     )
                     self.db.add(line)
                     self.db.flush()

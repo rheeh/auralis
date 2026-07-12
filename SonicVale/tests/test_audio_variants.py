@@ -38,7 +38,7 @@ class AudioVariantTest(unittest.TestCase):
                 audio.writeframes(b"".join(frames))
 
             original_hash = hashlib.sha256(Path(source).read_bytes()).hexdigest()
-            line = SimpleNamespace(id=7, audio_path=source, audio_variants=[])
+            line = SimpleNamespace(id=7, audio_path=source, audio_variants=[], active_audio_variant_id=None)
             service = LineService(FakeLineRepository(line), None, None, None)
             slow = service.create_audio_variant(7, LineAudioVariantDTO(speed=0.8, volume=1.0))
             fast = service.create_audio_variant(7, LineAudioVariantDTO(speed=1.25, volume=1.0))
@@ -53,10 +53,19 @@ class AudioVariantTest(unittest.TestCase):
                 fast_duration = audio.getnframes() / audio.getframerate()
             self.assertGreater(slow_duration, fast_duration)
             self.assertEqual(len(line.audio_variants), 2)
+            self.assertEqual(line.active_audio_variant_id, fast["id"])
+            self.assertEqual(service.resolve_audio_path(line), fast["audio_path"])
+            self.assertEqual(service.resolve_audio_path(line, original=True), source)
+
+            service.activate_audio_variant(7, slow["id"])
+            self.assertEqual(line.active_audio_variant_id, slow["id"])
+            self.assertEqual(service.resolve_audio_path(line), slow["audio_path"])
 
             self.assertTrue(service.delete_audio_variant(7, slow["id"]))
             self.assertFalse(os.path.exists(slow["audio_path"]))
             self.assertEqual([item["id"] for item in line.audio_variants], [fast["id"]])
+            self.assertIsNone(line.active_audio_variant_id)
+            self.assertEqual(service.resolve_audio_path(line), source)
 
 
 if __name__ == "__main__":

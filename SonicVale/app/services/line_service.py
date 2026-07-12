@@ -784,7 +784,33 @@ class LineService:
         }
         variants = list(getattr(line, "audio_variants", None) or [])
         variants.append(variant)
-        self.repository.update(line_id, {"audio_variants": variants})
+        self.repository.update(line_id, {
+            "audio_variants": variants,
+            "active_audio_variant_id": variant_id,
+        })
+        return variant
+
+    def resolve_audio_path(self, line, original: bool = False) -> str:
+        """Return the currently adopted audio, falling back safely to the generated source."""
+        if not original:
+            active_id = getattr(line, "active_audio_variant_id", None)
+            variant = next(
+                (item for item in (getattr(line, "audio_variants", None) or []) if item.get("id") == active_id),
+                None,
+            )
+            raw_variant_path = (variant or {}).get("audio_path") or ""
+            variant_path = os.path.abspath(os.path.expanduser(raw_variant_path)) if raw_variant_path else ""
+            if variant_path and os.path.isfile(variant_path):
+                return variant_path
+        source_path = getattr(line, "audio_path", None) or ""
+        return os.path.abspath(os.path.expanduser(source_path)) if source_path else ""
+
+    def activate_audio_variant(self, line_id: int, variant_id: str) -> dict:
+        variant = self.get_audio_variant(line_id, variant_id)
+        audio_path = os.path.abspath(os.path.expanduser(variant.get("audio_path") or ""))
+        if not os.path.isfile(audio_path):
+            raise FileNotFoundError("音频版本文件不存在")
+        self.repository.update(line_id, {"active_audio_variant_id": variant_id})
         return variant
 
     def get_audio_variant(self, line_id: int, variant_id: str) -> dict:
@@ -807,7 +833,12 @@ class LineService:
         audio_path = os.path.abspath(os.path.expanduser(variant.get("audio_path") or ""))
         if audio_path and os.path.isfile(audio_path):
             os.remove(audio_path)
-        self.repository.update(line_id, {"audio_variants": [item for item in variants if item.get("id") != variant_id]})
+        updates = {"audio_variants": [item for item in variants if item.get("id") != variant_id]}
+        if getattr(line, "active_audio_variant_id", None) == variant_id:
+            # LineRepository.update intentionally skips None, so clear this tracked
+            # SQLAlchemy attribute directly before the repository commits the row.
+            line.active_audio_variant_id = None
+        self.repository.update(line_id, updates)
         return True
 
     # 导出音频,合并音频，并且导出字幕
@@ -869,8 +900,9 @@ class LineService:
             "production_note": getattr(line, "production_note", None),
             "audio_events": getattr(line, "audio_events", None) or [],
             "audio_variants": getattr(line, "audio_variants", None) or [],
+            "active_audio_variant_id": getattr(line, "active_audio_variant_id", None),
             "is_placeholder_material": self._is_placeholder_material(line),
-            "audio_path": line.audio_path,
+            "audio_path": self.resolve_audio_path(line),
             "subtitle_path": getattr(line, "subtitle_path", None),
             "status": getattr(line, "status", None),
             "is_done": bool(getattr(line, "is_done", 0)),
@@ -962,10 +994,11 @@ class LineService:
             valid_lines = []
             missing_files = []
             for line in lines:
-                if not line.audio_path:
+                effective_path = self.resolve_audio_path(line)
+                if not effective_path:
                     missing_files.append(f"台词#{line.id}(序号{line.line_order}): 无音频路径")
-                elif not os.path.exists(line.audio_path):
-                    missing_files.append(f"台词#{line.id}(序号{line.line_order}): 文件不存在 - {line.audio_path}")
+                elif not os.path.exists(effective_path):
+                    missing_files.append(f"台词#{line.id}(序号{line.line_order}): 文件不存在 - {effective_path}")
                 else:
                     valid_lines.append(line)
             
@@ -976,7 +1009,7 @@ class LineService:
                     "missing_files": missing_files
                 }
             
-            source_paths = [line.audio_path for line in valid_lines]
+            source_paths = [self.resolve_audio_path(line) for line in valid_lines]
 
             # 把首个有效音频的目录作为导出基准目录
             output_dir_path = os.path.join(os.path.dirname(source_paths[0]), "result")
@@ -1026,7 +1059,7 @@ class LineService:
                 
                 for line in valid_lines:
                     try:
-                        path = line.audio_path
+                        path = self.resolve_audio_path(line)
                         base_name = os.path.splitext(os.path.basename(path))[0]
                         subtitle_path = os.path.join(subtitle_dir_path, base_name + ".srt")
                         subtitle_engine.generate_subtitle(path, subtitle_path)

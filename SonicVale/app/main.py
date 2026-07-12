@@ -165,6 +165,7 @@ def add_drama_line_columns():
         "production_note": "TEXT",
         "audio_events": "TEXT",
         "audio_variants": "TEXT",
+        "active_audio_variant_id": "TEXT",
     }
     with engine.begin() as conn:
         result = conn.execute(text("PRAGMA table_info(lines)"))
@@ -280,6 +281,34 @@ async def startup_event():
                     logging.debug("强度 %s 已存在或创建失败: %s", name, e)
         except Exception as e:
             logging.warning("⚠️ 强度初始化失败: %s", e)
+
+        try:
+            calm = db.query(EmotionPO).filter(EmotionPO.name == "平静").first()
+            medium = db.query(StrengthPO).filter(StrengthPO.name == "中等").first()
+            emotion_count = db.query(LinePO).filter(LinePO.should_speak == 1, LinePO.emotion_id.is_(None)).update(
+                {LinePO.emotion_id: calm.id}, synchronize_session=False
+            ) if calm else 0
+            strength_count = db.query(LinePO).filter(LinePO.should_speak == 1, LinePO.strength_id.is_(None)).update(
+                {LinePO.strength_id: medium.id}, synchronize_session=False
+            ) if medium else 0
+            stale_active_count = 0
+            for line in db.query(LinePO).filter(LinePO.active_audio_variant_id.is_not(None)).all():
+                active = next(
+                    (item for item in (line.audio_variants or []) if item.get("id") == line.active_audio_variant_id),
+                    None,
+                )
+                if not active or not os.path.isfile(os.path.abspath(os.path.expanduser(active.get("audio_path") or ""))):
+                    line.active_audio_variant_id = None
+                    stale_active_count += 1
+            db.commit()
+            if emotion_count or strength_count or stale_active_count:
+                logging.info(
+                    "已修复旧台词数据：情绪 %s 条，强度 %s 条，失效音频版本 %s 条",
+                    emotion_count, strength_count, stale_active_count,
+                )
+        except Exception as e:
+            db.rollback()
+            logging.warning("⚠️ 旧台词情绪/强度补齐失败: %s", e)
 
     #     创建默认提示词
         try:
