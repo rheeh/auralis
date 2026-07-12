@@ -1,0 +1,97 @@
+:root {
+  font-family: Inter, "SF Pro Display", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  --auralis-mint: #7de6d1;
+  --auralis-cyan: #6bd3ff;
+  --auralis-coral: #ff7e67;
+  --auralis-ink: #111827;
+  --auralis-paper: #f7f6f2;
+  --auralis-sidebar: #082131;
+  --auralis-shadow-sm: 0 8px 26px rgba(20, 33, 45, 0.055);
+  --auralis-shadow-md: 0 16px 42px rgba(20, 33, 45, 0.09);
+  --el-color-primary: #159f9b;
+  --el-color-primary-light-3: #62cedb;
+  --el-color-primary-light-5: #8bdce5;
+  --el-color-primary-light-7: #b5eaf0;
+  --el-color-primary-light-8: #cef2f5;
+  --el-color-primary-light-9: #e8f9fb;
+  --el-color-primary-dark-2: #0c7778;
+  --el-border-radius-base: 9px;
+  --el-border-radius-small: 7px;
+  --el-bg-color-page: #f5f5f1;
+}
+
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+  --el-color-primary: #7de6d1;
+  --el-color-primary-light-3: #6ac4bb;
+  --el-color-primary-light-5: #4d9c99;
+  --el-color-primary-light-7: #2c5e63;
+  --el-color-primary-light-8: #244a50;
+  --el-color-primary-light-9: #1b333a;
+  --el-color-primary-dark-2: #a9f4e4;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--el-bg-color-page);
+  color: var(--el-text-color-primary);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+::selection {
+  color: #07232b;
+  background: rgba(105, 230, 215, 0.52);
+}
+
+.el-button {
+  font-weight: 600;
+}
+
+.el-button--primary {
+  --el-button-bg-color: #f16452;
+  --el-button-border-color: #f16452;
+  --el-button-hover-bg-color: #f47766;
+  --el-button-hover-border-color: #f47766;
+  --el-button-active-bg-color: #d95042;
+  --el-button-active-border-color: #d95042;
+  box-shadow: 0 7px 16px rgba(241, 100, 82, 0.17);
+}
+
+.el-card,
+.el-dialog,
+.el-message-box {
+  --el-card-border-radius: 12px;
+}
+
+html.dark {
+  --el-bg-color-page: #0d171f;
+  --auralis-shadow-sm: 0 8px 26px rgba(0, 0, 0, 0.18);
+  --auralis-shadow-md: 0 18px 48px rgba(0, 0, 0, 0.28);
+}
+
+#app {
+  min-height: 100%;
+}
