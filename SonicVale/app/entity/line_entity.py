@@ -22,6 +22,7 @@ class LineEntity:
     voice_profile : Optional[str] = None
     production_note : Optional[str] = None
     audio_events: Optional[list[dict[str, Any]]] = None
+    audio_variants: Optional[list[dict[str, Any]]] = None
 
     emotion_id : Optional[int] = None
     strength_id : Optional[int] = None

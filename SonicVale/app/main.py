@@ -164,6 +164,7 @@ def add_drama_line_columns():
         "voice_profile": "TEXT",
         "production_note": "TEXT",
         "audio_events": "TEXT",
+        "audio_variants": "TEXT",
     }
     with engine.begin() as conn:
         result = conn.execute(text("PRAGMA table_info(lines)"))

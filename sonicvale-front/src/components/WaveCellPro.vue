@@ -41,7 +41,7 @@
       <!-- <el-button size="small" @click="loopRegion" :disabled="!hasRegion">循环区间</el-button> -->
       <el-button size="small" @click="clearRegion" :disabled="!hasRegion">清除区间</el-button>
 
-      <el-button size="small" type="primary" @click="confirmProcess" :disabled="!ready">应用处理</el-button>
+      <el-button size="small" type="primary" @click="confirmProcess" :disabled="!ready">{{ variantMode ? '保存为新音频版本' : '应用处理' }}</el-button>
     </div>
 
     <div ref="container" class="wave" />
@@ -63,6 +63,7 @@ const props = defineProps({
   volume2x: { type: Number, default: 1.0 },  // 0~2.0（前端试听倍数）
   startMs: { type: Number, default: null },  // 初始选区
   endMs: { type: Number, default: null },
+  variantMode: { type: Boolean, default: false },
 })
 
 const emit = defineEmits([
@@ -250,7 +251,11 @@ async function confirmProcess() {
   const start_ms = region.value ? Math.round(region.value.start * 1000) : null
   const end_ms = region.value ? Math.round(region.value.end * 1000) : null
   const current_ms = ws ? Math.round(ws.getCurrentTime() * 1000) : 0  // ✅ 新增
-  await ElMessageBox.confirm('确认将当前速度、音量、裁剪或停顿处理应用到这一句音频吗？', '应用本句音频处理', { type: 'warning' })
+  await ElMessageBox.confirm(
+    props.variantMode ? '将从原始音频创建一个独立版本，原音频和已有版本都不会被覆盖。' : '确认将当前速度、音量、裁剪或停顿处理应用到这一句音频吗？',
+    props.variantMode ? '保存独立音频版本' : '应用本句音频处理',
+    { type: props.variantMode ? 'info' : 'warning' },
+  )
   emit('confirm', {
     speed: Number(rate.value || 1.0),
     volume: Number(vol2x.value || 1.0),

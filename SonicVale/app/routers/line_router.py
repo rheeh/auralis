@@ -14,7 +14,7 @@ from app.core.config import getConfigPath
 from app.core.response import Res
 from app.core.ws_manager import manager
 from app.db.database import get_db, SessionLocal
-from app.dto.line_dto import LineResponseDTO, LineCreateDTO, LineOrderDTO, LineAudioProcessDTO, LineAssetAttachDTO
+from app.dto.line_dto import LineResponseDTO, LineCreateDTO, LineOrderDTO, LineAudioProcessDTO, LineAudioVariantDTO, LineAssetAttachDTO
 from app.entity.line_entity import LineEntity
 from app.repositories.chapter_repository import ChapterRepository
 from app.repositories.llm_provider_repository import LLMProviderRepository
@@ -130,6 +130,47 @@ def get_line_audio(line_id: int, line_service: LineService = Depends(get_line_se
         media_type=media_type,
         filename=os.path.basename(audio_path),
     )
+
+
+@router.post("/{line_id}/audio-variants", response_model=Res[dict])
+def create_line_audio_variant(
+        line_id: int,
+        dto: LineAudioVariantDTO,
+        line_service: LineService = Depends(get_line_service),
+):
+    try:
+        variant = line_service.create_audio_variant(line_id, dto)
+        return Res(data={key: value for key, value in variant.items() if key != "audio_path"}, message="已保存为独立音频版本")
+    except (ValueError, FileNotFoundError) as exc:
+        return Res(data=None, code=400, message=str(exc))
+
+
+@router.get("/{line_id}/audio-variants/{variant_id}/audio")
+def get_line_audio_variant(
+        line_id: int,
+        variant_id: str,
+        line_service: LineService = Depends(get_line_service),
+):
+    try:
+        variant = line_service.get_audio_variant(line_id, variant_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    audio_path = os.path.abspath(os.path.expanduser(variant.get("audio_path") or ""))
+    if not os.path.isfile(audio_path):
+        raise HTTPException(status_code=404, detail="音频版本文件不存在")
+    return FileResponse(audio_path, media_type=_detect_audio_media_type(audio_path), filename=os.path.basename(audio_path))
+
+
+@router.delete("/{line_id}/audio-variants/{variant_id}", response_model=Res[bool])
+def delete_line_audio_variant(
+        line_id: int,
+        variant_id: str,
+        line_service: LineService = Depends(get_line_service),
+):
+    try:
+        return Res(data=line_service.delete_audio_variant(line_id, variant_id), message="音频版本已删除")
+    except ValueError as exc:
+        return Res(data=False, code=404, message=str(exc))
 
 
 def _detect_audio_media_type(audio_path: str) -> str:

@@ -11,7 +11,9 @@ import sys
 import tempfile
 import threading
 from collections import defaultdict
+from datetime import datetime, timezone
 from typing import List
+from uuid import uuid4
 
 from openpyxl import Workbook
 from sqlalchemy import Sequence
@@ -21,7 +23,7 @@ from app.core.audio_engin import AudioProcessor
 from app.core.config import getConfigPath, getFfmpegPath
 from app.core.subtitle import subtitle_engine
 from app.core.tts_engine import ConfigurableCloudTTSEngine, EdgeTTSEngine, TTSEngine
-from app.dto.line_dto import LineCreateDTO, LineOrderDTO, LineAudioProcessDTO
+from app.dto.line_dto import LineCreateDTO, LineOrderDTO, LineAudioProcessDTO, LineAudioVariantDTO
 from app.entity.line_entity import LineEntity
 from app.models.po import LinePO, RolePO
 from app.repositories.line_repository import LineRepository
@@ -366,6 +368,7 @@ class LineService:
             "subtitle_path": None,
             "production_note": production_note,
             "audio_events": getattr(po, "audio_events", None) or [],
+            "audio_variants": getattr(po, "audio_variants", None) or [],
         })
         return target_path
 
@@ -735,6 +738,78 @@ class LineService:
         else:
             return False
 
+    def create_audio_variant(self, line_id: int, dto: LineAudioVariantDTO) -> dict:
+        """Create a non-destructive processed version while preserving the generated source."""
+        line = self.repository.get_by_id(line_id)
+        if not line:
+            raise ValueError("台词不存在")
+        source_path = os.path.abspath(os.path.expanduser(line.audio_path or ""))
+        if not source_path or not os.path.isfile(source_path):
+            raise FileNotFoundError("该台词还没有可处理的原始音频")
+
+        variant_id = uuid4().hex[:12]
+        variant_dir = os.path.join(os.path.dirname(source_path), "variants")
+        os.makedirs(variant_dir, exist_ok=True)
+        target_path = os.path.join(variant_dir, f"line_{line_id}_{variant_id}.wav")
+        if os.path.splitext(source_path)[1].lower() == ".wav":
+            shutil.copy2(source_path, target_path)
+        else:
+            self._convert_audio_to_wav(source_path, target_path)
+
+        processor = AudioProcessor(target_path)
+        if dto.start_ms is not None and dto.end_ms is not None and dto.end_ms > dto.start_ms:
+            processor.cut(dto.start_ms, dto.end_ms)
+        elif dto.current_ms is not None and dto.silence_sec:
+            processor.insert_silence(dto.current_ms, dto.silence_sec)
+        elif dto.silence_sec:
+            processor.append_silence(dto.silence_sec)
+        speed = float(dto.speed or 1.0)
+        volume = float(dto.volume if dto.volume is not None else 1.0)
+        if abs(speed - 1.0) > 1e-6:
+            processor.change_speed(speed)
+        if abs(volume - 1.0) > 1e-6:
+            processor.change_volume(volume)
+
+        variant = {
+            "id": variant_id,
+            "label": (dto.label or "").strip() or f"{speed:g}x 速度 · {volume:g}x 音量",
+            "speed": speed,
+            "volume": volume,
+            "start_ms": dto.start_ms,
+            "end_ms": dto.end_ms,
+            "silence_sec": float(dto.silence_sec or 0),
+            "current_ms": dto.current_ms,
+            "audio_path": target_path,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        variants = list(getattr(line, "audio_variants", None) or [])
+        variants.append(variant)
+        self.repository.update(line_id, {"audio_variants": variants})
+        return variant
+
+    def get_audio_variant(self, line_id: int, variant_id: str) -> dict:
+        line = self.repository.get_by_id(line_id)
+        if not line:
+            raise ValueError("台词不存在")
+        variant = next((item for item in (line.audio_variants or []) if item.get("id") == variant_id), None)
+        if not variant:
+            raise ValueError("音频版本不存在")
+        return variant
+
+    def delete_audio_variant(self, line_id: int, variant_id: str) -> bool:
+        line = self.repository.get_by_id(line_id)
+        if not line:
+            raise ValueError("台词不存在")
+        variants = list(line.audio_variants or [])
+        variant = next((item for item in variants if item.get("id") == variant_id), None)
+        if not variant:
+            raise ValueError("音频版本不存在")
+        audio_path = os.path.abspath(os.path.expanduser(variant.get("audio_path") or ""))
+        if audio_path and os.path.isfile(audio_path):
+            os.remove(audio_path)
+        self.repository.update(line_id, {"audio_variants": [item for item in variants if item.get("id") != variant_id]})
+        return True
+
     # 导出音频,合并音频，并且导出字幕
     def concat_wav_files(self,paths, out_path, verify=True, block_frames=262144):
         """
@@ -793,6 +868,7 @@ class LineService:
             "sound_prompt": getattr(line, "sound_prompt", None),
             "production_note": getattr(line, "production_note", None),
             "audio_events": getattr(line, "audio_events", None) or [],
+            "audio_variants": getattr(line, "audio_variants", None) or [],
             "is_placeholder_material": self._is_placeholder_material(line),
             "audio_path": line.audio_path,
             "subtitle_path": getattr(line, "subtitle_path", None),

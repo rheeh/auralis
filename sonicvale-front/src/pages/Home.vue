@@ -53,19 +53,9 @@
             <i v-for="particle in particles" :key="particle.id" :style="particle.style" />
           </div>
 
-          <svg class="listener-silhouette enter-person" :style="personTransform" viewBox="0 0 180 420" role="img" aria-label="戴耳机随音乐轻轻律动的高挑人物剪影">
-            <defs><linearGradient id="silhouetteGradient" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#77818d"/><stop offset=".42" stop-color="#3c4652"/><stop offset="1" stop-color="#101820"/></linearGradient></defs>
-            <g class="person-body">
-              <g class="person-head"><ellipse cx="90" cy="48" rx="17" ry="23"/><path class="hair" d="M71 47c0-25 8-38 20-38 17 0 22 16 20 41l-4 25-9-17-8 13-14-12-6 16z"/><path class="headphones" d="M69 47c0-28 43-29 43 0M69 47v19M112 47v19"/></g>
-              <path class="neck" d="M83 68h14l3 19H80z"/>
-              <path class="torso" d="M76 84c8-4 20-4 28 0l17 23-8 88-17 28H83l-17-28-8-88z"/>
-              <g class="arm arm-left"><path d="M63 101c-8 8-11 23-13 43l-9 93c-1 9 8 11 11 2l20-91 6-43z"/><ellipse cx="44" cy="241" rx="5" ry="11"/></g>
-              <g class="arm arm-right"><path d="M117 101c8 8 11 23 13 43l9 93c1 9-8 11-11 2l-20-91-6-43z"/><ellipse cx="136" cy="241" rx="5" ry="11"/></g>
-              <g class="leg leg-left"><path d="M76 214h15l-2 142-9 39-9 13-7-3 8-22 1-43z"/></g>
-              <g class="leg leg-right"><path d="M90 214h15l3 126 1 43 8 22-7 3-10-13-9-39z"/></g>
-              <path class="coat-tail" d="M72 176h36l14 82-31 20-32-20z"/>
-            </g>
-          </svg>
+          <div class="singer-parallax enter-person" :style="personTransform">
+            <img class="anime-singer" :src="singerImage" alt="戴耳机随音乐轻轻律动的二次元女歌姬" />
+          </div>
         </div>
 
         <div v-if="latestProject" class="continue-card enter-actions" @click="openLatest">
@@ -91,6 +81,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { fetchProjects } from '../api/project'
+import singerImage from '../assets/visuals/auralis-anime-singer.png'
 
 const router = useRouter()
 const waveCanvas = ref(null)
@@ -220,7 +211,10 @@ function formatDate(value){if(!value)return '最近编辑';const date=new Date(v
 @media(max-width:760px){.landing-page{padding:0}.hero-shell{min-height:800px;border-radius:0}.landing-nav{display:flex;justify-content:space-between;padding:0 20px}.landing-nav nav,.ghost-link{display:none}.landing-brand{font-size:21px}.hero-content{min-height:720px}.hero-copy{width:auto;padding:75px 24px 380px}.hero-copy h1{font-size:82px}.cn-title{font-size:20px}.hero-actions{gap:10px}.start-button,.demo-button{height:52px;padding:0 22px}.ring-system{right:50%;top:66%;width:480px;translate:50% -50%}.listener-silhouette{right:calc(50% - 70px);top:53%;width:140px;height:280px}.particle-field{right:0;top:37%;width:100%;height:52%}.wave-canvas{top:56%;height:22%}.explore-link{display:none}.feature-strip{grid-template-columns:1fr;padding:18px}.feature-strip a{min-height:78px}.nav-primary{min-width:94px}.hero-description{font-size:13px}}
 @media(prefers-reduced-motion:reduce){.landing-page *{animation:none!important;scroll-behavior:auto!important}.ring-system,.particle-field,.listener-silhouette{transition:none!important}}
 .demo-playing .ring-system{filter:brightness(1.14) drop-shadow(0 0 15px rgba(255,240,205,.5))!important}
+.singer-parallax{position:absolute;z-index:7;right:calc(7vw + min(56vw,700px)/2 - 170px);top:21%;width:340px;height:500px;transition:transform 1s cubic-bezier(.2,.8,.2,1);filter:drop-shadow(0 24px 18px rgba(25,42,63,.2))}.anime-singer{width:100%;height:100%;object-fit:contain;transform-origin:50% 72%;animation:singer-groove 2.9s ease-in-out infinite}.demo-playing .anime-singer{animation-duration:2.55s}@keyframes singer-groove{0%,100%{transform:translateY(0) rotate(-.7deg)}50%{transform:translateY(-5px) rotate(.8deg)}}
 .listener-silhouette{right:calc(7vw + min(56vw,700px)/2 - 80px);top:30%;width:160px;height:420px;fill:url(#silhouetteGradient);filter:drop-shadow(0 22px 14px rgba(16,24,32,.2))}.person-body{transform-origin:90px 245px}.headphones{stroke:#596571}.neck{opacity:.96}.torso{opacity:.98}.coat-tail{opacity:.94}
 @media(max-width:1100px){.listener-silhouette{right:calc(-2vw + min(56vw,700px)/2 - 80px)}}
 @media(max-width:760px){.listener-silhouette{right:calc(50% - 65px);top:50%;width:130px;height:340px}}
+@media(max-width:1100px){.singer-parallax{right:calc(-2vw + min(56vw,700px)/2 - 160px);width:320px}}
+@media(max-width:760px){.singer-parallax{right:calc(50% - 135px);top:49%;width:270px;height:360px}}
 </style>

@@ -24,6 +24,9 @@ class LineAudioProcessDTO(BaseModel):
     silence_sec: Optional[float] = 0.0
     current_ms: Optional[int] = None
 
+class LineAudioVariantDTO(LineAudioProcessDTO):
+    label: Optional[str] = None
+
 class LineAssetAttachDTO(BaseModel):
     source_path: str
 
@@ -42,6 +45,7 @@ class LineCreateDTO(BaseModel):
     voice_profile: Optional[str] = None
     production_note: Optional[str] = None
     audio_events: Optional[list[dict[str, Any]]] = None
+    audio_variants: Optional[list[dict[str, Any]]] = None
 
     emotion_id: Optional[int] = None
     strength_id: Optional[int] = None
@@ -66,6 +70,7 @@ class LineResponseDTO(BaseModel):
     voice_profile: Optional[str] = None
     production_note: Optional[str] = None
     audio_events: Optional[list[dict[str, Any]]] = None
+    audio_variants: Optional[list[dict[str, Any]]] = None
 
     emotion_id: Optional[int] = None
     strength_id: Optional[int] = None

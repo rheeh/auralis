@@ -60,6 +60,19 @@ export function processAudio(line_id, payload) {
   return request.post(`/lines/process-audio/${line_id}`, payload)
 }
 
+export function createAudioVariant(lineId, payload) {
+  return request.post(`/lines/${lineId}/audio-variants`, payload)
+}
+
+export function deleteAudioVariant(lineId, variantId) {
+  return request.delete(`/lines/${lineId}/audio-variants/${variantId}`)
+}
+
+export function getAudioVariantUrl(lineId, variantId, version = 0) {
+  const query = version ? `?v=${encodeURIComponent(version)}` : ''
+  return `${API_BASE_URL}lines/${lineId}/audio-variants/${variantId}/audio${query}`
+}
+
 // 导出结果和字幕
 // 导出接口，带 single 参数
 export function exportLines(chapter_id, single = false) {

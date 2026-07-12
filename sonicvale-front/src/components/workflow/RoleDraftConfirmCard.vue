@@ -26,9 +26,14 @@
         <div class="voice-picker">
           <el-select v-model="role.default_voice_id" filterable clearable placeholder="按模型来源选择音色">
             <el-option-group v-for="group in voiceGroups" :key="group.id" :label="group.label">
-              <el-option v-for="voice in group.voices" :key="voice.id" :label="voice.name" :value="voice.id" :disabled="voiceUsedByOtherRole(voice.id, role.draft_id)" />
+              <el-option v-for="voice in group.voices" :key="voice.id" :label="voice.name" :value="voice.id" :disabled="voiceUsedByOtherRole(voice.id, role.draft_id)">
+                <span>{{ voice.name }}</span>
+                <button class="option-preview" type="button" :disabled="!voice.reference_path" :title="!voice.reference_path?'该音色暂无样音':previewingId===voice.id?'停止试听':'试听音色'" @mousedown.stop @click.stop="toggleVoicePreview(voice)"><el-icon><component :is="previewingId===voice.id?VideoPause:VideoPlay" /></el-icon></button>
+              </el-option>
             </el-option-group>
           </el-select>
+          <button v-if="selectedVoice(role)?.reference_path" class="selected-preview" type="button" @click="toggleVoicePreview(selectedVoice(role))"><el-icon><component :is="previewingId===role.default_voice_id?VideoPause:VideoPlay" /></el-icon>{{ previewingId===role.default_voice_id?'停止试听':`试听「${selectedVoice(role).name}」` }}</button>
+          <small v-else-if="selectedVoice(role)" class="no-preview">该音色暂无试听样音</small>
           <small>{{ role.voice_type || 'AI 声线建议' }}</small>
         </div>
       </article>
@@ -42,12 +47,12 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { MagicStick } from '@element-plus/icons-vue'
+import { MagicStick, VideoPause, VideoPlay } from '@element-plus/icons-vue'
 import DraftRevisionBar from './DraftRevisionBar.vue'
 import { fetchTTSProviders } from '../../api/provider'
-import { fetchVoicesByTTS } from '../../api/voice'
+import { fetchVoicesByTTS, getVoiceAudioUrl } from '../../api/voice'
 import { getRoleAvatarUrl, uploadRoleAvatar } from '../../api/drama'
 
 const props = defineProps({ roles: { type: Array, default: () => [] }, revision: Number, loading: Boolean, confirmLabel: String, sessionId: String })
@@ -56,6 +61,8 @@ const editableRoles = ref([])
 const providers = ref([])
 const voices = ref([])
 const uploadingId = ref('')
+const previewingId = ref(null)
+const voicePlayer = new Audio()
 watch(() => props.roles, (value) => {
   editableRoles.value = JSON.parse(JSON.stringify(value || []))
 }, { immediate: true, deep: true })
@@ -70,6 +77,7 @@ const voiceGroups = computed(() => providers.value.map(provider => ({
 })).filter(group => group.voices.length))
 
 onMounted(loadVoices)
+onBeforeUnmount(() => { voicePlayer.pause();voicePlayer.removeAttribute('src');previewingId.value=null })
 
 async function loadVoices() {
   providers.value = (await fetchTTSProviders()) || []
@@ -79,6 +87,14 @@ async function loadVoices() {
 function roleColor(index) { return ['#37c9c6','#8b7cf6','#ef7eb8','#f2a84b','#55a7ed','#70bd69'][index%6] }
 function avatarUrl(role) { return getRoleAvatarUrl(props.sessionId, role.avatar_path) }
 function voiceUsedByOtherRole(voiceId, draftId) { return selectedRoles.value.some(role => role.draft_id !== draftId && role.default_voice_id === voiceId) }
+function selectedVoice(role){return voices.value.find(voice=>voice.id===role.default_voice_id)||null}
+async function toggleVoicePreview(voice){
+  if(!voice)return
+  if(previewingId.value===voice.id&&!voicePlayer.paused){voicePlayer.pause();previewingId.value=null;return}
+  voicePlayer.pause();previewingId.value=voice.id;voicePlayer.src=getVoiceAudioUrl(voice.id,Date.now())
+  voicePlayer.onended=()=>{previewingId.value=null};voicePlayer.onpause=()=>{if(voicePlayer.currentTime>0&&voicePlayer.currentTime<voicePlayer.duration)previewingId.value=null}
+  try{await voicePlayer.play()}catch(error){previewingId.value=null;ElMessage.error(error?.message||'该音色暂时无法试听')}
+}
 function tagsFor(voice) { return `${voice.name},${voice.description || ''}`.toLowerCase() }
 function scoreVoice(role, voice) {
   const hint = `${role.voice_type || ''},${role.identity || ''},${role.speech_style || ''}`.toLowerCase()
@@ -120,7 +136,7 @@ async function uploadAvatar(role,event) {
 .role-item strong,.role-item small { display:block; }
 .role-item small,.role-item p { color:var(--el-text-color-secondary); }
 .role-item p { margin:4px 0 0; line-height:1.5; }
-.voice-picker .el-select{width:100%}.voice-picker small{margin-top:5px}
+.voice-picker .el-select{width:100%}.voice-picker small{margin-top:5px}.option-preview{float:right;display:inline-grid;place-items:center;width:24px;height:24px;margin-top:3px;border:0;border-radius:50%;color:var(--el-color-primary);background:var(--el-fill-color-light);cursor:pointer}.option-preview:disabled{cursor:not-allowed;opacity:.35}.selected-preview{display:flex;align-items:center;gap:5px;margin-top:6px;padding:0;border:0;color:var(--el-color-primary);background:none;cursor:pointer;font-size:11px}.voice-picker .no-preview{color:var(--el-text-color-placeholder);font-size:10px}
 .confirm-card footer { justify-content:flex-end; }
 @media(max-width:760px){.role-item{grid-template-columns:62px auto minmax(0,1fr)}.voice-picker{grid-column:1/-1}.card-actions{align-items:flex-start;flex-direction:column}}
 </style>
