@@ -26,6 +26,38 @@ class FakeLineRepository:
 
 
 class AudioVariantTest(unittest.TestCase):
+    def test_local_speed_changes_only_selected_range(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = os.path.join(tmp, "line.wav")
+            sample_rate = 16000
+            with wave.open(source, "wb") as audio:
+                audio.setnchannels(1)
+                audio.setsampwidth(2)
+                audio.setframerate(sample_rate)
+                frames = [
+                    struct.pack("<h", int(9000 * math.sin(2 * math.pi * (220 if i < sample_rate else 440) * i / sample_rate)))
+                    for i in range(sample_rate * 2)
+                ]
+                audio.writeframes(b"".join(frames))
+
+            original_hash = hashlib.sha256(Path(source).read_bytes()).hexdigest()
+            line = SimpleNamespace(id=8, audio_path=source, audio_variants=[], active_audio_variant_id=None)
+            service = LineService(FakeLineRepository(line), None, None, None)
+            variant = service.create_audio_variant(8, LineAudioVariantDTO(
+                speed=0.5,
+                volume=1.0,
+                start_ms=0,
+                end_ms=1000,
+                region_action="speed",
+            ))
+
+            with wave.open(variant["audio_path"], "rb") as audio:
+                duration = audio.getnframes() / audio.getframerate()
+            self.assertAlmostEqual(duration, 3.0, delta=0.08)
+            self.assertEqual(variant["region_action"], "speed")
+            self.assertIn("局部变速", variant["label"])
+            self.assertEqual(hashlib.sha256(Path(source).read_bytes()).hexdigest(), original_hash)
+
     def test_two_speeds_create_independent_files_without_overwriting_source(self):
         with tempfile.TemporaryDirectory() as tmp:
             source = os.path.join(tmp, "line.wav")

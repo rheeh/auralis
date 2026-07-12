@@ -1,7 +1,7 @@
 <template>
   <div class="app-shell" :class="{ 'sidebar-compact': sidebarCompact, 'is-landing': route.name === 'Home' }">
     <aside v-if="route.name !== 'Home'" class="app-sidebar">
-      <RouterLink to="/projects" class="brand" aria-label="Auralis 作品库">
+      <RouterLink to="/home" class="brand" aria-label="返回 Auralis 首页">
         <span class="brand-mark"><img src="/auralis-mark.svg" alt="" /></span>
         <span class="brand-name">Auralis</span>
       </RouterLink>
@@ -251,9 +251,13 @@ body,
 }
 
 .workspace-bar.compact {
-  min-height: 48px;
+  min-height: 36px;
+  padding-inline: 16px;
   padding-top: 0;
   padding-bottom: 0;
+  border-bottom: 0;
+  background: transparent;
+  backdrop-filter: none;
 }
 
 .workspace-bar.compact .workspace-title {
@@ -270,8 +274,16 @@ body,
 }
 
 .app-stage.is-project-workspace .page-surface {
-  padding-top: 10px;
+  padding-top: 4px;
 }
+
+.app-stage.is-project-workspace {
+  grid-template-rows: 36px minmax(0, 1fr);
+}
+
+.workspace-bar.compact .breadcrumbs { font-size: 15px; }
+.workspace-bar.compact .breadcrumbs strong { font-size: 17px; }
+.workspace-bar.compact .local-status { font-size: 11px; }
 
 .app-sidebar {
   position: relative;

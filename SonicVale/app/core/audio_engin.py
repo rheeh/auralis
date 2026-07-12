@@ -148,6 +148,43 @@ class AudioProcessor:
         self._run_ffmpeg(cmd)
         os.replace(self.temp_path, self.audio_path)
 
+    def change_speed_range(self, start_ms: int, end_ms: int, speed: float):
+        """Change speed only inside [start_ms, end_ms], preserving both outside segments."""
+        speed = float(np.clip(speed, 0.5, 2.0))
+        start_sec = max(0.0, min(float(start_ms) / 1000, self.duration))
+        end_sec = max(start_sec, min(float(end_ms) / 1000, self.duration))
+        if end_sec - start_sec < 0.01:
+            raise ValueError("局部变速区间过短")
+
+        filters = []
+        segments = []
+        if start_sec > 0:
+            filters.append(f"[0:a]atrim=0:{start_sec},asetpts=PTS-STARTPTS[before]")
+            segments.append("[before]")
+        middle_output = "out" if start_sec <= 0 and end_sec >= self.duration else "middle"
+        filters.append(
+            f"[0:a]atrim={start_sec}:{end_sec},asetpts=PTS-STARTPTS,atempo={speed}[{middle_output}]"
+        )
+        segments.append(f"[{middle_output}]")
+        if end_sec < self.duration:
+            filters.append(f"[0:a]atrim={end_sec},asetpts=PTS-STARTPTS[after]")
+            segments.append("[after]")
+        if len(segments) > 1:
+            filters.append(f"{''.join(segments)}concat=n={len(segments)}:v=0:a=1[out]")
+
+        cmd = [
+            self.ffmpeg_path, "-y", "-i", self.audio_path,
+            "-filter_complex", ";".join(filters),
+            "-map", "[out]",
+            "-ar", str(self.sr),
+            "-ac", str(self.ch),
+            "-c:a", "pcm_s16le",
+            self.temp_path,
+        ]
+        self._run_ffmpeg(cmd)
+        os.replace(self.temp_path, self.audio_path)
+        self.duration = sf.info(self.audio_path).duration
+
     def change_volume(self, volume: float):
         """音量调整"""
         volume = max(0.0, float(volume))

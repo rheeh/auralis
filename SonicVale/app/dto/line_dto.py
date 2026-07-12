@@ -26,6 +26,7 @@ class LineAudioProcessDTO(BaseModel):
 
 class LineAudioVariantDTO(LineAudioProcessDTO):
     label: Optional[str] = None
+    region_action: Optional[str] = None
 
 class LineAssetAttachDTO(BaseModel):
     source_path: str

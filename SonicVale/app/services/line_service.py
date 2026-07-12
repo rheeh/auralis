@@ -757,28 +757,41 @@ class LineService:
             self._convert_audio_to_wav(source_path, target_path)
 
         processor = AudioProcessor(target_path)
-        if dto.start_ms is not None and dto.end_ms is not None and dto.end_ms > dto.start_ms:
+        speed = float(dto.speed or 1.0)
+        region_action = (dto.region_action or "").strip().lower()
+        is_local_speed = (
+            region_action == "speed"
+            and dto.start_ms is not None
+            and dto.end_ms is not None
+            and dto.end_ms > dto.start_ms
+        )
+        if is_local_speed:
+            processor.change_speed_range(dto.start_ms, dto.end_ms, speed)
+        elif dto.start_ms is not None and dto.end_ms is not None and dto.end_ms > dto.start_ms:
             processor.cut(dto.start_ms, dto.end_ms)
         elif dto.current_ms is not None and dto.silence_sec:
             processor.insert_silence(dto.current_ms, dto.silence_sec)
         elif dto.silence_sec:
             processor.append_silence(dto.silence_sec)
-        speed = float(dto.speed or 1.0)
         volume = float(dto.volume if dto.volume is not None else 1.0)
-        if abs(speed - 1.0) > 1e-6:
+        if not is_local_speed and abs(speed - 1.0) > 1e-6:
             processor.change_speed(speed)
         if abs(volume - 1.0) > 1e-6:
             processor.change_volume(volume)
 
         variant = {
             "id": variant_id,
-            "label": (dto.label or "").strip() or f"{speed:g}x 速度 · {volume:g}x 音量",
+            "label": (dto.label or "").strip() or (
+                f"{speed:g}x 局部变速 {dto.start_ms / 1000:g}–{dto.end_ms / 1000:g}s · {volume:g}x 音量"
+                if is_local_speed else f"{speed:g}x 速度 · {volume:g}x 音量"
+            ),
             "speed": speed,
             "volume": volume,
             "start_ms": dto.start_ms,
             "end_ms": dto.end_ms,
             "silence_sec": float(dto.silence_sec or 0),
             "current_ms": dto.current_ms,
+            "region_action": region_action or None,
             "audio_path": target_path,
             "created_at": datetime.now(timezone.utc).isoformat(),
         }

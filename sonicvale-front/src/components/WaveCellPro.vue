@@ -1,11 +1,11 @@
 <!-- src/components/WaveCellPro.vue -->
 <template>
   <div class="wavecell">
-    <div class="preview-note"><strong>原音处理预听</strong><span>播放会立即应用当前速度和音量；保存后生成独立版本。</span></div>
+    <div class="preview-note"><strong>原音处理预听</strong><span>不选区间时调整整段；选中区间后只改变该段速度，其余部分保持原速。</span></div>
     <div class="bar">
       <!-- 替换原来的按钮 -->
       <el-button :type="isPlaying ? 'danger' : 'success'" class="play-btn" :class="{ playing: isPlaying }" circle
-        size="mid" :disabled="!ready || !!loadError" @click="togglePlay">
+        size="default" :disabled="!ready || !!loadError" @click="togglePlay">
         <template #icon>
           <el-icon :size="22">
             <VideoPause v-if="isPlaying" />
@@ -16,7 +16,7 @@
 
       <!-- 下载按钮 -->
       <el-tooltip :content="ready ? '下载音频' : '暂无音频'" placement="top">
-        <el-button class="download-btn" :class="{ 'is-disabled': !ready }" circle size="mid" 
+        <el-button class="download-btn" :class="{ 'is-disabled': !ready }" circle size="default"
           @click="downloadAudio" :disabled="!ready">
           <template #icon>
             <el-icon :size="18">
@@ -38,7 +38,7 @@
 
 
       <!-- <el-switch v-model="regionMode" active-text="标注" inactive-text="浏览" /> -->
-      <el-button size="small" @click="makeRegion" :disabled="hasRegion">选择裁剪区间</el-button>
+      <el-button size="small" @click="makeRegion" :disabled="hasRegion">选择局部变速区间</el-button>
       <!-- <el-button size="small" @click="loopRegion" :disabled="!hasRegion">循环区间</el-button> -->
       <el-button size="small" @click="clearRegion" :disabled="!hasRegion">清除区间</el-button>
 
@@ -236,7 +236,7 @@ function makeRegion() {
   region.value = regionsPlugin.addRegion({
     start, end,
     drag: true, resize: true,
-    color: 'rgba(255,0,0,0.15)',
+    color: 'rgba(55,201,198,0.2)',
   })
 }
 
@@ -252,8 +252,12 @@ async function confirmProcess() {
   const start_ms = region.value ? Math.round(region.value.start * 1000) : null
   const end_ms = region.value ? Math.round(region.value.end * 1000) : null
   const current_ms = ws ? Math.round(ws.getCurrentTime() * 1000) : 0  // ✅ 新增
+  if (region.value && Math.abs(Number(rate.value || 1) - 1) < 1e-6) {
+    ElMessage.warning('已选择局部区间，请先把速度调为非 1.0×')
+    return
+  }
   await ElMessageBox.confirm(
-    props.variantMode ? '将从原始音频创建一个独立版本，原音频和已有版本都不会被覆盖。' : '确认将当前速度、音量、裁剪或停顿处理应用到这一句音频吗？',
+    props.variantMode ? (region.value ? '只对选中区间应用当前速度，区间外保持原速，并从原音保存为独立版本。' : '对整段应用当前速度和音量，并从原音保存为独立版本。') : '确认应用当前音频处理吗？',
     props.variantMode ? '保存独立音频版本' : '应用本句音频处理',
     { type: props.variantMode ? 'info' : 'warning' },
   )
@@ -263,6 +267,7 @@ async function confirmProcess() {
     start_ms, end_ms,
     silence_sec: Number(tailSilence.value || 0),
     current_ms,
+    region_action: region.value ? 'speed' : null,
   })
 }
 

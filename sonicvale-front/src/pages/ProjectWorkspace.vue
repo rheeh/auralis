@@ -66,18 +66,14 @@
       </aside>
 
       <main class="result-panel">
-        <div class="result-head">
-          <div><p class="eyebrow">当前输出</p><h2>{{ outputTitle }}</h2></div>
-          <div v-if="canViewCharacters" class="view-switch">
+        <div v-if="canViewCharacters" class="result-head">
+          <div class="view-switch">
             <el-button size="small" :type="resultView==='output'?'primary':'default'" @click="resultView='output'">当前制作</el-button>
             <el-button size="small" :type="resultView==='characters'?'primary':'default'" @click="resultView='characters'">人物卡</el-button>
           </div>
-          <div class="stage-dots" aria-label="制作阶段">
-            <span v-for="item in stages" :key="item.key" :class="{ active:item.key===activeStage,done:item.done }">{{ item.label }}</span>
-          </div>
         </div>
 
-        <CharacterCardsArchive v-if="resultView==='characters'" :roles="roleDrafts" :session-id="snapshot?.session_id" />
+        <CharacterCardsArchive v-if="resultView==='characters'" :roles="roleDrafts" :session-id="snapshot?.session_id" :project-id="projectId" @voice-changed="voiceRevision++" />
 
         <div v-else-if="!snapshot" class="result-empty">
           <el-icon><Document /></el-icon>
@@ -125,6 +121,7 @@
           :chapter-id="snapshot.chapter_id"
           :tts-provider-id="project?.tts_provider_id"
           :source-text="snapshot.source_text"
+          :voice-revision="voiceRevision"
         />
       </main>
     </section>
@@ -169,6 +166,7 @@ const transitioning = ref(false)
 const transitionFromStage = ref('')
 const roleEdits = ref([])
 const productionRef = ref(null)
+const voiceRevision = ref(0)
 let pollTimer = null
 let transitionStartedAt = 0
 
@@ -186,16 +184,9 @@ const activeStage = computed(() => {
   if (['generating_script','awaiting_script_confirmation','script_draft_ready','committing'].includes(stage)) return 'script'
   return 'production'
 })
-const stages = computed(() => [
-  { key:'source',label:'原文',done:!!snapshot.value },
-  { key:'roles',label:'人物卡',done:['script','production'].includes(activeStage.value) },
-  { key:'script',label:'广播剧台本',done:activeStage.value==='production' },
-  { key:'production',label:'音色与音频',done:false },
-])
 const stageLabel = computed(() => ({created:'准备解析',parsing:'正在解析小说',awaiting_role_confirmation:'确认人物设定',generating_script:'正在生成台本',awaiting_script_confirmation:'确认广播剧台本',script_draft_ready:'台本已确认',committing:'正在建立逐句制作',completed:'逐句制作',failed:'需要处理',cancelled:'已取消'}[snapshot.value?.current_stage] || '项目工作台'))
 const stageDescription = computed(() => ({awaiting_role_confirmation:'先确认主要人物身份和说话方式。',awaiting_script_confirmation:'检查对白、旁白比例和声音轨。',completed:'逐句绑定音色、生成并试听音频。'}[snapshot.value?.current_stage] || 'AI 正在推进当前步骤。'))
 const stageType = computed(() => snapshot.value?.current_stage === 'failed' ? 'danger' : snapshot.value?.current_stage === 'completed' ? 'success' : 'warning')
-const outputTitle = computed(() => resultView.value === 'characters' ? '人物卡' : ({source:'等待开始',roles:'主要角色身份卡',script:'广播剧台本',production:'逐句制作台本'}[activeStage.value]))
 const processingHint = computed(() => activeStage.value === 'roles' ? '正在识别人物身份、关系、动机和说话方式。' : '正在把剧情改成对白、音效、音乐与少量必要旁白。')
 const assistantMission = computed(() => ({
   awaiting_role_confirmation:{title:'确认人物、头像和声线',detail:'人物卡决定台词写法。确认前请保证每个人物已绑定不同音色。'},
@@ -324,4 +315,5 @@ function apiError(error,fallback){return error?.response?.data?.message||error?.
 .assistant-actions{display:flex;flex-wrap:wrap;gap:6px}.working-hint{display:flex;align-items:center;gap:7px;color:var(--el-text-color-secondary);font-size:11px;line-height:1.45}
 .working-hint i{width:7px;height:7px;flex:0 0 7px;border-radius:50%;background:var(--el-color-primary);box-shadow:0 0 0 4px color-mix(in srgb,var(--el-color-primary) 14%,transparent);animation:assistant-pulse 1.4s ease-in-out infinite}
 @keyframes assistant-pulse{50%{opacity:.45;transform:scale(.82)}}
+.result-head{justify-content:center;min-height:42px;padding:5px 12px}.view-switch{display:flex;align-items:center;gap:8px}.view-switch .el-button{min-width:88px;font-size:13px}
 </style>
