@@ -1,30 +1,17 @@
 <template>
   <div class="project-canvas-page">
-    <section class="canvas-hero">
-      <div>
-        <p class="eyebrow">项目空间</p>
-        <h1>让一个故事开始发声</h1>
-        <p class="hero-copy">每个项目都保留章节、角色、声线和生成进度。先写故事，模型、TTS 和保存位置都可以稍后补齐。</p>
-      </div>
-      <div class="hero-actions">
-        <el-button type="primary" :icon="Plus" @click="openCreateDialog('studio')">新建项目</el-button>
-      </div>
-    </section>
-
     <section class="quick-board">
       <button class="quick-tile primary-tile" type="button" @click="openCreateDialog('studio')">
         <span class="tile-icon">
           <el-icon><EditPen /></el-icon>
         </span>
-        <strong>从一段正文开始</strong>
-        <small>创建后直接进入工作台，自由粘贴小说、写改编指令、生成台本。</small>
+        <span class="tile-copy"><strong>新建项目</strong><small>创建后直接进入工作台，粘贴小说并生成台本。</small></span>
       </button>
       <button class="quick-tile" type="button" @click="$router.push('/config')">
         <span class="tile-icon">
           <el-icon><Setting /></el-icon>
         </span>
-        <strong>整理模型配置</strong>
-        <small>需要更换厂商时，在配置中心新增 Provider 测试后再绑定项目。</small>
+        <span class="tile-copy"><strong>整理模型配置</strong><small>新增或更换 Provider，测试后再绑定项目。</small></span>
       </button>
     </section>
 
@@ -49,11 +36,6 @@
           @keydown.enter.prevent="openProject(item)"
           @keydown.space.prevent="openProject(item)"
         >
-          <div class="project-cover" aria-hidden="true">
-            <span class="cover-ring" />
-            <span class="cover-wave"><i v-for="n in 18" :key="n" /></span>
-            <strong>{{ item.name.slice(0, 1) }}</strong>
-          </div>
           <header class="card-header">
             <div>
               <h3 :title="item.name">{{ item.name }}</h3>
@@ -908,23 +890,18 @@ async function pickRootDir() {
 .canvas-hero .hero-copy { max-width:560px;color:#718095; }
 .canvas-hero .eyebrow { color:#3598bf;font-weight:700;letter-spacing:.12em; }
 .canvas-hero .el-button { height:48px;padding-inline:22px;border-radius:14px; }
-.quick-board { grid-template-columns:repeat(2,minmax(0,1fr));gap:20px; }
-.quick-tile { min-height:122px;padding:22px;border-color:rgba(135,169,197,.15);border-radius:18px;background:rgba(255,255,255,.7);box-shadow:0 12px 35px rgba(63,91,116,.055);backdrop-filter:blur(16px); }
+.quick-board { grid-template-columns:repeat(2,minmax(0,1fr));gap:14px; }
+.quick-tile { display:flex;align-items:center;gap:14px;min-height:72px;padding:14px 18px;border-color:rgba(135,169,197,.15);border-radius:16px;background:rgba(255,255,255,.7);box-shadow:0 10px 28px rgba(63,91,116,.05);backdrop-filter:blur(16px); }
 .primary-tile { background:linear-gradient(135deg,rgba(232,248,255,.88),rgba(255,255,255,.78),rgba(255,244,236,.62)); }
-.tile-icon { width:42px;height:42px;border-radius:13px;background:linear-gradient(145deg,#e0f3ff,#eef1ff); }
+.tile-icon { width:42px;height:42px;flex:0 0 42px;margin:0;border-radius:13px;background:linear-gradient(145deg,#e0f3ff,#eef1ff); }
+.tile-copy { min-width:0; }
+.tile-copy strong { margin-bottom:3px; }
+.tile-copy small { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .section-heading { padding:4px 2px; }
 .section-heading h2 { color:#22334a;font-size:24px; }
 .project-grid { grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px; }
-.project-card { gap:16px;padding:0 18px 18px;overflow:hidden;border-color:rgba(132,166,194,.14);border-radius:20px;background:rgba(255,255,255,.76);box-shadow:0 14px 38px rgba(61,89,114,.07); }
+.project-card { gap:16px;padding:18px;overflow:hidden;border-color:rgba(132,166,194,.14);border-radius:20px;background:rgba(255,255,255,.76);box-shadow:0 14px 38px rgba(61,89,114,.07); }
 .project-card:hover,.project-card:focus-visible { transform:translateY(-4px);border-color:rgba(66,155,211,.36);box-shadow:0 22px 46px rgba(57,94,125,.13); }
-.project-cover { position:relative;height:118px;margin:0 -18px;overflow:hidden;background:radial-gradient(circle at 72% 34%,rgba(255,252,236,.95),transparent 18%),linear-gradient(145deg,#ccecff,#edf0ff 53%,#ffe8d7); }
-.project-card:nth-child(3n+2) .project-cover { background:radial-gradient(circle at 26% 38%,rgba(255,255,255,.86),transparent 18%),linear-gradient(145deg,#d5ecf7,#e9e5fa 52%,#f9e5ea); }
-.project-card:nth-child(3n) .project-cover { background:radial-gradient(circle at 70% 33%,rgba(255,249,226,.92),transparent 17%),linear-gradient(145deg,#bfe1ed,#e4f2ed 50%,#f8dfcc); }
-.cover-ring { position:absolute;right:12%;top:-45%;width:160px;aspect-ratio:1;border:2px solid rgba(255,255,255,.88);border-radius:50%;box-shadow:0 0 18px rgba(255,255,255,.8),inset 0 0 24px rgba(255,255,255,.35); }
-.cover-wave { position:absolute;left:8%;right:8%;top:50%;display:flex;align-items:center;gap:5px;height:44px; }
-.cover-wave i { width:2px;height:calc(6px + (var(--wave, 1) * 1px));border-radius:3px;background:rgba(56,146,203,.45); }
-.cover-wave i:nth-child(3n){height:28px}.cover-wave i:nth-child(4n){height:16px}.cover-wave i:nth-child(5n){height:38px}
-.project-cover > strong { position:absolute;right:22%;bottom:15px;color:rgba(33,61,87,.72);font-family:Georgia,serif;font-size:30px;font-weight:400; }
 .workflow-canvas { border-color:rgba(125,164,195,.13);border-radius:14px;background:linear-gradient(145deg,rgba(239,249,255,.72),rgba(255,255,255,.7)); }
 .workflow-node { border-color:rgba(130,163,190,.14);border-radius:11px;background:rgba(255,255,255,.74); }
 .project-footer { border-top-color:rgba(128,159,185,.13); }

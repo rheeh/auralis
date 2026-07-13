@@ -642,7 +642,8 @@ body,
 .page-surface { padding:24px 30px 34px;background:radial-gradient(circle at 90% 0,rgba(180,224,250,.24),transparent 28%),radial-gradient(circle at 68% 92%,rgba(255,220,190,.18),transparent 27%),linear-gradient(145deg,#f6fbff,#fdfcf9 52%,#fffaf4); }
 
 .page-surface :is(.el-button,.el-input__wrapper,.el-select__wrapper,.el-textarea__inner) { border-radius:12px; }
-.page-surface .el-button--primary { border-color:transparent;background:linear-gradient(135deg,#347fd1,#2abac5);box-shadow:0 8px 20px rgba(49,133,187,.17); }
+.page-surface .el-button--primary:not(.is-plain):not(.is-link):not(.is-text) { --el-button-text-color:#fff;--el-button-hover-text-color:#fff;--el-button-active-text-color:#fff;color:#fff;border-color:transparent;background:linear-gradient(135deg,#347fd1,#2abac5);box-shadow:0 8px 20px rgba(49,133,187,.17); }
+.page-surface .el-button--primary.is-plain { --el-button-text-color:#226b98;--el-button-bg-color:#edf8fc;--el-button-border-color:#89c9df;--el-button-hover-text-color:#fff;--el-button-hover-bg-color:#2b92c8;--el-button-hover-border-color:#2b92c8;color:var(--el-button-text-color);background:var(--el-button-bg-color);border-color:var(--el-button-border-color);box-shadow:none; }
 .page-surface :is(.el-card,.el-table,.el-dialog,.el-collapse,.el-tabs--border-card) { --el-border-radius-base:16px; }
 .page-surface .el-table { border-radius:16px;overflow:hidden;background:rgba(255,255,255,.76); }
 .page-surface > :not(.project-canvas-page) :is(.page-header,.queue-header,.config-head,.header-bar,.voice-table-shell,.filter-bar,.audio-task-panel,.panel,.metrics-card) { border-color:rgba(132,167,195,.15)!important;border-radius:18px!important;background:rgba(255,255,255,.7)!important;box-shadow:0 14px 38px rgba(58,89,117,.06)!important;backdrop-filter:blur(18px); }
