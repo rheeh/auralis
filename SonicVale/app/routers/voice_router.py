@@ -152,8 +152,8 @@ def seed_edge_voice_presets(
 
 
 @router.post("/presets/cosyvoice", response_model=Res[VoicePresetSeedResultDTO],
-             summary="生成 CosyVoice-v1 常见音色",
-             description="调用 CosyVoice-v1 系统预置 voice 生成试听样例，无需用户上传参考音频")
+             summary="生成 CosyVoice 模型兼容音色",
+             description="按当前模型生成 Base 或 Instruct 兼容的系统音色试听，无需用户上传参考音频")
 def seed_cosyvoice_presets(
     dto: VoicePresetSeedDTO,
     voice_service: VoiceService = Depends(get_voice_service),

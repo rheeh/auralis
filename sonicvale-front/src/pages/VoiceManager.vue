@@ -7,7 +7,7 @@
           <el-option v-for="t in ttsProviders" :key="t.id" :label="t.name" :value="t.id" />
         </el-select>
         <el-button type="primary" plain :disabled="!canSeedPresets" :loading="isSeedingPresets" @click="handleSeedPresets">
-          {{ isCosyVoiceV1 ? '生成 CosyVoice 常见音色' : '生成 Edge 常见音色' }}
+          {{ isCosyVoice ? '生成 CosyVoice 兼容音色' : '生成 Edge 常见音色' }}
         </el-button>
         <el-button type="warning" plain :disabled="!canSeedPresets" :loading="isSeedingPresets" @click="handleSeedPresets(true)">
           覆盖重生成
@@ -331,11 +331,14 @@ const selectedCount = computed(() => selectedIds.value.length)
 const selectedProvider = computed(() => ttsProviders.value.find(provider => provider.id === selectedTTS.value) || null)
 const selectedModel = computed(() => (selectedProvider.value?.model || '').toLowerCase())
 const selectedProviderType = computed(() => (selectedProvider.value?.provider_type || '').toLowerCase())
-const isCosyVoiceV1 = computed(() => selectedModel.value.startsWith('cosyvoice-v1'))
+const isCosyVoice = computed(() => selectedModel.value.startsWith('cosyvoice'))
+const isCosyVoiceInstruct = computed(() => selectedModel.value.startsWith('cosyvoice-v3'))
 const isEdgeProvider = computed(() => selectedProviderType.value === 'edge' || selectedModel.value.includes('edge'))
-const canSeedPresets = computed(() => !!selectedTTS.value && (isCosyVoiceV1.value || isEdgeProvider.value))
-const voiceHelperText = computed(() => isCosyVoiceV1.value
-  ? 'CosyVoice-v1 自带多组系统音色，不需要上传参考文件。点击“生成 CosyVoice 常见音色”即可创建男女、青年、成年、中年、旁白等可直接合成的音色和试听样例。参考文件只用于声音复刻。'
+const canSeedPresets = computed(() => !!selectedTTS.value && (isCosyVoice.value || isEdgeProvider.value))
+const voiceHelperText = computed(() => isCosyVoice.value
+  ? (isCosyVoiceInstruct.value
+      ? '当前为 CosyVoice v3 指令模式。生成的兼容音色支持按模型要求接收情绪/表演指令；旧 v1/v2 音色不可与 v3 模型混用。'
+      : '当前为 CosyVoice 基础模式，只会把声音指导映射为语速、音高和音量。需要自然语言情绪控制时，请在设置中改用 v3 Flash 指令模板。')
   : 'Edge-TTS 不需要参考文件。可以先生成旁白、男女主、儿童等免费预置音色；需要复刻特定真人声音时再上传有合法使用权的参考音频。')
 
 const filterTags = ref([])
@@ -507,7 +510,7 @@ async function handleSeedPresets(overwrite = false) {
   if (overwrite) {
     try {
       await ElMessageBox.confirm(
-        `这会重新生成同名 ${isCosyVoiceV1.value ? 'CosyVoice-v1' : 'Edge-TTS'} 常见音色的试听音频。自定义音色不会被覆盖。`,
+        `这会重新生成同名 ${isCosyVoice.value ? 'CosyVoice' : 'Edge-TTS'} 常见音色的试听音频。自定义音色不会被覆盖。`,
         '覆盖重生成常见音色',
         { confirmButtonText: '覆盖重生成', cancelButtonText: '取消', type: 'warning' }
       )
@@ -517,7 +520,7 @@ async function handleSeedPresets(overwrite = false) {
   }
   isSeedingPresets.value = true
   try {
-    const seed = isCosyVoiceV1.value ? seedCosyVoicePresets : seedEdgeVoicePresets
+    const seed = isCosyVoice.value ? seedCosyVoicePresets : seedEdgeVoicePresets
     const res = await seed(selectedTTS.value, { overwrite })
     if (res.code !== 200) {
       ElMessage.error(res.message || '生成常见音色失败')
@@ -529,7 +532,7 @@ async function handleSeedPresets(overwrite = false) {
     await loadVoices()
   } catch (e) {
     console.error(e)
-    ElMessage.error(`生成常见音色失败，请检查${isCosyVoiceV1.value ? ' API Key、地域和模型配置' : '网络或 Edge-TTS 可用性'}`)
+    ElMessage.error(`生成常见音色失败，请检查${isCosyVoice.value ? ' API Key、地域、模型与音色兼容性' : '网络或 Edge-TTS 可用性'}`)
   } finally {
     isSeedingPresets.value = false
   }

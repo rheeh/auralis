@@ -107,10 +107,16 @@ const choices = [
 const templates = [
   {
     key: 'dashscope_cosyvoice',
-    label: '阿里云 CosyVoice',
+    label: '阿里云 CosyVoice v3 Flash（指令控制）',
     api_base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    model: 'cosyvoice-v1',
-    params: { driver: 'dashscope_cosyvoice', voice: 'longxiaochun', format: 'mp3' },
+    model: 'cosyvoice-v3-flash',
+    params: {
+      driver: 'dashscope_cosyvoice',
+      voice: 'longanhuan',
+      format: 'mp3',
+      instruction_mode: 'structured',
+      supports_instruction: true,
+    },
   },
   {
     key: 'openai_speech',
@@ -122,7 +128,7 @@ const templates = [
       endpoint: 'https://example.com/v1/audio/speech',
       auth_header: 'Authorization',
       auth_prefix: 'Bearer ',
-      payload: { model: '{{model}}', input: '{{text}}', voice: '{{voice}}' },
+      payload: { model: '{{model}}', input: '{{text}}', voice: '{{voice}}', instructions: '{{instruction}}' },
     },
   },
 ]

@@ -132,6 +132,15 @@ Auralis 是一个本地优先的 AI 广播剧制作工具，技术栈为 Vue 3 +
 - 项目页新增声场式横幅和抽象音频封面，保留原有创建、配置检查、工作流节点、删除与进入工作台能力。
 - 已浏览器巡检 `/home`、`/projects`、`/voices`、`/queue`、`/prompts`、`/config`；桌面视口无横向溢出，控制台无 error/warning。
 
+### 2026-07-13 TTS 模型能力适配
+
+- `ConfigurableCloudTTSEngine` 不再把所有云端 TTS 当成相同能力：`instruction_mode` 支持 `native`、`structured`、`mapped`、`none`。
+- CosyVoice v1/v2 只做语速、音高、音量参数映射；v3 Flash/Plus 将台词情绪和声音指导转换为 DashScope 系统音色接受的结构化 Instruct；v3.5 复刻/设计音色可透传自然语言指令。
+- 通用 HTTP TTS 模板新增 `{{instruction}}`，也可用 `instruction_field` 配置 `instructions`、`input.instruction` 等厂商字段路径。
+- 配置中心 TTS 表格会显示“原生指令 / 结构化指令 / 基础参数映射 / 基础生成”，测试接口也会返回实际使用的模式。
+- 本机 Provider #2 已迁移为 `cosyvoice-v3-flash` 结构化指令模式；旧 v1 音色移至停用的兼容 Provider #4，没有删除。迁移前数据库备份位于 `.local-data/backups/app_test-before-cosyvoice-v3-20260713.db`。
+- 已真实调用 DashScope：Provider 测试 HTTP 200，并成功生成 3 个 v3 Instruct 兼容音色样例；项目 5/6/7 中原先使用 v1 女声的角色已改绑“元气女声·龙安欢”。
+
 ## 6. 用户偏好、要求和约束
 
 - 用户希望直接修改真实项目，不只提供建议或伪代码。

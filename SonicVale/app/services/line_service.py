@@ -187,13 +187,19 @@ class LineService:
         content = self.clean_tts_text(content)
         if not content:
             raise ValueError("可朗读文本清洗后为空，请把音效提示移到声音事件或制作备注")
+        instruction_parts = []
+        if emotion_name:
+            instruction_parts.append(f"情绪为{emotion_name}")
+        if production_note and production_note.strip():
+            instruction_parts.append(production_note.strip())
+        voice_instruction = "。".join(instruction_parts)
         route = self.resolve_tts_route(role, line_type=line_type, track=track, emotion_name=emotion_name)
         if self.resolve_cosyvoice_voice(voice):
             route = "cloud"
         if route == "skip":
             return b""
         if route == "edge":
-            return self.generate_edge_audio(content, save_path, role=role, voice=voice, instruction=production_note)
+            return self.generate_edge_audio(content, save_path, role=role, voice=voice, instruction=voice_instruction)
         return self.generate_cloud_audio(
             reference_path,
             tts_provider_id,
@@ -202,7 +208,7 @@ class LineService:
             emo_vector,
             save_path,
             voice=voice,
-            instruction=production_note,
+            instruction=voice_instruction,
         )
 
     @staticmethod
@@ -246,6 +252,12 @@ class LineService:
             raise Exception("TTS服务地址未配置，请先在配置中心设置TTS服务")
 
         if provider_type not in {"fish", "legacy", "index_tts"}:
+            model_name = (getattr(tts_provider, "model", None) or "").lower()
+            voice_description = (getattr(voice, "description", None) or "")
+            if model_name.startswith("cosyvoice-v3") and "CosyVoice-v1" in voice_description:
+                raise ValueError("当前音色属于 CosyVoice-v1，不能用于 v3 指令模型；请重新选择 v3 兼容音色")
+            if model_name.startswith(("cosyvoice-v1", "cosyvoice-v2")) and "CosyVoice-v3" in voice_description:
+                raise ValueError("当前音色属于 CosyVoice-v3，不能用于 v1/v2 基础模型；请重新选择基础模式音色")
             engine = ConfigurableCloudTTSEngine(
                 tts_provider.api_base_url,
                 api_key=tts_provider.api_key,

@@ -193,7 +193,9 @@ class ConfigurableCloudTTSEngine:
     - query: URL 查询参数
     - audio_base64_path/audio_url_path/audio_path_path: JSON 响应中的音频字段路径
     - voice/language_type/format/sample_rate/rate/pitch/volume: 常用 TTS 参数
-    模板字符串可使用 {{text}}、{{model}}、{{voice}}、{{reference_path}}、{{emotion}}。
+    - instruction_mode: native/structured/mapped/none，声明模型的指令能力
+    - instruction_field: 通用 HTTP 请求中声音指令的字段路径，如 instructions 或 input.instruction
+    模板字符串可使用 {{text}}、{{model}}、{{voice}}、{{reference_path}}、{{emotion}}、{{instruction}}。
     """
 
     def __init__(
@@ -234,7 +236,9 @@ class ConfigurableCloudTTSEngine:
         headers.update(self.custom_params.get("headers") or {})
 
         request_url = self._resolve_request_url()
-        payload = self._build_payload(text, voice_name, reference_path, emo_text, emo_vector, request_url)
+        payload = self._build_payload(
+            text, voice_name, reference_path, emo_text, emo_vector, instruction, request_url,
+        )
         query = self.custom_params.get("query") or {}
 
         method = str(self.custom_params.get("method") or "POST").upper()
@@ -257,6 +261,7 @@ class ConfigurableCloudTTSEngine:
         reference_path: str | None,
         emo_text: str | None,
         emo_vector: list[float] | None,
+        instruction: str | None,
         request_url: str,
     ) -> dict[str, Any]:
         custom_voice = self.custom_params.get("voice")
@@ -268,6 +273,7 @@ class ConfigurableCloudTTSEngine:
             "voice": voice_value,
             "reference_path": reference_path or "",
             "emotion": emo_text or "",
+            "instruction": (instruction or "").strip(),
         }
         if "payload" in self.custom_params or "body" in self.custom_params:
             template = self.custom_params.get("payload") or self.custom_params.get("body") or {}
@@ -281,6 +287,8 @@ class ConfigurableCloudTTSEngine:
             language_type = self.custom_params.get("language_type")
             if language_type:
                 input_payload["language_type"] = language_type
+            if instruction and self.custom_params.get("supports_instruction", False):
+                input_payload["instruction"] = instruction.strip()
 
             payload: dict[str, Any] = {
                 "model": self.model,
@@ -310,7 +318,38 @@ class ConfigurableCloudTTSEngine:
         elif emo_text:
             payload["emotion"] = emo_text
         payload.update(self.custom_params.get("extra_payload") or {})
+        instruction_field = self._instruction_field()
+        if instruction and instruction_field:
+            self._set_nested(payload, instruction_field, instruction.strip())
         return {k: v for k, v in payload.items() if v is not None}
+
+    def _instruction_field(self) -> str | None:
+        """Return the provider-specific instruction path for non-CosyVoice HTTP adapters."""
+        configured = self.custom_params.get("instruction_field")
+        if configured is False or self.custom_params.get("supports_instruction") is False:
+            return None
+        if isinstance(configured, str) and configured.strip():
+            return configured.strip()
+        model = (self.model or "").lower()
+        if "qwen" in model and "instruct" in model:
+            return "input.instruction"
+        if model.startswith("gpt-4o") and "tts" in model:
+            return "instructions"
+        return None
+
+    @staticmethod
+    def _set_nested(payload: dict[str, Any], path: str, value: Any) -> None:
+        target = payload
+        parts = [part for part in str(path).split(".") if part]
+        if not parts:
+            return
+        for part in parts[:-1]:
+            child = target.get(part)
+            if not isinstance(child, dict):
+                child = {}
+                target[part] = child
+            target = child
+        target[parts[-1]] = value
 
     def _extract_audio(self, resp: requests.Response, save_path: str) -> bytes:
         content_type = (resp.headers.get("content-type") or "").lower()
@@ -524,22 +563,10 @@ class ConfigurableCloudTTSEngine:
                 kwargs[dst] = self.custom_params[src]
         if instruction and instruction.strip():
             prompt = instruction.strip()
-            model_name = (self.model or "").lower()
-            if model_name.startswith(("cosyvoice-v1", "cosyvoice-v2")):
-                # v1/v2 系统音色不接受自然语言 Instruct；将常用制作意见映射为
-                # 它们支持的语速、音高和音量参数，避免请求直接失败。
-                if any(word in prompt for word in ("慢", "克制", "舒缓", "停顿")):
-                    kwargs["speech_rate"] = min(int(kwargs.get("speech_rate", 0)), -20)
-                if any(word in prompt for word in ("快", "急促", "紧张")):
-                    kwargs["speech_rate"] = max(int(kwargs.get("speech_rate", 0)), 20)
-                if any(word in prompt for word in ("压低", "低沉", "低音")):
-                    kwargs["pitch_rate"] = min(int(kwargs.get("pitch_rate", 0)), -10)
-                if any(word in prompt for word in ("高昂", "明亮", "高音")):
-                    kwargs["pitch_rate"] = max(int(kwargs.get("pitch_rate", 0)), 10)
-                if any(word in prompt for word in ("轻声", "小声", "耳语")):
-                    kwargs["volume"] = min(int(kwargs.get("volume", 50)), 35)
-            elif self.custom_params.get("supports_instruction", True):
-                kwargs["instruction"] = prompt
+            self._apply_prosody_controls(kwargs, prompt)
+            prepared = self._prepare_cosyvoice_instruction(prompt)
+            if prepared:
+                kwargs["instruction"] = prepared
         if isinstance(self.custom_params.get("additional_params"), dict):
             kwargs["additional_params"] = self.custom_params["additional_params"]
 
@@ -551,6 +578,59 @@ class ConfigurableCloudTTSEngine:
 
         self._write_audio(save_path, audio_bytes)
         return audio_bytes
+
+    def _cosyvoice_instruction_mode(self) -> str:
+        """Resolve native/structured/mapped instruction behavior from model capabilities."""
+        configured = str(self.custom_params.get("instruction_mode") or "auto").strip().lower()
+        if configured in {"native", "structured", "mapped", "none"}:
+            return configured
+        if self.custom_params.get("supports_instruction") is False:
+            return "mapped"
+        model = (self.model or "").lower()
+        if model.startswith(("cosyvoice-v3.5-plus", "cosyvoice-v3.5-flash")):
+            return "native"
+        if model.startswith(("cosyvoice-v3-flash", "cosyvoice-v3-plus")):
+            # DashScope system voices accept a strict Chinese instruction grammar.
+            return "structured"
+        if model.startswith(("cosyvoice-v1", "cosyvoice-v2")):
+            return "mapped"
+        return "native" if self.custom_params.get("supports_instruction") is True else "none"
+
+    def _prepare_cosyvoice_instruction(self, prompt: str) -> str | None:
+        mode = self._cosyvoice_instruction_mode()
+        if mode in {"none", "mapped"}:
+            return None
+        if mode == "native":
+            return prompt[:100]
+
+        emotion_aliases = (
+            (("恐惧", "害怕", "惊恐"), "fearful"),
+            (("愤怒", "生气", "暴躁", "恼火"), "angry"),
+            (("悲伤", "伤心", "低落", "难过"), "sad"),
+            (("惊讶", "震惊", "意外"), "surprised"),
+            (("开心", "高兴", "欢快", "活泼", "兴奋"), "happy"),
+            (("厌恶", "嫌弃", "恶心"), "disgusted"),
+        )
+        emotion = "neutral"
+        for words, value in emotion_aliases:
+            if any(word in prompt for word in words):
+                emotion = value
+                break
+        return f"你说话的情感是{emotion}。"
+
+    @staticmethod
+    def _apply_prosody_controls(kwargs: dict[str, Any], prompt: str) -> None:
+        """Keep common speed/pitch/volume controls across Base and Instruct models."""
+        if any(word in prompt for word in ("慢", "克制", "舒缓", "停顿")):
+            kwargs["speech_rate"] = min(int(kwargs.get("speech_rate", 0)), -20)
+        if any(word in prompt for word in ("快", "急促", "紧张")):
+            kwargs["speech_rate"] = max(int(kwargs.get("speech_rate", 0)), 20)
+        if any(word in prompt for word in ("压低", "低沉", "低音")):
+            kwargs["pitch_rate"] = min(int(kwargs.get("pitch_rate", 0)), -10)
+        if any(word in prompt for word in ("高昂", "明亮", "高音")):
+            kwargs["pitch_rate"] = max(int(kwargs.get("pitch_rate", 0)), 10)
+        if any(word in prompt for word in ("轻声", "小声", "耳语")):
+            kwargs["volume"] = min(int(kwargs.get("volume", 50)), 35)
 
     def _synthesize_dashscope_sambert(self, text: str, save_path: str) -> bytes:
         try:

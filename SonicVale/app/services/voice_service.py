@@ -39,6 +39,12 @@ class VoiceService:
         {"name": "成熟男声·龙祥", "voice": "longxiang", "tags": ["预置", "CosyVoice-v1", "男", "中年", "成熟"], "sample": "二十年前的账，今天也该有个了结了。"},
     ]
 
+    COMMON_COSYVOICE_V3_INSTRUCT_PRESETS = [
+        {"name": "阳光男声·龙安洋", "voice": "longanyang", "tags": ["预置", "CosyVoice-v3", "男", "青年", "Instruct"], "sample": "别急，我们把刚才发生的事从头梳理一遍。", "instruction": "你说话的情感是neutral。"},
+        {"name": "元气女声·龙安欢", "voice": "longanhuan", "tags": ["预置", "CosyVoice-v3", "女", "青年", "Instruct"], "sample": "快看，我就知道这条线索一定有用！", "instruction": "你说话的情感是happy。"},
+        {"name": "故事女童·龙呼呼", "voice": "longhuhu_v3", "tags": ["预置", "CosyVoice-v3", "女", "儿童", "Instruct"], "sample": "姐姐，你有没有听见阁楼上传来的声音？", "instruction": "你说话的情感是fearful。"},
+    ]
+
     COMMON_EDGE_VOICE_PRESETS = [
         {
             "name": "旁白-温柔女声",
@@ -350,12 +356,21 @@ class VoiceService:
         target_dir: str | None = None,
         overwrite: bool = False,
     ) -> tuple[int, int, int, list[str], list[str], str]:
-        """Generate previews for CosyVoice-v1 system voices; no reference recording is required."""
+        """Generate model-compatible CosyVoice system-voice previews."""
         model = (getattr(tts_provider, "model", None) or "").strip().lower()
-        if not model.startswith("cosyvoice-v1"):
-            raise ValueError("当前功能只为 cosyvoice-v1 创建系统预置音色，请先选择对应的 TTS 引擎")
+        if not model.startswith("cosyvoice"):
+            raise ValueError("当前 TTS 引擎不是 CosyVoice，请先选择对应模型")
 
-        target_dir = target_dir or os.path.join(getConfigPath(), "voices", "cosyvoice-v1-presets")
+        if model.startswith(("cosyvoice-v3-flash", "cosyvoice-v3-plus")):
+            presets = self.COMMON_COSYVOICE_V3_INSTRUCT_PRESETS
+            preset_family = "cosyvoice-v3-instruct"
+        elif model.startswith(("cosyvoice-v1", "cosyvoice-v2")):
+            presets = self.COMMON_COSYVOICE_V1_PRESETS
+            preset_family = "cosyvoice-base"
+        else:
+            raise ValueError("该 CosyVoice 模型没有可安全复用的系统音色预设；声音复刻/设计音色请手动导入")
+
+        target_dir = target_dir or os.path.join(getConfigPath(), "voices", f"{preset_family}-presets")
         target_dir = os.path.abspath(os.path.expanduser(target_dir))
         os.makedirs(target_dir, exist_ok=True)
         engine = ConfigurableCloudTTSEngine(
@@ -367,7 +382,7 @@ class VoiceService:
         success_count = 0
         skipped_names: list[str] = []
         failed_names: list[str] = []
-        for preset in self.COMMON_COSYVOICE_V1_PRESETS:
+        for preset in presets:
             voice_name = preset["name"]
             existing = self.repository.get_by_name(voice_name, tts_provider.id)
             if existing and not overwrite:
@@ -375,7 +390,10 @@ class VoiceService:
                 continue
             audio_path = os.path.join(target_dir, f"{self._safe_filename(voice_name)}.mp3")
             try:
-                engine.synthesize(preset["sample"], save_path=audio_path, voice_name=preset["voice"])
+                engine.synthesize(
+                    preset["sample"], save_path=audio_path, voice_name=preset["voice"],
+                    instruction=preset.get("instruction"),
+                )
                 description = ",".join([*preset["tags"], "无需参考音频", f"cosyvoice_voice:{preset['voice']}"])
                 data = {
                     "name": voice_name,

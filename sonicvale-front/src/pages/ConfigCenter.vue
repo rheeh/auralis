@@ -120,6 +120,11 @@
               {{ row.model || (row.provider_type === 'edge' ? 'Edge 内置' : '未设置') }}
             </template>
           </el-table-column>
+          <el-table-column label="声音控制" min-width="150">
+            <template #default="{ row }">
+              <el-tag :type="ttsCapability(row).type" effect="plain">{{ ttsCapability(row).label }}</el-tag>
+            </template>
+          </el-table-column>
           <el-table-column prop="api_base_url" label="Base URL" min-width="240" />
 
           <el-table-column label="API Key" min-width="180">
@@ -242,7 +247,7 @@
             type="textarea"
             v-model="ttsForm.custom_params"
             :rows="8"
-            placeholder='可留 {}。推荐显式填写 driver：dashscope_cosyvoice、dashscope_sambert、http。HTTP 厂商支持 endpoint、headers、payload/body、query、auth_header、audio_url_path/audio_base64_path；payload 可用 {{text}}、{{model}}、{{voice}} 占位。'
+            placeholder='可留 {}。推荐显式填写 driver 和指令能力：instruction_mode 可用 native、structured、mapped、none；HTTP 可用 instruction_field 或在 payload 中加入 {{instruction}}。'
           />
         </el-form-item>
 
@@ -486,13 +491,27 @@ const loadTTS = async () => {
 const TTS_PARAM_PRESETS = [
   {
     key: 'dashscope_cosyvoice',
-    label: '阿里云 CosyVoice',
+    label: '阿里云 CosyVoice v3 Flash（指令控制）',
+    api_base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    model: 'cosyvoice-v3-flash',
+    params: {
+      driver: 'dashscope_cosyvoice',
+      voice: 'longanhuan',
+      format: 'mp3',
+      instruction_mode: 'structured',
+      supports_instruction: true
+    }
+  },
+  {
+    key: 'dashscope_cosyvoice_base',
+    label: '阿里云 CosyVoice v1（基础模式）',
     api_base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     model: 'cosyvoice-v1',
     params: {
       driver: 'dashscope_cosyvoice',
-      voice: 'longxiaochun',
-      format: 'mp3'
+      format: 'mp3',
+      instruction_mode: 'mapped',
+      supports_instruction: false
     }
   },
   {
@@ -516,7 +535,8 @@ const TTS_PARAM_PRESETS = [
       payload: {
         model: '{{model}}',
         input: '{{text}}',
-        voice: '{{voice}}'
+        voice: '{{voice}}',
+        instructions: '{{instruction}}'
       }
     }
   },
@@ -644,6 +664,24 @@ async function testTTS() {
 
 // ---------- 工具 ----------
 const maskKey = (val) => (val ? '•'.repeat(Math.min(val.length, 8)) : '（未设置）')
+const ttsCapability = (provider) => {
+  if (provider?.provider_type === 'edge') return { label: '参数控制', type: 'info' }
+  let params = {}
+  try { params = JSON.parse(provider?.custom_params || '{}') } catch { params = {} }
+  const model = String(provider?.model || '').toLowerCase()
+  const mode = params.instruction_mode || (
+    model.startsWith('cosyvoice-v3.5') ? 'native'
+      : model.startsWith('cosyvoice-v3') ? 'structured'
+        : model.startsWith('cosyvoice-v1') || model.startsWith('cosyvoice-v2') ? 'mapped'
+          : params.instruction_field || JSON.stringify(params.payload || {}).includes('{{instruction}}') ? 'native' : 'none'
+  )
+  return {
+    native: { label: '原生指令', type: 'success' },
+    structured: { label: '结构化指令', type: 'success' },
+    mapped: { label: '基础参数映射', type: 'warning' },
+    none: { label: '基础生成', type: 'info' },
+  }[mode] || { label: String(mode), type: 'info' }
+}
 const providerTypeLabel = (value) => {
   const map = {
     edge: 'Edge-TTS',
