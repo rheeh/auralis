@@ -2,7 +2,7 @@
   <div class="app-shell" :class="{ 'sidebar-compact': sidebarCompact, 'is-landing': route.name === 'Home' }">
     <aside v-if="route.name !== 'Home'" class="app-sidebar">
       <RouterLink to="/home" class="brand" aria-label="返回 Auralis 首页">
-        <span class="brand-mark"><img src="/auralis-mark.svg" alt="" /></span>
+        <span class="brand-mark" aria-hidden="true"><span class="app-brand-wave"><i v-for="i in 7" :key="i" /></span></span>
         <span class="brand-name">Auralis</span>
       </RouterLink>
 
@@ -21,7 +21,7 @@
       </nav>
 
       <section v-if="activeProjectId" class="project-nav">
-        <p class="nav-section-label">当前作品</p>
+        <p class="nav-section-label">当前项目</p>
         <div class="project-chip" :title="activeProjectName">
           <span>{{ projectInitial }}</span>
           <strong>{{ activeProjectName }}</strong>
@@ -117,7 +117,7 @@ const isDark = ref(false)
 const activeProject = ref(null)
 
 const primaryNav = [
-  { path: '/projects', label: '作品', icon: Tickets, match: ['/projects', '/home'] },
+  { path: '/projects', label: '项目', icon: Tickets, match: ['/projects', '/home'] },
   { path: '/voices', label: '音色', icon: Microphone, match: ['/voices'] },
   { path: '/queue', label: '任务', icon: DataLine, match: ['/queue'] },
 ]
@@ -132,13 +132,13 @@ const utilityNav = [
 ]
 
 const routeInfo = {
-  Home: ['作品', '欢迎回来', '从一个作品开始，继续你的广播剧制作。'],
-  Scripts: ['作品', '作品库', '创建、整理并继续最近的广播剧工程。'],
+  Home: ['项目', '欢迎回来', '从一个项目开始，继续你的广播剧制作。'],
+  Scripts: ['项目', '我的项目', '创建、整理并继续最近的广播剧工程。'],
   Studio: ['创作', 'AI 改编', '从原文到角色与台本，逐步确认并写入作品。'],
   StudioSession: ['创作', '继续改编', '恢复上次会话，继续确认角色和台本。'],
   VoiceManager: ['资源', '音色库', '管理可跨作品复用的角色音色。'],
   Queue: ['生产', '任务队列', '查看生成进度，处理失败与等待任务。'],
-  ProjectOverview: ['作品', '制作总览', '聚焦当前缺口和下一步制作动作。'],
+  ProjectOverview: ['项目', '制作总览', '聚焦当前缺口和下一步制作动作。'],
   ProjectDubbingDetail: ['制作', '台本与配音', '编辑章节、台词、声线与音频结果。'],
   ProjectWorkspace: ['项目', '项目工作台', '从小说原文到逐句音频，在一个页面完成。'],
   Roles: ['制作', '角色与声线', '为当前作品分配角色层级和配音策略。'],
@@ -150,7 +150,7 @@ const routeInfo = {
 }
 
 const activeProjectId = computed(() => Number(route.params.id || route.query.project_id) || 0)
-const activeProjectName = computed(() => activeProject.value?.name || `作品 #${activeProjectId.value}`)
+const activeProjectName = computed(() => activeProject.value?.name || `项目 #${activeProjectId.value}`)
 const projectInitial = computed(() => activeProjectName.value.trim().slice(0, 1) || '作')
 const currentRouteInfo = computed(() => routeInfo[route.name] || ['工作区', 'Auralis', 'AI 广播剧创作空间'])
 const routeGroup = computed(() => currentRouteInfo.value[0])
@@ -591,6 +591,67 @@ body,
     radial-gradient(circle at 92% -4%, color-mix(in srgb, var(--auralis-mint) 13%, transparent), transparent 30%),
     var(--el-bg-color-page);
 }
+
+/* Auralis light studio system */
+.app-shell:not(.is-landing) {
+  --sidebar-width: 244px;
+  background: linear-gradient(135deg, #edf7ff 0%, #fbfbf8 46%, #fff7ef 100%);
+}
+
+.app-shell:not(.is-landing).sidebar-compact { --sidebar-width: 76px; }
+
+.app-sidebar {
+  padding: 22px 16px 16px;
+  color: #23364d;
+  border-right: 1px solid rgba(137, 166, 196, .18);
+  background:
+    radial-gradient(circle at 22% 10%, rgba(120, 205, 250, .22), transparent 27%),
+    radial-gradient(circle at 78% 74%, rgba(255, 216, 181, .2), transparent 31%),
+    rgba(247, 251, 253, .8);
+  box-shadow: 12px 0 42px rgba(56, 86, 114, .06);
+  backdrop-filter: blur(24px);
+}
+
+.brand { height: 52px; margin: 0 10px 30px; color: #203149; gap: 13px; }
+.brand-mark { display:grid;place-items:center;width:46px;height:46px;flex-basis:46px;border-radius:13px;background:linear-gradient(145deg,rgba(171,229,255,.82),rgba(232,244,255,.92) 52%,rgba(255,218,230,.78));box-shadow:0 9px 24px rgba(74,137,185,.12)}
+.brand-mark::after { display:none; }
+.app-brand-wave { display:flex;align-items:center;gap:2px;height:24px; }
+.app-brand-wave i { width:3px;border-radius:4px;background:linear-gradient(180deg,#318ee9,#33c8cd 58%,#ff8fa4);transform-origin:center;animation:app-equalizer 1.12s ease-in-out infinite; }
+.app-brand-wave i:nth-child(1),.app-brand-wave i:nth-child(7){height:7px;animation-delay:-.15s}.app-brand-wave i:nth-child(2),.app-brand-wave i:nth-child(6){height:13px;animation-delay:-.45s}.app-brand-wave i:nth-child(3),.app-brand-wave i:nth-child(5){height:19px;animation-delay:-.7s}.app-brand-wave i:nth-child(4){height:25px;animation-delay:-.3s}
+@keyframes app-equalizer{0%,100%{transform:scaleY(.48);opacity:.65}45%{transform:scaleY(1.08);opacity:1}70%{transform:scaleY(.72);opacity:.86}}
+.brand-name { color:#203149;font-size:22px;font-weight:720; }
+
+.sidebar-nav,.project-nav nav { gap:7px; }
+.sidebar-link { min-height:48px;padding:0 15px;border-radius:14px;color:#637387;font-size:15px; }
+.sidebar-link:hover,.sidebar-link:focus-visible { color:#246fa9;background:rgba(255,255,255,.62); }
+.sidebar-link.active,.sidebar-link.router-link-active { color:#267dcc;border-color:rgba(255,255,255,.8);background:rgba(255,255,255,.9);box-shadow:0 12px 30px rgba(61,103,139,.11),inset 0 0 0 1px rgba(140,194,229,.16); }
+.project-nav { border-top-color:rgba(104,139,172,.13); }
+.nav-section-label { color:#8795a5;letter-spacing:1.1px; }
+.project-chip { border:1px solid rgba(135,170,199,.15);background:rgba(255,255,255,.58); }
+.project-chip strong { color:#34465b; }
+.utility-nav { border-top-color:rgba(104,139,172,.13); }
+.sidebar-edge-toggle { border-color:rgba(117,158,194,.25);color:#61758b;background:rgba(255,255,255,.9);box-shadow:7px 0 18px rgba(45,77,105,.08); }
+.sidebar-edge-toggle:hover,.sidebar-edge-toggle:focus-visible { color:#fff;background:linear-gradient(180deg,#4ba4e8,#36bfc5); }
+
+.app-stage { grid-template-rows:78px minmax(0,1fr); }
+.workspace-bar { padding:0 30px;border-bottom:1px solid rgba(128,157,184,.14);background:rgba(255,255,255,.56);backdrop-filter:blur(22px); }
+.breadcrumbs { color:#758498;font-size:14px; }
+.breadcrumbs strong { color:#1e3048;font-size:18px; }
+.workspace-title p { color:#8995a5;font-size:12px; }
+.icon-button { width:40px;height:40px;border-radius:12px;border-color:rgba(123,154,181,.2);background:rgba(255,255,255,.68); }
+.page-surface { padding:24px 30px 34px;background:radial-gradient(circle at 90% 0,rgba(180,224,250,.24),transparent 28%),radial-gradient(circle at 68% 92%,rgba(255,220,190,.18),transparent 27%),linear-gradient(145deg,#f6fbff,#fdfcf9 52%,#fffaf4); }
+
+.page-surface :is(.el-button,.el-input__wrapper,.el-select__wrapper,.el-textarea__inner) { border-radius:12px; }
+.page-surface .el-button--primary { border-color:transparent;background:linear-gradient(135deg,#347fd1,#2abac5);box-shadow:0 8px 20px rgba(49,133,187,.17); }
+.page-surface :is(.el-card,.el-table,.el-dialog,.el-collapse,.el-tabs--border-card) { --el-border-radius-base:16px; }
+.page-surface .el-table { border-radius:16px;overflow:hidden;background:rgba(255,255,255,.76); }
+.page-surface > :not(.project-canvas-page) :is(.page-header,.queue-header,.config-head,.header-bar,.voice-table-shell,.filter-bar,.audio-task-panel,.panel,.metrics-card) { border-color:rgba(132,167,195,.15)!important;border-radius:18px!important;background:rgba(255,255,255,.7)!important;box-shadow:0 14px 38px rgba(58,89,117,.06)!important;backdrop-filter:blur(18px); }
+
+.dark .app-sidebar { color:#dce8f1;background:linear-gradient(178deg,#15162f,#101b36); }
+.dark .brand,.dark .brand-name { color:#fff; }
+.dark .sidebar-link { color:#aebfca; }
+.dark .sidebar-link.active,.dark .sidebar-link.router-link-active { color:#fff;border-color:rgba(113,226,255,.3);background:rgba(77,213,237,.16); }
+.dark .workspace-bar { background:rgba(16,27,49,.78); }
 
 @media (max-width: 920px) {
   .app-shell {

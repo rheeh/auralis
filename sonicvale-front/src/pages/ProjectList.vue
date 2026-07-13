@@ -2,12 +2,12 @@
   <div class="project-canvas-page">
     <section class="canvas-hero">
       <div>
-        <p class="eyebrow">作品库</p>
+        <p class="eyebrow">项目空间</p>
         <h1>让一个故事开始发声</h1>
-        <p class="hero-copy">每个作品都保留章节、角色、声线和生成进度。先写故事，模型、TTS 和保存位置都可以稍后补齐。</p>
+        <p class="hero-copy">每个项目都保留章节、角色、声线和生成进度。先写故事，模型、TTS 和保存位置都可以稍后补齐。</p>
       </div>
       <div class="hero-actions">
-        <el-button type="primary" :icon="Plus" @click="openCreateDialog('studio')">新建作品</el-button>
+        <el-button type="primary" :icon="Plus" @click="openCreateDialog('studio')">新建项目</el-button>
       </div>
     </section>
 
@@ -32,7 +32,7 @@
       <div class="section-heading">
         <div>
           <p class="eyebrow">最近</p>
-          <h2>你的作品</h2>
+          <h2>我的项目</h2>
         </div>
         <el-button :icon="Refresh" @click="loadAll">刷新</el-button>
       </div>
@@ -49,6 +49,11 @@
           @keydown.enter.prevent="openProject(item)"
           @keydown.space.prevent="openProject(item)"
         >
+          <div class="project-cover" aria-hidden="true">
+            <span class="cover-ring" />
+            <span class="cover-wave"><i v-for="n in 18" :key="n" /></span>
+            <strong>{{ item.name.slice(0, 1) }}</strong>
+          </div>
           <header class="card-header">
             <div>
               <h3 :title="item.name">{{ item.name }}</h3>
@@ -125,13 +130,13 @@
         </article>
       </div>
 
-      <el-empty v-else description="还没有作品，从一段正文开始吧">
-        <el-button type="primary" :icon="Plus" @click="openCreateDialog('studio')">新建作品</el-button>
+      <el-empty v-else description="还没有项目，从一段正文开始吧">
+        <el-button type="primary" :icon="Plus" @click="openCreateDialog('studio')">新建项目</el-button>
       </el-empty>
     </section>
 
     <el-dialog
-      title="新建作品"
+      title="新建项目"
       v-model="dialogVisible"
       width="720px"
       class="canvas-dialog"
@@ -160,7 +165,7 @@
             type="textarea"
             :rows="3"
             resize="none"
-            placeholder="可选：作品名、风格、主角关系、想做成几集等"
+            placeholder="可选：项目名、风格、主角关系、想做成几集等"
           />
         </el-form-item>
 
@@ -893,6 +898,36 @@ async function pickRootDir() {
 .full {
   width: 100%;
 }
+
+/* 首页同源的轻盈项目视觉 */
+.project-canvas-page { gap:24px; }
+.canvas-hero { position:relative;min-height:220px;padding:42px 48px;overflow:hidden;border-color:rgba(137,171,199,.16);border-radius:22px;background:radial-gradient(circle at 74% 48%,rgba(255,247,226,.95),transparent 17%),radial-gradient(circle at 80% 50%,transparent 0 14%,rgba(255,255,255,.82) 14.4% 15.1%,transparent 15.5%),linear-gradient(120deg,rgba(235,248,255,.96),rgba(245,245,255,.88) 58%,rgba(255,246,237,.92));box-shadow:0 18px 50px rgba(65,96,123,.08)}
+.canvas-hero::after { content:"";position:absolute;left:42%;right:-4%;top:51%;height:54px;opacity:.46;background:repeating-linear-gradient(90deg,transparent 0 8px,rgba(55,158,220,.55) 8px 10px,transparent 10px 15px);mask:linear-gradient(180deg,transparent 0,black 35% 65%,transparent 100%);transform:skewY(-1deg);pointer-events:none; }
+.canvas-hero > * { position:relative;z-index:2; }
+.canvas-hero h1 { max-width:430px;font-size:38px;line-height:1.25;color:#1f3048; }
+.canvas-hero .hero-copy { max-width:560px;color:#718095; }
+.canvas-hero .eyebrow { color:#3598bf;font-weight:700;letter-spacing:.12em; }
+.canvas-hero .el-button { height:48px;padding-inline:22px;border-radius:14px; }
+.quick-board { grid-template-columns:repeat(2,minmax(0,1fr));gap:20px; }
+.quick-tile { min-height:122px;padding:22px;border-color:rgba(135,169,197,.15);border-radius:18px;background:rgba(255,255,255,.7);box-shadow:0 12px 35px rgba(63,91,116,.055);backdrop-filter:blur(16px); }
+.primary-tile { background:linear-gradient(135deg,rgba(232,248,255,.88),rgba(255,255,255,.78),rgba(255,244,236,.62)); }
+.tile-icon { width:42px;height:42px;border-radius:13px;background:linear-gradient(145deg,#e0f3ff,#eef1ff); }
+.section-heading { padding:4px 2px; }
+.section-heading h2 { color:#22334a;font-size:24px; }
+.project-grid { grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px; }
+.project-card { gap:16px;padding:0 18px 18px;overflow:hidden;border-color:rgba(132,166,194,.14);border-radius:20px;background:rgba(255,255,255,.76);box-shadow:0 14px 38px rgba(61,89,114,.07); }
+.project-card:hover,.project-card:focus-visible { transform:translateY(-4px);border-color:rgba(66,155,211,.36);box-shadow:0 22px 46px rgba(57,94,125,.13); }
+.project-cover { position:relative;height:118px;margin:0 -18px;overflow:hidden;background:radial-gradient(circle at 72% 34%,rgba(255,252,236,.95),transparent 18%),linear-gradient(145deg,#ccecff,#edf0ff 53%,#ffe8d7); }
+.project-card:nth-child(3n+2) .project-cover { background:radial-gradient(circle at 26% 38%,rgba(255,255,255,.86),transparent 18%),linear-gradient(145deg,#d5ecf7,#e9e5fa 52%,#f9e5ea); }
+.project-card:nth-child(3n) .project-cover { background:radial-gradient(circle at 70% 33%,rgba(255,249,226,.92),transparent 17%),linear-gradient(145deg,#bfe1ed,#e4f2ed 50%,#f8dfcc); }
+.cover-ring { position:absolute;right:12%;top:-45%;width:160px;aspect-ratio:1;border:2px solid rgba(255,255,255,.88);border-radius:50%;box-shadow:0 0 18px rgba(255,255,255,.8),inset 0 0 24px rgba(255,255,255,.35); }
+.cover-wave { position:absolute;left:8%;right:8%;top:50%;display:flex;align-items:center;gap:5px;height:44px; }
+.cover-wave i { width:2px;height:calc(6px + (var(--wave, 1) * 1px));border-radius:3px;background:rgba(56,146,203,.45); }
+.cover-wave i:nth-child(3n){height:28px}.cover-wave i:nth-child(4n){height:16px}.cover-wave i:nth-child(5n){height:38px}
+.project-cover > strong { position:absolute;right:22%;bottom:15px;color:rgba(33,61,87,.72);font-family:Georgia,serif;font-size:30px;font-weight:400; }
+.workflow-canvas { border-color:rgba(125,164,195,.13);border-radius:14px;background:linear-gradient(145deg,rgba(239,249,255,.72),rgba(255,255,255,.7)); }
+.workflow-node { border-color:rgba(130,163,190,.14);border-radius:11px;background:rgba(255,255,255,.74); }
+.project-footer { border-top-color:rgba(128,159,185,.13); }
 
 @media (max-width: 920px) {
   .canvas-hero,
