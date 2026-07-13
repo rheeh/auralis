@@ -24,7 +24,6 @@
           <p class="product-kicker enter-title">AI AUDIO DRAMA STUDIO</p>
           <h1 class="enter-title">Auralis</h1>
           <p class="cn-title enter-subtitle">AI 广 播 剧</p>
-          <p class="hero-description enter-subtitle">把小说变成真正可制作的广播剧台本，为每个角色建立声线，并逐句生成、试听与精修。</p>
           <div class="hero-actions enter-actions">
             <RouterLink class="start-button" to="/projects"><span>✦</span>开始创作</RouterLink>
             <button class="demo-button" type="button" :aria-pressed="demoPlaying" @click="toggleDemo">
@@ -164,46 +163,26 @@ function drawWave(now) {
   ctx.lineTo(width, centerY)
   ctx.stroke()
   ctx.restore()
-  const gradient = ctx.createLinearGradient(0,0,width,0)
-  gradient.addColorStop(0,'rgba(71,161,231,.12)')
-  gradient.addColorStop(.26,'rgba(55,155,232,.82)')
-  gradient.addColorStop(.56,'rgba(45,195,207,.98)')
-  gradient.addColorStop(.78,'rgba(255,139,156,.9)')
-  gradient.addColorStop(1,'rgba(255,181,117,.12)')
-  ctx.strokeStyle = gradient
-  ctx.lineWidth = 2
+  ctx.strokeStyle = 'rgba(104, 190, 219, .58)'
+  ctx.lineWidth = 1.8
   ctx.lineCap = 'round'
-  ctx.shadowBlur = 9 + energy*8
-  ctx.shadowColor = 'rgba(52,170,221,.62)'
+  ctx.shadowBlur = 7 + energy*5
+  ctx.shadowColor = 'rgba(112, 199, 225, .32)'
   ctx.beginPath()
-  for (let x=2;x<=width;x+=7) {
+  for (let x=2;x<=width;x+=8) {
     const normalized=x/width
-    const focus=.18 + Math.exp(-Math.pow((normalized-.62)/.27,2))*.82
+    const focus=.28 + Math.exp(-Math.pow((normalized-.62)/.3,2))*.72
     const harmonic=Math.abs(Math.sin(x*.071-phase*3.4)*.58 + Math.sin(x*.023-phase*1.7)*.3 + Math.sin(x*.13-phase*4.8)*.12)
-    const amplitude=2.5 + focus*(6 + harmonic*(22+energy*34))
+    const amplitude=5 + focus*(13 + harmonic*(40+energy*26))
     ctx.moveTo(x,centerY-amplitude)
     ctx.lineTo(x,centerY+amplitude)
   }
   ctx.stroke()
-  ctx.globalAlpha=.22
-  ctx.lineWidth=1.2
-  ctx.beginPath()
-  for (let x=0;x<=width;x+=4) {
-    const focus=Math.exp(-Math.pow((x/width-.64)/.27,2))
-    const y=centerY + Math.sin(x*.032-phase*2.1)*(3+focus*(11+energy*16))
-    x===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y)
-  }
-  ctx.stroke()
-  ctx.globalAlpha=1
   if (demoPlaying.value) {
     const playhead=((phase*.12)%1)*width
-    const glow=ctx.createRadialGradient(playhead,centerY,0,playhead,centerY,22)
-    glow.addColorStop(0,'rgba(255,255,255,.95)')
-    glow.addColorStop(.25,'rgba(53,201,211,.72)')
-    glow.addColorStop(1,'rgba(53,201,211,0)')
-    ctx.fillStyle=glow
+    ctx.fillStyle='rgba(104, 190, 219, .72)'
     ctx.beginPath()
-    ctx.arc(playhead,centerY,22,0,Math.PI*2)
+    ctx.arc(playhead,centerY,5,0,Math.PI*2)
     ctx.fill()
   }
   frameId=requestAnimationFrame(drawWave)
@@ -242,7 +221,7 @@ function formatDate(value){if(!value)return '最近编辑';const date=new Date(v
 @media(max-width:760px){.singer-parallax{right:calc(50% - 135px);top:49%;width:270px;height:360px}}
 
 /* 品牌节拍与主视觉播放态 */
-.brand-wave{height:32px;padding:0 5px}.brand-wave i{background:linear-gradient(180deg,#2d8fee,#2fc5cc 58%,#ff8fa4);transform-origin:center;animation:brand-equalizer 1.12s ease-in-out infinite}.brand-wave i:nth-child(1),.brand-wave i:nth-child(7){animation-delay:-.15s}.brand-wave i:nth-child(2),.brand-wave i:nth-child(6){animation-delay:-.45s}.brand-wave i:nth-child(3),.brand-wave i:nth-child(5){animation-delay:-.7s}.brand-wave i:nth-child(4){animation-delay:-.3s}.wave-canvas{opacity:1;filter:drop-shadow(0 0 7px rgba(39,165,219,.25))}.singer-parallax{right:calc(7vw + min(56vw,700px)/2 - 113px);top:30%;width:226px;height:334px}.demo-playing .brand-wave i{animation-duration:.72s}@keyframes brand-equalizer{0%,100%{transform:scaleY(.46);opacity:.64}45%{transform:scaleY(1.08);opacity:1}70%{transform:scaleY(.72);opacity:.86}}
+.brand-wave{height:32px;padding:0 5px}.brand-wave i{background:linear-gradient(180deg,#2d8fee,#2fc5cc 58%,#ff8fa4);transform-origin:center;animation:brand-equalizer 1.12s ease-in-out infinite}.brand-wave i:nth-child(1),.brand-wave i:nth-child(7){animation-delay:-.15s}.brand-wave i:nth-child(2),.brand-wave i:nth-child(6){animation-delay:-.45s}.brand-wave i:nth-child(3),.brand-wave i:nth-child(5){animation-delay:-.7s}.brand-wave i:nth-child(4){animation-delay:-.3s}.wave-canvas{opacity:1;filter:drop-shadow(0 0 5px rgba(100,188,218,.16))}.singer-parallax{right:calc(7vw + min(56vw,700px)/2 - 113px);top:30%;width:226px;height:334px}.demo-playing .brand-wave i{animation-duration:.72s}@keyframes brand-equalizer{0%,100%{transform:scaleY(.46);opacity:.64}45%{transform:scaleY(1.08);opacity:1}70%{transform:scaleY(.72);opacity:.86}}
 @media(max-width:1100px){.singer-parallax{right:calc(-2vw + min(56vw,700px)/2 - 106px);width:212px;height:320px}}
 @media(max-width:760px){.singer-parallax{right:calc(50% - 90px);top:56%;width:180px;height:240px}}
 </style>
