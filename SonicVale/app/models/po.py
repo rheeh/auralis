@@ -138,6 +138,8 @@ class LinePO(Base):
     voice_profile = Column(Text, nullable=True)
     production_note = Column(Text, nullable=True)
     audio_events = Column(JSON, nullable=True)
+    audio_versions = Column(JSON, nullable=True)
+    active_audio_version_id = Column(String(64), nullable=True)
     audio_variants = Column(JSON, nullable=True)
     active_audio_variant_id = Column(String(64), nullable=True)
     # 情绪 和 强弱
@@ -192,6 +194,7 @@ class AdaptationRunPO(Base):
     error_message = Column(Text, nullable=True)
     parsed_json = Column(JSON, nullable=True)
     draft_json = Column(JSON, nullable=True)
+    review_json = Column(JSON, nullable=True)
     final_json = Column(JSON, nullable=True)
     session_id = Column(String(64), nullable=True, index=True)
     is_conversational = Column(Boolean, default=False, nullable=False)

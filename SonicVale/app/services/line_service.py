@@ -23,6 +23,7 @@ from app.core.audio_engin import AudioProcessor
 from app.core.config import getConfigPath, getFfmpegPath
 from app.core.subtitle import subtitle_engine
 from app.core.tts_engine import ConfigurableCloudTTSEngine, EdgeTTSEngine, TTSEngine
+from app.core.tts_guidance import build_voice_instruction, edge_prosody
 from app.dto.line_dto import LineCreateDTO, LineOrderDTO, LineAudioProcessDTO, LineAudioVariantDTO
 from app.entity.line_entity import LineEntity
 from app.models.po import LinePO, RolePO
@@ -182,24 +183,32 @@ class LineService:
         line_type: str | None = None,
         track: str | None = None,
         emotion_name: str | None = None,
+        strength_name: str | None = None,
         production_note: str | None = None,
     ):
         content = self.clean_tts_text(content)
         if not content:
             raise ValueError("可朗读文本清洗后为空，请把音效提示移到声音事件或制作备注")
-        instruction_parts = []
-        if emotion_name:
-            instruction_parts.append(f"情绪为{emotion_name}")
-        if production_note and production_note.strip():
-            instruction_parts.append(production_note.strip())
-        voice_instruction = "。".join(instruction_parts)
+        voice_instruction = build_voice_instruction(emotion_name, strength_name, production_note)
         route = self.resolve_tts_route(role, line_type=line_type, track=track, emotion_name=emotion_name)
+        provider = self.tts_provider_repository.get_by_id(tts_provider_id) if self.tts_provider_repository and tts_provider_id else None
+        if (getattr(provider, "provider_type", None) or "").lower() == "edge":
+            route = "edge"
         if self.resolve_cosyvoice_voice(voice):
             route = "cloud"
         if route == "skip":
             return b""
         if route == "edge":
-            return self.generate_edge_audio(content, save_path, role=role, voice=voice, instruction=voice_instruction)
+            return self.generate_edge_audio(
+                content,
+                save_path,
+                role=role,
+                voice=voice,
+                instruction=voice_instruction,
+                emotion_name=emotion_name,
+                strength_name=strength_name,
+                production_note=production_note,
+            )
         return self.generate_cloud_audio(
             reference_path,
             tts_provider_id,
@@ -217,14 +226,27 @@ class LineService:
         text = re.sub(r"(?:\([^()]*\)|（[^（）]*）|\[[^\[\]]*\]|【[^【】]*】)", "", text)
         return re.sub(r"[ \t]+", "", text).strip()
 
-    def generate_edge_audio(self, content, save_path=None, role=None, voice=None, instruction: str | None = None):
+    def generate_edge_audio(
+        self,
+        content,
+        save_path=None,
+        role=None,
+        voice=None,
+        instruction: str | None = None,
+        emotion_name: str | None = None,
+        strength_name: str | None = None,
+        production_note: str | None = None,
+    ):
         edge_voice = self.resolve_edge_voice(role=role, voice=voice)
-        prompt = instruction or ""
-        rate = "-20%" if any(word in prompt for word in ("慢", "克制", "舒缓", "停顿")) else "+20%" if any(word in prompt for word in ("快", "急促", "紧张")) else "+0%"
-        pitch = "-10Hz" if any(word in prompt for word in ("压低", "低沉", "低音")) else "+10Hz" if any(word in prompt for word in ("高昂", "明亮", "高音")) else "+0Hz"
-        volume = "-25%" if any(word in prompt for word in ("轻声", "小声", "耳语")) else "+0%"
+        guidance = production_note if production_note is not None else instruction
+        prosody = edge_prosody(emotion_name, strength_name, guidance)
         return EdgeTTSEngine().synthesize(
-            content, save_path=save_path, voice=edge_voice, rate=rate, pitch=pitch, volume=volume,
+            content,
+            save_path=save_path,
+            voice=edge_voice,
+            rate=prosody["rate"],
+            pitch=prosody["pitch"],
+            volume=prosody["volume"],
         )
 
     def resolve_edge_voice(self, role=None, voice=None) -> str:
@@ -246,7 +268,7 @@ class LineService:
 
         provider_type = (getattr(tts_provider, "provider_type", None) or "cloud").lower()
         if provider_type == "edge":
-            return EdgeTTSEngine().synthesize(content, save_path=save_path, voice=self.resolve_edge_voice(voice=voice))
+            return self.generate_edge_audio(content, save_path=save_path, voice=voice, instruction=instruction)
 
         if not tts_provider.api_base_url:
             raise Exception("TTS服务地址未配置，请先在配置中心设置TTS服务")
@@ -373,6 +395,9 @@ class LineService:
             shutil.copy2(source_path, target_path)
 
         production_note = self._clear_placeholder_note(getattr(po, "production_note", None))
+        po.audio_versions = []
+        po.active_audio_version_id = None
+        po.active_audio_variant_id = None
         self.repository.update(po.id, {
             "audio_path": target_path,
             "status": "done",
@@ -750,12 +775,85 @@ class LineService:
         else:
             return False
 
+    def ensure_generated_audio_version(self, line_id: int) -> dict | None:
+        """Archive a legacy source before a regeneration overwrites it."""
+        line = self.repository.get_by_id(line_id)
+        if not line:
+            raise ValueError("台词不存在")
+        versions = list(getattr(line, "audio_versions", None) or [])
+        if versions:
+            active_id = getattr(line, "active_audio_version_id", None)
+            return next((item for item in versions if item.get("id") == active_id), versions[-1])
+        source_path = os.path.abspath(os.path.expanduser(getattr(line, "audio_path", None) or ""))
+        if not source_path or not os.path.isfile(source_path):
+            return None
+        return self.register_generated_audio_version(line_id, source_path, {"origin": "legacy"})
+
+    def register_generated_audio_version(
+        self,
+        line_id: int,
+        source_path: str,
+        metadata: dict | None = None,
+    ) -> dict:
+        """Copy one TTS result into immutable version storage and make it current."""
+        line = self.repository.get_by_id(line_id)
+        if not line:
+            raise ValueError("台词不存在")
+        source_path = os.path.abspath(os.path.expanduser(source_path or ""))
+        if not source_path or not os.path.isfile(source_path):
+            raise FileNotFoundError("生成音频文件不存在")
+
+        versions = list(getattr(line, "audio_versions", None) or [])
+        version_id = uuid4().hex[:12]
+        extension = os.path.splitext(source_path)[1].lower() or ".wav"
+        version_dir = os.path.join(os.path.dirname(source_path), "generated_versions")
+        os.makedirs(version_dir, exist_ok=True)
+        target_path = os.path.join(version_dir, f"line_{line_id}_{version_id}{extension}")
+        shutil.copy2(source_path, target_path)
+        version = {
+            "id": version_id,
+            "label": f"版本 {len(versions) + 1}",
+            "kind": "generated",
+            "audio_path": target_path,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            **(metadata or {}),
+        }
+        versions.append(version)
+        line.active_audio_variant_id = None
+        self.repository.update(line_id, {
+            "audio_versions": versions,
+            "active_audio_version_id": version_id,
+        })
+        return version
+
+    def get_generated_audio_version(self, line_id: int, version_id: str) -> dict:
+        line = self.repository.get_by_id(line_id)
+        if not line:
+            raise ValueError("台词不存在")
+        version = next(
+            (item for item in (getattr(line, "audio_versions", None) or []) if item.get("id") == version_id),
+            None,
+        )
+        if not version:
+            raise ValueError("生成音频版本不存在")
+        return version
+
+    def activate_generated_audio_version(self, line_id: int, version_id: str) -> dict:
+        line = self.repository.get_by_id(line_id)
+        version = self.get_generated_audio_version(line_id, version_id)
+        audio_path = os.path.abspath(os.path.expanduser(version.get("audio_path") or ""))
+        if not os.path.isfile(audio_path):
+            raise FileNotFoundError("生成音频版本文件不存在")
+        line.active_audio_variant_id = None
+        self.repository.update(line_id, {"active_audio_version_id": version_id})
+        return version
+
     def create_audio_variant(self, line_id: int, dto: LineAudioVariantDTO) -> dict:
         """Create a non-destructive processed version while preserving the generated source."""
         line = self.repository.get_by_id(line_id)
         if not line:
             raise ValueError("台词不存在")
-        source_path = os.path.abspath(os.path.expanduser(line.audio_path or ""))
+        source_path = self.resolve_audio_path(line, original=True)
         if not source_path or not os.path.isfile(source_path):
             raise FileNotFoundError("该台词还没有可处理的原始音频")
 
@@ -804,6 +902,7 @@ class LineService:
             "silence_sec": float(dto.silence_sec or 0),
             "current_ms": dto.current_ms,
             "region_action": region_action or None,
+            "source_audio_version_id": getattr(line, "active_audio_version_id", None),
             "audio_path": target_path,
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
@@ -827,6 +926,15 @@ class LineService:
             variant_path = os.path.abspath(os.path.expanduser(raw_variant_path)) if raw_variant_path else ""
             if variant_path and os.path.isfile(variant_path):
                 return variant_path
+        versions = list(getattr(line, "audio_versions", None) or [])
+        active_version_id = getattr(line, "active_audio_version_id", None)
+        version = next((item for item in versions if item.get("id") == active_version_id), None)
+        if not version and versions:
+            version = versions[-1]
+        raw_version_path = (version or {}).get("audio_path") or ""
+        version_path = os.path.abspath(os.path.expanduser(raw_version_path)) if raw_version_path else ""
+        if version_path and os.path.isfile(version_path):
+            return version_path
         source_path = getattr(line, "audio_path", None) or ""
         return os.path.abspath(os.path.expanduser(source_path)) if source_path else ""
 
@@ -924,6 +1032,8 @@ class LineService:
             "sound_prompt": getattr(line, "sound_prompt", None),
             "production_note": getattr(line, "production_note", None),
             "audio_events": getattr(line, "audio_events", None) or [],
+            "audio_versions": getattr(line, "audio_versions", None) or [],
+            "active_audio_version_id": getattr(line, "active_audio_version_id", None),
             "audio_variants": getattr(line, "audio_variants", None) or [],
             "active_audio_variant_id": getattr(line, "active_audio_variant_id", None),
             "is_placeholder_material": self._is_placeholder_material(line),

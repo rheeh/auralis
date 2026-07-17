@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from uuid import uuid4
 import os
 import sys
@@ -9,7 +10,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.config import CHAT_EVENT_REPLAY_LIMIT, LANGGRAPH_CHAT_UI_ENABLED, LANGGRAPH_ENABLED, LANGGRAPH_TTS_REVIEW_ENABLED
+from app.core.config import CHAT_EVENT_REPLAY_LIMIT, WORKFLOW_CHAT_UI_ENABLED, WORKFLOW_TTS_REVIEW_ENABLED
 from app.core.config import getConfigPath
 from app.core.response import Res
 from app.db.database import SessionLocal, get_db
@@ -20,6 +21,7 @@ from app.services.audio_task_service import AudioTaskService
 from app.services.chat_session_service import ChatSessionService
 from app.services.drama_commit_service import DramaCommitService
 from app.services.drama_workflow_service import DramaWorkflowService, WorkflowConflictError
+from app.services.production_assistant_service import ProductionAssistantAgent
 
 
 router = APIRouter(prefix="/chat", tags=["Conversational Drama Workflow"])
@@ -53,14 +55,38 @@ def _run_action(session_id: str, action: dict) -> None:
         db.close()
 
 
+def _run_assistant(session_id: str, message_id: str, queue) -> None:
+    db = SessionLocal()
+    try:
+        ProductionAssistantAgent(db, queue).run_turn(session_id, message_id)
+    finally:
+        db.close()
+
+
+class _ThreadsafeQueueProxy:
+    """Schedule asyncio queue writes from FastAPI's background worker thread."""
+
+    def __init__(self, queue, loop: asyncio.AbstractEventLoop):
+        self.queue = queue
+        self.loop = loop
+
+    def full(self) -> bool:
+        return bool(self.queue.maxsize and self.queue.qsize() >= self.queue.maxsize)
+
+    def put_nowait(self, item) -> None:
+        self.loop.call_soon_threadsafe(self.queue.put_nowait, item)
+
+
 @router.get("/capabilities", response_model=Res[dict])
 def workflow_capabilities():
     return Res(data={
-        "langgraph_enabled": LANGGRAPH_ENABLED,
-        "chat_ui_enabled": LANGGRAPH_CHAT_UI_ENABLED,
-        "tts_review_enabled": LANGGRAPH_TTS_REVIEW_ENABLED,
+        "workflow_enabled": True,
+        "workflow_engine": "database_state_machine",
+        "assistant_enabled": True,
+        "chat_ui_enabled": WORKFLOW_CHAT_UI_ENABLED,
+        "tts_review_enabled": WORKFLOW_TTS_REVIEW_ENABLED,
         "python_version": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
-        "checkpoint_backend": "sqlite",
+        "state_backend": "sqlalchemy",
     }, message="工作流能力可用")
 
 
@@ -292,19 +318,25 @@ def replay_events(
 
 
 @router.post("/sessions/{session_id}/message", response_model=Res[dict], status_code=202)
-def send_message(session_id: str, dto: ChatMessageCreateDTO, tasks: BackgroundTasks, service: ChatSessionService = Depends(get_chat_service)):
+async def send_message(
+    session_id: str,
+    dto: ChatMessageCreateDTO,
+    tasks: BackgroundTasks,
+    request: Request,
+    db: Session = Depends(get_db),
+):
     try:
-        snapshot = service.get(session_id)
-        if snapshot["current_stage"] == "awaiting_role_confirmation":
-            action = "revise_roles"
-        elif snapshot["current_stage"] == "awaiting_script_confirmation":
-            action = "revise_script"
-        else:
-            return _error(409, "当前阶段不接受修改意见")
-        tasks.add_task(_run_action, session_id, {
-            "action": action, "feedback": dto.message, "payload": {}, "client_request_id": dto.client_request_id,
-        })
-        return Res(data=snapshot, code=202, message="修改意见已收到")
+        assistant = ProductionAssistantAgent(db)
+        user_message = assistant.accept_message(session_id, dto.message, dto.client_request_id)
+        queue = getattr(request.app.state, "tts_queue", None)
+        queue_proxy = _ThreadsafeQueueProxy(queue, asyncio.get_running_loop()) if queue is not None else None
+        tasks.add_task(_run_assistant, session_id, user_message.id, queue_proxy)
+        return Res(data={
+            "session_id": session_id,
+            "user_message_id": user_message.id,
+        }, code=202, message="制作助手正在处理")
+    except WorkflowConflictError as exc:
+        return _error(409, str(exc))
     except ValueError as exc:
         return _error(404, str(exc))
 
@@ -316,7 +348,7 @@ def confirm(session_id: str, dto: ChatConfirmDTO, tasks: BackgroundTasks, servic
         expected_action_type = "roles" if dto.action.endswith("roles") else "script"
         if snapshot.get("active_confirm_type") != dto.confirm_type or expected_action_type != dto.confirm_type:
             advanced_stages = {
-                "roles": {"generating_script", "awaiting_script_confirmation", "script_draft_ready", "committing", "completed"},
+                "roles": {"generating_script", "reviewing_script", "awaiting_script_confirmation", "script_draft_ready", "committing", "completed"},
                 "script": {"script_draft_ready", "committing", "completed"},
             }
             if snapshot.get("current_stage") in advanced_stages.get(dto.confirm_type, set()):

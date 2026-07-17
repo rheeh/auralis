@@ -26,6 +26,42 @@ class FakeLineRepository:
 
 
 class AudioVariantTest(unittest.TestCase):
+    def test_regenerated_audio_is_preserved_and_can_be_selected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = os.path.join(tmp, "line.wav")
+
+            def write_tone(frequency):
+                sample_rate = 16000
+                with wave.open(source, "wb") as audio:
+                    audio.setnchannels(1)
+                    audio.setsampwidth(2)
+                    audio.setframerate(sample_rate)
+                    audio.writeframes(b"".join(
+                        struct.pack("<h", int(9000 * math.sin(2 * math.pi * frequency * i / sample_rate)))
+                        for i in range(sample_rate)
+                    ))
+
+            write_tone(220)
+            line = SimpleNamespace(
+                id=11, audio_path=source, audio_versions=[], active_audio_version_id=None,
+                audio_variants=[], active_audio_variant_id=None,
+            )
+            service = LineService(FakeLineRepository(line), None, None, None)
+            first = service.ensure_generated_audio_version(11)
+            write_tone(440)
+            second = service.register_generated_audio_version(11, source, {"prompt": "更紧张"})
+
+            self.assertEqual([item["label"] for item in line.audio_versions], ["版本 1", "版本 2"])
+            self.assertNotEqual(first["audio_path"], second["audio_path"])
+            self.assertEqual(line.active_audio_version_id, second["id"])
+            self.assertEqual(service.resolve_audio_path(line, original=True), second["audio_path"])
+
+            line.active_audio_variant_id = "processed-version"
+            service.activate_generated_audio_version(11, first["id"])
+            self.assertEqual(line.active_audio_version_id, first["id"])
+            self.assertIsNone(line.active_audio_variant_id)
+            self.assertEqual(service.resolve_audio_path(line), first["audio_path"])
+
     def test_local_speed_changes_only_selected_range(self):
         with tempfile.TemporaryDirectory() as tmp:
             source = os.path.join(tmp, "line.wav")

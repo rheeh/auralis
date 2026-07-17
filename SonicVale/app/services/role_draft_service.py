@@ -21,17 +21,13 @@ class RoleDraftService:
         previous_roles: list[dict[str, Any]] | None = None,
         feedback: str = "",
     ) -> list[dict[str, Any]]:
-        schema = {
-            "roles": [{
-                "draft_id": "r1", "name": "角色名", "identity": "身份",
-                "personality": ["性格"], "relationships": ["与其他人物的关系"],
-                "speech_style": "表达特点", "voice_type": "通用声线建议", "selected": True,
-            }]
-        }
-        prompt_parts = [
-            "你是广播剧角色设计 Agent。只输出严格 JSON。",
+        system_prompt = "\n\n".join([
+            "你是 Auralis 的广播剧角色设计 Agent。你的唯一职责是根据既有小说解析设计可制作的角色草稿。",
             "角色名不得重复；voice_type 只能描述年龄、音色、节奏和气质，不得模仿真实人物。",
-            f"JSON schema: {json.dumps(schema, ensure_ascii=False)}",
+            "小说解析已提供充分信息。必须返回包含非空 roles 数组的对象；不得返回 status、message、characters 或 insufficient_information 来代替角色草稿。",
+            "不得重新解析原文、生成剧本或执行制作工具。只返回符合响应结构的 JSON。",
+        ])
+        prompt_parts = [
             f"小说解析：{json.dumps(parsed, ensure_ascii=False)}",
         ]
         if previous_roles:
@@ -39,6 +35,12 @@ class RoleDraftService:
         if feedback:
             prompt_parts.append(f"用户修改意见：{feedback}")
             prompt_parts.append("只修改受反馈影响的角色，其余角色保持不变。")
-        raw = self.llm.call_json(project, "\n\n".join(prompt_parts))
+        raw = self.llm.call_json(
+            project,
+            "\n\n".join(prompt_parts),
+            system_prompt=system_prompt,
+            response_model=RoleDraftList,
+            schema_name="role_draft",
+        )
         validated = RoleDraftList.model_validate(raw)
         return [role.model_dump() for role in validated.roles]

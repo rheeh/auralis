@@ -1,11 +1,10 @@
-# app/core/llm_engine.py
 import json
 import logging
-# app/core/llm_engine.py
-
+import random
 import re
 import time
-import random
+from typing import Any
+
 from openai import OpenAI
 
 from app.core.prompts import get_auto_fix_json_prompt
@@ -42,51 +41,131 @@ class LLMEngine:
             raise ValueError("Response does not contain <result>...</result> tag")
         return match.group(1).strip()
 
-    def generate_text_test(self, prompt: str) -> str:
-        """
-        测试：生成结果并返回（非流式）
-        """
-        response = self.client.chat.completions.create(
-            model=self.model_name,
-            messages=[{"role": "user", "content": prompt}],
-            timeout=3000,
-            **self.custom_params
-        )
-        return response.choices[0].message.content
-    def generate_text(self, prompt: str, retries: int = 3, delay: float = 1.0) -> str:
-        """
-        流式生成：边生成边输出
-        """
+    @staticmethod
+    def _messages(prompt: str, system_prompt: str | None = None) -> list[dict[str, str]]:
+        messages: list[dict[str, str]] = []
+        if system_prompt and system_prompt.strip():
+            messages.append({"role": "system", "content": system_prompt.strip()})
+        messages.append({"role": "user", "content": prompt})
+        return messages
+
+    def _completion(
+        self,
+        prompt: str,
+        *,
+        system_prompt: str | None = None,
+        response_format: dict[str, Any] | None = None,
+        remove_custom_response_format: bool = False,
+        retries: int = 3,
+        delay: float = 1.0,
+    ) -> str:
+        request_params = dict(self.custom_params)
+        if remove_custom_response_format:
+            request_params.pop("response_format", None)
+        if response_format is not None:
+            request_params["response_format"] = response_format
+
         for attempt in range(retries):
             try:
-                # 开启流式
-                # stream = self.client.chat.completions.create(
-                #     model=self.model_name,
-                #     messages=[{"role": "user", "content": prompt}],
-                #     stream=True,
-                #     timeout=3000,
-                #     **self.custom_params
-                # )
-
-                # 关闭流式，直接获取完整响应
                 response = self.client.chat.completions.create(
                     model=self.model_name,
-                    messages=[{"role": "user", "content": prompt}],
-                    stream=False,  # 关键：设置为 False
+                    messages=self._messages(prompt, system_prompt),
+                    stream=False,
                     timeout=3000,
-                    **self.custom_params
+                    **request_params,
                 )
-
-                # 直接获取完整文本
-                full_text = response.choices[0].message.content
-                return full_text
-
-            except Exception as e:
+                return response.choices[0].message.content
+            except Exception:
                 if attempt < retries - 1:
                     sleep_time = delay * (2 ** attempt) + random.random()
                     time.sleep(sleep_time)
                 else:
-                    raise e
+                    raise
+
+    @staticmethod
+    def _structured_output_unsupported(exc: Exception) -> bool:
+        status_code = getattr(exc, "status_code", None)
+        message = str(exc).lower()
+        format_terms = ("response_format", "json_schema", "json schema", "structured output")
+        unsupported_terms = (
+            "unsupported", "not support", "unknown", "unrecognized", "invalid parameter",
+            "invalid value", "extra inputs", "not permitted", "not allowed",
+        )
+        return status_code in {400, 404, 422} and (
+            any(term in message for term in format_terms)
+            or any(term in message for term in unsupported_terms)
+        )
+
+    def generate_text_test(self, prompt: str, system_prompt: str | None = None) -> str:
+        """
+        测试：生成结果并返回（非流式）
+        """
+        return self._completion(prompt, system_prompt=system_prompt, retries=1)
+
+    def generate_text(
+        self,
+        prompt: str,
+        retries: int = 3,
+        delay: float = 1.0,
+        system_prompt: str | None = None,
+    ) -> str:
+        """非流式文本生成，兼容原有单 user prompt 调用。"""
+        return self._completion(
+            prompt,
+            system_prompt=system_prompt,
+            retries=retries,
+            delay=delay,
+        )
+
+    def generate_json(
+        self,
+        prompt: str,
+        *,
+        system_prompt: str,
+        json_schema: dict[str, Any] | None = None,
+        schema_name: str = "auralis_response",
+    ) -> str:
+        """Prefer native structured output and degrade for OpenAI-compatible providers."""
+        response_formats: list[dict[str, Any]] = []
+        if json_schema:
+            safe_name = re.sub(r"[^a-zA-Z0-9_-]", "_", schema_name)[:64] or "auralis_response"
+            response_formats.append({
+                "type": "json_schema",
+                "json_schema": {
+                    "name": safe_name,
+                    "strict": False,
+                    "schema": json_schema,
+                },
+            })
+        response_formats.append({"type": "json_object"})
+
+        for response_format in response_formats:
+            try:
+                return self._completion(
+                    prompt,
+                    system_prompt=system_prompt,
+                    response_format=response_format,
+                    remove_custom_response_format=True,
+                    retries=1,
+                )
+            except Exception as exc:
+                if not self._structured_output_unsupported(exc):
+                    raise
+
+        fallback_prompt = prompt
+        if json_schema:
+            fallback_prompt += (
+                "\n\n当前模型接口不支持原生结构化输出。请只返回符合以下 JSON Schema 的 JSON，"
+                "不要使用 Markdown 代码块：\n" + json.dumps(json_schema, ensure_ascii=False)
+            )
+        else:
+            fallback_prompt += "\n\n请只返回一个合法 JSON 对象，不要使用 Markdown 代码块。"
+        return self._completion(
+            fallback_prompt,
+            system_prompt=system_prompt,
+            remove_custom_response_format=True,
+        )
+
     def save_load_json(self, json_str: str):
         """解析JSON，支持自动提取<result>标签内容"""
         # 先尝试提取 <result> 标签内容
@@ -106,13 +185,13 @@ class LLMEngine:
             # 递归调用，修复后的结果也可能包含 <result> 标签
             return self.save_load_json(res)
 
-    def generate_smart_text(self, prompt: str) -> str:
+    def generate_smart_text(self, prompt: str, system_prompt: str | None = None) -> str:
         """
         智能文本生成（流式）
         """
         stream = self.client.chat.completions.create(
             model=self.model_name,
-            messages=[{"role": "user", "content": prompt}],
+            messages=self._messages(prompt, system_prompt),
             stream=True,
             timeout=3000
         )

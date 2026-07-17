@@ -226,7 +226,7 @@ body,
 }
 
 .app-shell.sidebar-compact {
-  --sidebar-width: 76px;
+  --sidebar-width: 64px;
 }
 
 .app-shell.is-landing {
@@ -455,19 +455,19 @@ body,
 .sidebar-edge-toggle {
   position: absolute;
   top: 50%;
-  right: -13px;
+  right: -9px;
   z-index: 30;
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 52px;
+  width: 18px;
+  height: 34px;
   padding: 0;
   border: 1px solid rgba(123, 219, 247, 0.5);
   border-left: 0;
-  border-radius: 0 13px 13px 0;
+  border-radius: 0 9px 9px 0;
   color: #eafcff;
   background: linear-gradient(180deg, #3a3d77, #26284e);
-  box-shadow: 7px 0 16px rgba(25, 17, 68, 0.2);
+  box-shadow: 4px 0 10px rgba(25, 17, 68, 0.14);
   transform: translateY(-50%);
   cursor: pointer;
 }
@@ -494,6 +494,23 @@ body,
 
 .sidebar-compact .sidebar-link {
   padding-inline: 0;
+}
+
+.sidebar-compact .app-sidebar {
+  padding-inline: 10px;
+}
+
+.sidebar-compact .brand {
+  margin-inline: 0;
+}
+
+.sidebar-compact .brand-mark {
+  width: 40px;
+  flex-basis: 40px;
+}
+
+.sidebar-edge-toggle .el-icon {
+  font-size: 10px;
 }
 
 .app-stage {
@@ -598,7 +615,7 @@ body,
   background: linear-gradient(135deg, #edf7ff 0%, #fbfbf8 46%, #fff7ef 100%);
 }
 
-.app-shell:not(.is-landing).sidebar-compact { --sidebar-width: 76px; }
+.app-shell:not(.is-landing).sidebar-compact { --sidebar-width: 64px; }
 
 .app-sidebar {
   padding: 22px 16px 16px;
@@ -640,6 +657,7 @@ body,
 .workspace-title p { color:#8995a5;font-size:12px; }
 .icon-button { width:40px;height:40px;border-radius:12px;border-color:rgba(123,154,181,.2);background:rgba(255,255,255,.68); }
 .page-surface { padding:24px 30px 34px;background:radial-gradient(circle at 90% 0,rgba(180,224,250,.24),transparent 28%),radial-gradient(circle at 68% 92%,rgba(255,220,190,.18),transparent 27%),linear-gradient(145deg,#f6fbff,#fdfcf9 52%,#fffaf4); }
+.app-stage.is-project-workspace .page-surface { padding:4px 8px 8px; }
 
 .page-surface :is(.el-button,.el-input__wrapper,.el-select__wrapper,.el-textarea__inner) { border-radius:12px; }
 .page-surface .el-button--primary:not(.is-plain):not(.is-link):not(.is-text) { --el-button-text-color:#fff;--el-button-hover-text-color:#fff;--el-button-active-text-color:#fff;color:#fff;border-color:transparent;background:linear-gradient(135deg,#347fd1,#2abac5);box-shadow:0 8px 20px rgba(49,133,187,.17); }
@@ -656,7 +674,7 @@ body,
 
 @media (max-width: 920px) {
   .app-shell {
-    --sidebar-width: 76px;
+    --sidebar-width: 64px;
   }
 
   .brand-name,

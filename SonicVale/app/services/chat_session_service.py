@@ -7,7 +7,7 @@ from uuid import uuid4
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.config import DRAMA_GRAPH_MAX_SOURCE_CHARS, LANGGRAPH_ENABLED
+from app.core.config import DRAMA_WORKFLOW_MAX_SOURCE_CHARS, WORKFLOW_CHAT_UI_ENABLED
 from app.dto.chat_dto import ChatSessionCreateDTO, SourceDocumentCreateDTO
 from app.models.po import (
     AdaptationRunPO,
@@ -27,8 +27,8 @@ class ChatSessionService:
     def create_source_document(self, dto: SourceDocumentCreateDTO) -> SourceDocumentPO:
         if not self.db.get(ProjectPO, dto.project_id):
             raise ValueError("项目不存在")
-        if len(dto.content) > DRAMA_GRAPH_MAX_SOURCE_CHARS:
-            raise ValueError(f"原文不能超过 {DRAMA_GRAPH_MAX_SOURCE_CHARS} 字")
+        if len(dto.content) > DRAMA_WORKFLOW_MAX_SOURCE_CHARS:
+            raise ValueError(f"原文不能超过 {DRAMA_WORKFLOW_MAX_SOURCE_CHARS} 字")
         document = SourceDocumentPO(project_id=dto.project_id, name=dto.name, content=dto.content)
         self.db.add(document)
         self.db.commit()
@@ -36,7 +36,7 @@ class ChatSessionService:
         return document
 
     def create(self, dto: ChatSessionCreateDTO) -> dict[str, Any]:
-        if not LANGGRAPH_ENABLED:
+        if not WORKFLOW_CHAT_UI_ENABLED:
             raise ValueError("对话式改编功能当前未启用")
         project = self.db.get(ProjectPO, dto.project_id)
         if not project:
@@ -55,8 +55,8 @@ class ChatSessionService:
             source_text = document.content
         if not source_text:
             raise ValueError("小说正文不能为空")
-        if len(source_text) > DRAMA_GRAPH_MAX_SOURCE_CHARS:
-            raise ValueError(f"小说正文不能超过 {DRAMA_GRAPH_MAX_SOURCE_CHARS} 字")
+        if len(source_text) > DRAMA_WORKFLOW_MAX_SOURCE_CHARS:
+            raise ValueError(f"小说正文不能超过 {DRAMA_WORKFLOW_MAX_SOURCE_CHARS} 字")
 
         session_id = f"sess_{uuid4().hex}"
         title = dto.title or source_text.splitlines()[0][:80] or "新改编会话"
@@ -86,10 +86,10 @@ class ChatSessionService:
         self.db.add(ChatMessagePO(
             id=f"msg_{uuid4().hex}",
             session_id=session_id,
-            role="user",
-            message_type="text",
-            content=dto.instruction or "请把这段小说改编成广播剧。",
-            payload_json={"source_chars": len(source_text)},
+            role="user" if dto.instruction and dto.instruction.strip() else "assistant",
+            message_type="instruction" if dto.instruction and dto.instruction.strip() else "status",
+            content=(dto.instruction or "已收到小说原文，准备开始解析。").strip(),
+            payload_json={"source_chars": len(source_text), "source": "session_creation"},
         ))
         self.db.commit()
         self.db.refresh(session)

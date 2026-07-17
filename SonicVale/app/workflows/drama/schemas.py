@@ -8,9 +8,52 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 WorkflowStage = Literal[
     "created", "parsing", "role_draft_ready", "awaiting_role_confirmation",
-    "generating_script", "script_draft_ready", "awaiting_script_confirmation",
+    "generating_script", "reviewing_script", "script_draft_ready", "awaiting_script_confirmation",
     "committing", "completed", "failed", "cancelled",
 ]
+
+
+class SourceCharacter(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    name: str = Field(min_length=1, max_length=100)
+    role: str = ""
+    traits: list[str] = Field(default_factory=list)
+    motivation: str = ""
+    voiceClues: str = ""
+
+
+class SourceScenePlan(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    title: str
+    location: str = ""
+    mood: str = ""
+    plotBeats: list[str] = Field(default_factory=list)
+    likelySfx: list[str] = Field(default_factory=list)
+    likelyBgm: str = ""
+
+
+class SourceContentMapEntry(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    source: str
+    category: str
+    audioStrategy: Literal["dialogue", "sfx", "bgm", "silence", "narration", "delete"]
+    keepAsNarration: bool = False
+    reason: str = ""
+
+
+class SourceAnalysis(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    title: str = "未命名作品"
+    logline: str = ""
+    genre: str = ""
+    narratorPointOfView: str = ""
+    characters: list[SourceCharacter] = Field(min_length=1)
+    scenePlan: list[SourceScenePlan] = Field(min_length=1)
+    contentMap: list[SourceContentMapEntry] = Field(min_length=1)
 
 
 class RoleDraft(BaseModel):
@@ -120,7 +163,7 @@ class ScriptScene(BaseModel):
     title: str
     location: str = ""
     mood: str = ""
-    lines: list[ScriptLine] = Field(default_factory=list)
+    lines: list[ScriptLine] = Field(min_length=1)
 
 
 class DramaScript(BaseModel):
@@ -128,8 +171,29 @@ class DramaScript(BaseModel):
 
     title: str
     logline: str = ""
-    characters: list[dict[str, Any]] = Field(default_factory=list)
-    scenes: list[ScriptScene] = Field(default_factory=list)
+    characters: list[dict[str, Any]] = Field(min_length=1)
+    scenes: list[ScriptScene] = Field(min_length=1)
+
+
+class ScriptReviewIssue(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    severity: Literal["error", "warning", "suggestion"] = "warning"
+    category: str = "声音表达"
+    scene_title: str = ""
+    line_index: int | None = None
+    evidence: str = ""
+    suggestion: str = ""
+
+
+class ScriptReviewReport(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    passed: bool
+    score: int = Field(default=80, ge=0, le=100)
+    summary: str = ""
+    strengths: list[str] = Field(default_factory=list)
+    issues: list[ScriptReviewIssue] = Field(default_factory=list)
 
 
 class WorkflowAction(BaseModel):

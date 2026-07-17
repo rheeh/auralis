@@ -46,6 +46,8 @@ class LineCreateDTO(BaseModel):
     voice_profile: Optional[str] = None
     production_note: Optional[str] = None
     audio_events: Optional[list[dict[str, Any]]] = None
+    audio_versions: Optional[list[dict[str, Any]]] = None
+    active_audio_version_id: Optional[str] = None
     audio_variants: Optional[list[dict[str, Any]]] = None
     active_audio_variant_id: Optional[str] = None
 
@@ -72,6 +74,8 @@ class LineResponseDTO(BaseModel):
     voice_profile: Optional[str] = None
     production_note: Optional[str] = None
     audio_events: Optional[list[dict[str, Any]]] = None
+    audio_versions: Optional[list[dict[str, Any]]] = None
+    active_audio_version_id: Optional[str] = None
     audio_variants: Optional[list[dict[str, Any]]] = None
     active_audio_variant_id: Optional[str] = None
 

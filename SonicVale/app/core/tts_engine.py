@@ -604,12 +604,12 @@ class ConfigurableCloudTTSEngine:
             return prompt[:100]
 
         emotion_aliases = (
-            (("恐惧", "害怕", "惊恐"), "fearful"),
-            (("愤怒", "生气", "暴躁", "恼火"), "angry"),
-            (("悲伤", "伤心", "低落", "难过"), "sad"),
-            (("惊讶", "震惊", "意外"), "surprised"),
-            (("开心", "高兴", "欢快", "活泼", "兴奋"), "happy"),
-            (("厌恶", "嫌弃", "恶心"), "disgusted"),
+            (("恐惧", "害怕", "惊恐", "紧张", "惊慌", "焦急"), "fearful"),
+            (("愤怒", "生气", "暴躁", "恼火", "不耐烦", "悲愤"), "angry"),
+            (("悲伤", "伤心", "低落", "难过", "委屈"), "sad"),
+            (("惊讶", "震惊", "意外", "惊喜", "疑惑"), "surprised"),
+            (("开心", "高兴", "欢快", "活泼", "兴奋", "欣慰"), "happy"),
+            (("厌恶", "嫌弃", "恶心", "嘲讽"), "disgusted"),
         )
         emotion = "neutral"
         for words, value in emotion_aliases:
@@ -631,6 +631,14 @@ class ConfigurableCloudTTSEngine:
             kwargs["pitch_rate"] = max(int(kwargs.get("pitch_rate", 0)), 10)
         if any(word in prompt for word in ("轻声", "小声", "耳语")):
             kwargs["volume"] = min(int(kwargs.get("volume", 50)), 35)
+        if "情绪强度：微弱" in prompt:
+            kwargs["volume"] = min(int(kwargs.get("volume", 50)), 42)
+        elif "情绪强度：稍弱" in prompt:
+            kwargs["volume"] = min(int(kwargs.get("volume", 50)), 46)
+        elif "情绪强度：较强" in prompt:
+            kwargs["volume"] = max(int(kwargs.get("volume", 50)), 58)
+        elif "情绪强度：强烈" in prompt:
+            kwargs["volume"] = max(int(kwargs.get("volume", 50)), 65)
 
     def _synthesize_dashscope_sambert(self, text: str, save_path: str) -> bytes:
         try:

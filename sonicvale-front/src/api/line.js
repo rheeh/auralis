@@ -67,6 +67,10 @@ export function createAudioVariant(lineId, payload) {
   return request.post(`/lines/${lineId}/audio-variants`, payload)
 }
 
+export function activateGeneratedAudioVersion(lineId, versionId) {
+  return request.put(`/lines/${lineId}/audio-versions/${versionId}/activate`)
+}
+
 export function deleteAudioVariant(lineId, variantId) {
   return request.delete(`/lines/${lineId}/audio-variants/${variantId}`)
 }

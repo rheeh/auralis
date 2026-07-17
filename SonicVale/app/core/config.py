@@ -11,21 +11,15 @@ def _env_bool(name: str, default: bool = False) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
-LANGGRAPH_ENABLED = _env_bool("LANGGRAPH_ENABLED", True)
-LANGGRAPH_CHAT_UI_ENABLED = _env_bool("LANGGRAPH_CHAT_UI_ENABLED", True)
-LANGGRAPH_TTS_REVIEW_ENABLED = _env_bool("LANGGRAPH_TTS_REVIEW_ENABLED", True)
-DRAMA_GRAPH_MAX_ITERATIONS = int(os.environ.get("DRAMA_GRAPH_MAX_ITERATIONS", "8"))
-DRAMA_GRAPH_MAX_SOURCE_CHARS = int(os.environ.get("DRAMA_GRAPH_MAX_SOURCE_CHARS", "120000"))
-DRAMA_GRAPH_MAX_DRAFT_CHARS = int(os.environ.get("DRAMA_GRAPH_MAX_DRAFT_CHARS", "180000"))
+WORKFLOW_CHAT_UI_ENABLED = _env_bool("WORKFLOW_CHAT_UI_ENABLED", True)
+WORKFLOW_TTS_REVIEW_ENABLED = _env_bool("WORKFLOW_TTS_REVIEW_ENABLED", True)
+DRAMA_WORKFLOW_MAX_ITERATIONS = int(os.environ.get("DRAMA_WORKFLOW_MAX_ITERATIONS", "8"))
+DRAMA_WORKFLOW_MAX_SOURCE_CHARS = int(os.environ.get("DRAMA_WORKFLOW_MAX_SOURCE_CHARS", "120000"))
+DRAMA_WORKFLOW_MAX_DRAFT_CHARS = int(os.environ.get("DRAMA_WORKFLOW_MAX_DRAFT_CHARS", "180000"))
 CHAT_SESSION_EXPIRE_DAYS = int(os.environ.get("CHAT_SESSION_EXPIRE_DAYS", "30"))
 CHAT_EVENT_REPLAY_LIMIT = int(os.environ.get("CHAT_EVENT_REPLAY_LIMIT", "100"))
 
 
-def validate_langgraph_runtime() -> None:
-    if LANGGRAPH_ENABLED and sys.version_info < (3, 10):
-        raise RuntimeError(
-            "对话式改编需要 Python 3.10 或更高版本；请使用 scripts/dev.sh 创建 Python 3.12 环境。"
-        )
 # 得到默认配置文件
 def getConfigPath():
     override_dir = os.environ.get("AURALIS_CONFIG_DIR")
@@ -43,17 +37,6 @@ def getConfigPath():
     # 返回 config.json 路径（目录已保证存在）
     return user_dir
 
-
-def getLangGraphCheckpointPath() -> str:
-    configured = os.environ.get("LANGGRAPH_CHECKPOINT_DB")
-    if configured:
-        path = Path(configured).expanduser()
-        if not path.is_absolute():
-            path = Path(getConfigPath()) / path
-    else:
-        path = Path(getConfigPath()) / "auralis-checkpoints.sqlite3"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    return str(path)
 
 def getFfmpegPath():
     BASE_DIR = getattr(sys, "_MEIPASS", Path(os.path.abspath(".")))

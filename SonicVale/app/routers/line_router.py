@@ -149,6 +149,22 @@ def create_line_audio_variant(
         return Res(data=None, code=400, message=str(exc))
 
 
+@router.put("/{line_id}/audio-versions/{version_id}/activate", response_model=Res[dict])
+def activate_generated_audio_version(
+        line_id: int,
+        version_id: str,
+        line_service: LineService = Depends(get_line_service),
+):
+    try:
+        version = line_service.activate_generated_audio_version(line_id, version_id)
+        return Res(
+            data={key: value for key, value in version.items() if key != "audio_path"},
+            message="已切换当前生成版本",
+        )
+    except (ValueError, FileNotFoundError) as exc:
+        return Res(data=None, code=404, message=str(exc))
+
+
 @router.get("/{line_id}/audio-variants/{variant_id}/audio")
 def get_line_audio_variant(
         line_id: int,

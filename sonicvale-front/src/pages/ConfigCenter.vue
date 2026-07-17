@@ -10,9 +10,9 @@
 
     <el-alert
       v-if="workflowCapability"
-      :title="workflowCapability.langgraph_enabled ? '对话式工作流可用' : '对话式工作流已关闭'"
-      :description="`Python ${workflowCapability.python_version} · ${workflowCapability.checkpoint_backend} 检查点 · 会话界面${workflowCapability.chat_ui_enabled ? '已启用' : '未启用'}`"
-      :type="workflowCapability.langgraph_enabled ? 'success' : 'warning'"
+      :title="workflowCapability.workflow_enabled ? '数据库工作流与制作助手可用' : '对话式工作流已关闭'"
+      :description="`Python ${workflowCapability.python_version} · ${workflowCapability.state_backend} 单一状态源 · 制作助手${workflowCapability.assistant_enabled ? '已启用' : '未启用'}`"
+      :type="workflowCapability.workflow_enabled ? 'success' : 'warning'"
       show-icon
       :closable="false"
       class="workflow-capability"

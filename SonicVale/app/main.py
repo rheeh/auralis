@@ -8,7 +8,7 @@ from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 from starlette.middleware.cors import CORSMiddleware
 
-from app.core.config import getConfigPath, validate_langgraph_runtime
+from app.core.config import getConfigPath
 from app.core.prompts import get_prompt_str
 from app.core.tts_runtime import tts_worker
 from app.core.ws_manager import manager
@@ -16,6 +16,7 @@ from app.db.database import Base, engine, SessionLocal, get_db
 from app.db.migrations import migrate_workflow_schema
 from app.entity.emotion_entity import EmotionEntity
 from app.entity.strength_entity import StrengthEntity
+from app.core.tts_guidance import EMOTION_NAMES, STRENGTH_NAMES
 from app.models.po import *
 from app.repositories.llm_provider_repository import LLMProviderRepository
 from app.repositories.tts_provider_repository import TTSProviderRepository
@@ -164,6 +165,8 @@ def add_drama_line_columns():
         "voice_profile": "TEXT",
         "production_note": "TEXT",
         "audio_events": "TEXT",
+        "audio_versions": "TEXT",
+        "active_audio_version_id": "TEXT",
         "audio_variants": "TEXT",
         "active_audio_variant_id": "TEXT",
     }
@@ -208,7 +211,6 @@ def get_tts_service(db: Session = Depends(get_db)) -> TTSProviderService:
 
 @app.on_event("startup")
 async def startup_event():
-    validate_langgraph_runtime()
     # 1) 建表
     try:
         Base.metadata.create_all(bind=engine)
@@ -259,12 +261,7 @@ async def startup_event():
 
         try:
             emotion_service = get_emotion_service(db)
-            for name in [
-                # 8种基础情绪
-                "高兴", "生气", "伤心", "害怕", "厌恶", "低落", "惊喜", "平静",
-                # 2种独特复合情绪
-                "嘲讽", "悲愤",
-            ]:
+            for name in EMOTION_NAMES:
                 try:
                     emotion_service.create_emotion(EmotionEntity(name=name))
                 except Exception as e:
@@ -274,7 +271,7 @@ async def startup_event():
 
         try:
             strength_service = get_strength_service(db)
-            for name in ["微弱","稍弱","中等","较强","强烈"]:
+            for name in STRENGTH_NAMES:
                 try:
                     strength_service.create_strength(StrengthEntity(name=name))
                 except Exception as e:
@@ -300,11 +297,20 @@ async def startup_event():
                 if not active or not os.path.isfile(os.path.abspath(os.path.expanduser(active.get("audio_path") or ""))):
                     line.active_audio_variant_id = None
                     stale_active_count += 1
+            stale_generated_count = 0
+            for line in db.query(LinePO).filter(LinePO.active_audio_version_id.is_not(None)).all():
+                active = next(
+                    (item for item in (line.audio_versions or []) if item.get("id") == line.active_audio_version_id),
+                    None,
+                )
+                if not active or not os.path.isfile(os.path.abspath(os.path.expanduser(active.get("audio_path") or ""))):
+                    line.active_audio_version_id = None
+                    stale_generated_count += 1
             db.commit()
-            if emotion_count or strength_count or stale_active_count:
+            if emotion_count or strength_count or stale_active_count or stale_generated_count:
                 logging.info(
-                    "已修复旧台词数据：情绪 %s 条，强度 %s 条，失效音频版本 %s 条",
-                    emotion_count, strength_count, stale_active_count,
+                    "已修复旧台词数据：情绪 %s 条，强度 %s 条，失效处理版本 %s 条，失效生成版本 %s 条",
+                    emotion_count, strength_count, stale_active_count, stale_generated_count,
                 )
         except Exception as e:
             db.rollback()

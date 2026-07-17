@@ -187,7 +187,7 @@ function audioStatusType(status) {
 function sessionStageLabel(stage) {
   return {
     created: '准备解析', parsing: '解析原文', awaiting_role_confirmation: '等待确认角色',
-    generating_script: '生成剧本', awaiting_script_confirmation: '等待确认剧本',
+    generating_script: '生成剧本', reviewing_script: '审查剧本', awaiting_script_confirmation: '等待确认剧本',
     script_draft_ready: '等待写入项目', completed: '已完成', failed: '需要重试', cancelled: '已取消',
   }[stage] || stage
 }

@@ -15,7 +15,7 @@ const steps = computed(() => {
   const definitions = [
     ['source', '解析原文', '提取人物、场景与冲突', ['created', 'parsing']],
     ['roles', '确认角色', '检查人物设定与声线建议', ['role_draft_ready', 'awaiting_role_confirmation']],
-    ['script', '确认剧本', '按场景检查台词与声音轨', ['generating_script', 'script_draft_ready', 'awaiting_script_confirmation']],
+    ['script', '确认剧本', '按场景检查台词与声音轨', ['generating_script', 'reviewing_script', 'script_draft_ready', 'awaiting_script_confirmation']],
     ['commit', '加入项目', '写入章节、角色与台词', ['committing', 'completed']],
   ]
   let current = definitions.findIndex((item) => item[3].includes(props.stage))

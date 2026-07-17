@@ -8,48 +8,11 @@ from app.routers.chapter_router import get_voice_service, get_emotion_service, g
 from app.routers.multi_emotion_voice_router import get_multi_emotion_voice_service
 from app.routers.role_router import get_line_service, get_role_service, get_project_service
 from app.models.po import ChatSessionPO
+from app.core.tts_guidance import emotion_text_to_vector
 from app.services.audio_task_service import AudioTaskService
 from app.workflows.drama.events import WorkflowEventPublisher
 
 TTS_TIMEOUT_SECONDS = 1200  # 可调
-def emotion_text_to_vector(emotion: str, intensity: str) -> list[float]:
-    """
-    将情绪(文本) + 强度(文本) 转换成 8维向量
-    8维分别对应: [高兴, 生气, 伤心, 害怕, 厌恶, 低落, 惊喜, 平静]
-    基础情绪为 one-hot，复合情绪为多维加权混合
-    :param emotion: 情绪名称
-    :param intensity: "微弱" / "稍弱" / "中等" / "较强" / "强烈"
-    :return: 长度为8的向量
-    """
-    # 8维基础情绪索引: 高兴=0, 生气=1, 伤心=2, 害怕=3, 厌恶=4, 低落=5, 惊喜=6, 平静=7
-    BASE_EMOTIONS = ["高兴", "生气", "伤心", "害怕", "厌恶", "低落", "惊喜", "平静"]
-
-    # 复合情绪 → 基础情绪权重（各维度满强度，由 intensity 统一缩放）
-    COMPOSITE_MAP = {
-        "嘲讽":   {"高兴": 0.5, "厌恶": 1.0},  # 讽刺语气
-        "悲愤":   {"伤心": 1.0, "生气": 1.0},  # 悲愤交加
-    }
-
-    INTENSITY_MAP = {
-        "微弱": 0.2,
-        "稍弱": 0.4,
-        "中等": 0.6,
-        "较强": 0.8,
-        "强烈": 1.0
-    }
-
-    scale = INTENSITY_MAP.get(intensity, 0.5)
-    vec = [0.0] * 8
-
-    if emotion in BASE_EMOTIONS:
-        # 基础情绪: one-hot
-        vec[BASE_EMOTIONS.index(emotion)] = scale
-    elif emotion in COMPOSITE_MAP:
-        # 复合情绪: 多维加权混合
-        for base_name, weight in COMPOSITE_MAP[emotion].items():
-            vec[BASE_EMOTIONS.index(base_name)] = round(scale * weight, 4)
-    # 未知情绪返回全零向量（静默降级）
-    return vec
 async def tts_worker(app: FastAPI):
     q = app.state.tts_queue
     ex = app.state.tts_executor
@@ -139,6 +102,11 @@ async def tts_worker(app: FastAPI):
 
             project = project_service.get_project(project_id)
 
+            # Preserve the currently generated take before the canonical output
+            # path is overwritten by a regeneration.
+            if dto.id:
+                line_service.ensure_generated_audio_version(dto.id)
+
             loop = asyncio.get_running_loop()
             await asyncio.wait_for(
                 loop.run_in_executor(
@@ -155,10 +123,20 @@ async def tts_worker(app: FastAPI):
                     dto.line_type,
                     dto.track,
                     emotion_name,
+                    strength_name,
                     dto.production_note,
                 ),
                 timeout=TTS_TIMEOUT_SECONDS
             )
+
+            generated_version = line_service.register_generated_audio_version(dto.id, dto.audio_path, {
+                "text": dto.text_content,
+                "prompt": dto.production_note,
+                "emotion_id": dto.emotion_id,
+                "strength_id": dto.strength_id,
+                "voice_id": role.default_voice_id if role else None,
+                "task_id": task_id,
+            }) if dto.id else None
 
             line_service.update_line(dto.id, {"status": "done", "is_done": 1})
             task = task_service.mark(task_id, "done", audio_path=dto.audio_path) if task_id else None
@@ -173,7 +151,8 @@ async def tts_worker(app: FastAPI):
                 "status": "done",
                 "progress":  q.qsize(),
                 "meta": "生成完成",
-                "audio_path": dto.audio_path
+                "audio_path": dto.audio_path,
+                "audio_version_id": (generated_version or {}).get("id"),
             })
             # 发送给前端，队列中剩余的数量
             await manager.broadcast({

@@ -1,5 +1,7 @@
 # Auralis LangGraph 对话式改编架构实现方案
 
+> **归档说明（2026-07-13）**：本方案对应早期架构，当前运行时已移除 LangGraph。现行实现使用 SQLAlchemy 数据库状态机，`chat_sessions / adaptation_runs / adaptation_draft_revisions` 是唯一状态源；常驻自由对话由 `ProductionAssistantAgent` 和受控业务工具负责。本文不再作为实施依据。
+
 > 文档状态：实施设计稿
 >
 > 适用项目：Auralis / SonicVale
@@ -1067,4 +1069,3 @@ LANGGRAPH_TTS_REVIEW_ENABLED
 - 所有用户动作必须校验阶段并支持幂等。
 - 新旧改编链路通过功能开关并行一段时间。
 - 先完成单章闭环，再扩展到多章节和音频审核。
-

@@ -68,7 +68,7 @@ class WSManager:
         await self._send_many(sockets, data)
 
     def publish_from_worker(self, project_id: int, session_id: str, data: dict[str, Any]) -> None:
-        """Best-effort bridge for synchronous LangGraph nodes running in a worker thread."""
+        """Best-effort bridge for synchronous workflow jobs running in a worker thread."""
         if not self._loop or self._loop.is_closed():
             return
         try:

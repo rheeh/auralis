@@ -411,7 +411,7 @@ function continueSession(session) {
 function sessionStageLabel(stage) {
   return {
     created: '准备解析原文', parsing: '正在解析原文', awaiting_role_confirmation: '等待确认角色',
-    generating_script: '正在生成剧本', awaiting_script_confirmation: '等待确认剧本',
+    generating_script: '正在生成剧本', reviewing_script: '初稿审查中', awaiting_script_confirmation: '等待确认剧本',
     script_draft_ready: '等待写入项目', failed: '需要重试当前步骤',
   }[stage] || stage
 }

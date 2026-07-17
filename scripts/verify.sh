@@ -36,7 +36,7 @@ import uuid
 from types import SimpleNamespace
 
 from app.main import app
-from app.core.config import LANGGRAPH_TTS_REVIEW_ENABLED
+from app.core.config import WORKFLOW_TTS_REVIEW_ENABLED
 from app.services.line_service import LineService
 from app.dto.line_dto import LineAudioProcessDTO
 from app.core.subtitle import subtitle_engine
@@ -59,6 +59,7 @@ required = {
     "/lines/generate-audio/{project_id}/{chapter_id}",
     "/lines/{line_id}/attach-audio",
     "/lines/{line_id}/audio",
+    "/lines/{line_id}/audio-versions/{version_id}/activate",
     "/projects/{project_id}/readiness",
     "/projects/{project_id}/readiness/repair",
 }
@@ -66,7 +67,7 @@ missing = required - paths
 if missing:
     raise SystemExit(f"missing routes: {sorted(missing)}")
 print(f"FastAPI routes ok: {len(app.routes)} routes")
-if not LANGGRAPH_TTS_REVIEW_ENABLED:
+if not WORKFLOW_TTS_REVIEW_ENABLED:
     raise SystemExit("TTS review feature should be enabled by default")
 
 with TestClient(app) as client:

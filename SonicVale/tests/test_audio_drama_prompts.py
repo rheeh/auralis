@@ -1,4 +1,7 @@
 import unittest
+from types import SimpleNamespace
+
+from pydantic import ValidationError
 
 from app.core.prompts import get_audio_drama_adaptation_rules, get_prompt_str
 from app.services.chapter_service import ChapterService
@@ -72,6 +75,7 @@ class AudioDramaPromptTest(unittest.TestCase):
     def test_tts_text_moves_parenthetical_sound_into_audio_events(self):
         script = DramaScript.model_validate({
             "title": "电话",
+            "characters": [{"name": "周正明"}],
             "scenes": [{
                 "title": "通话",
                 "lines": [{
@@ -89,6 +93,45 @@ class AudioDramaPromptTest(unittest.TestCase):
         self.assertEqual(line["speaker"], "周正明")
         self.assertEqual(line["audioEvents"][0]["content"], "电流嘶啦声")
         self.assertNotIn("（", line["text"])
+
+    def test_script_schema_rejects_parallel_dialogue_arrays_without_lines(self):
+        with self.assertRaises(ValidationError):
+            DramaScript.model_validate({
+                "title": "深夜便利店",
+                "characters": [{"name": "陈默"}],
+                "scenes": [{
+                    "title": "便利店",
+                    "lines": [],
+                    "dialogues": [{"character": "陈默", "text": "下班了。"}],
+                }],
+            })
+
+    def test_script_generation_leaves_narration_repair_to_independent_reviewer(self):
+        draft = {
+            "title": "雨夜",
+            "characters": [{"name": "林默"}],
+            "scenes": [{
+                "title": "门外",
+                "lines": [
+                    {"type": "narration", "text": "他站在窗边，看着远处灰色的天空，想起很多年前发生的一切。"},
+                    {"type": "narration", "text": "房间里很安静，旧钟依旧走着。"},
+                    {"type": "dialogue", "speaker": "林默", "text": "谁？"},
+                ],
+            }],
+        }
+        calls = []
+        service = ScriptDraftService.__new__(ScriptDraftService)
+        service.llm = SimpleNamespace(call_json=lambda *args, **kwargs: calls.append(kwargs) or draft)
+
+        result = service.generate(
+            SimpleNamespace(),
+            {"title": "雨夜"},
+            [{"name": "林默"}],
+            "雨夜，林默听见敲门。",
+        )
+
+        self.assertEqual(len(calls), 1)
+        self.assertTrue(ScriptDraftService._narration_issues(result))
 
 
 if __name__ == "__main__":

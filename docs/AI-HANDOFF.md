@@ -69,7 +69,8 @@ Auralis 是一个本地优先的 AI 广播剧制作工具，技术栈为 Vue 3 +
 
 ### 3.4 非破坏性音频版本
 
-- `lines` 新增 `audio_variants` JSON 字段；SQLite 启动迁移由 `add_drama_line_columns()` 自动完成。
+- `lines` 用 `audio_versions / active_audio_version_id` 保存每次 TTS 重新生成的不可变 take，用 `audio_variants / active_audio_variant_id` 保存变速、音量等后期处理版本；SQLite 启动迁移由 `add_drama_line_columns()` 自动完成。
+- TTS worker 在覆盖固定输出路径前会归档旧音频，生成完成后再保存新版本；逐句播放器显示 `版本 n/N` 下拉框，选择后播放、后期处理、连播和导出统一读取当前生成版本。
 - 每次处理都复制 `line.audio_path` 原音频，再应用速度、音量、裁剪或停顿，绝不覆盖原始文件，也不从上一个变速版本继续叠加。
 - 后端接口：
   - `POST /lines/{line_id}/audio-variants`
@@ -116,12 +117,15 @@ Auralis 是一个本地优先的 AI 广播剧制作工具，技术栈为 Vue 3 +
 
 1. **工作台不拆成多页**：人物确认、台本确认、音色与音频必须在同一页面，减少上下文丢失。
 2. **人物卡先于台本**：人物身份和说话方式直接影响台词写法，也让音色在台本生成前确定。
-3. **不是纯 Multi-Agent 堆叠**：SQLAlchemy 项目数据是业务真相，LangGraph/工作流只负责编排；避免状态只存在 Agent 对话里。
-4. **台词与制作控制分离**：TTS 文本必须纯净，声音提示进入结构化字段，防止模型朗读括号。
-5. **音频处理非破坏性**：不同速度必须从同一原音频生成，避免 0.8× 后再做 1.2× 导致累计失真，也方便 A/B 比较。
-6. **音色试听放在绑定现场**：选择前可试听比跳到音色库更符合决策路径。
-7. **首页角色使用项目内透明 PNG**：视觉质量优先于代码生成剪影，同时保留 Canvas、SVG 圆环和粒子的实时动画。
-8. **Gitee 使用干净历史**：当前仓库 `master` 从 Auralis 单一根提交开始，不推送旧 SonicVale 上游多人历史；远程只保留 `origin`。
+3. **数据库是唯一状态源**：SQLAlchemy 项目表、会话表和草稿 revision 同时承担业务与工作流状态；制作助手只通过受控工具读写这些数据，不能把状态只留在对话里。
+4. **模型配置共享、提示词职责隔离**：同一项目可以复用一个 LLM provider/model，但制作助手、小说解析、角色设计和剧本生成分别使用独立 system 指令；动态素材只进入 user 消息，不能把小说解析提示词注入每轮助手对话。
+5. **结构化输出渐进兼容**：JSON 任务优先使用 `json_schema`，不支持时依次回退到 `json_object` 和提示词约束 JSON，兼容非 OpenAI 官方的 OpenAI-compatible 服务。
+6. **台词与制作控制分离**：TTS 文本必须纯净，声音提示进入结构化字段，防止模型朗读括号。
+7. **音频处理非破坏性**：不同速度必须从同一原音频生成，避免 0.8× 后再做 1.2× 导致累计失真，也方便 A/B 比较。
+8. **编剧和审查职责分离**：制作助手只转交用户意见；`ScriptDraftService` 生成或返修；`ScriptReviewService` 只输出验收报告。初稿未通过时由编剧按报告返修，再交审查器复核，审查器不直接改稿。
+9. **音色试听放在绑定现场**：选择前可试听比跳到音色库更符合决策路径。
+10. **首页角色使用项目内透明 PNG**：视觉质量优先于代码生成剪影，同时保留 Canvas、SVG 圆环和粒子的实时动画。
+11. **Gitee 使用干净历史**：当前仓库 `master` 从 Auralis 单一根提交开始，不推送旧 SonicVale 上游多人历史；远程只保留 `origin`。
 
 ### 2026-07-13 全站视觉统一
 
@@ -140,6 +144,8 @@ Auralis 是一个本地优先的 AI 广播剧制作工具，技术栈为 Vue 3 +
 - 配置中心 TTS 表格会显示“原生指令 / 结构化指令 / 基础参数映射 / 基础生成”，测试接口也会返回实际使用的模式。
 - 本机 Provider #2 已迁移为 `cosyvoice-v3-flash` 结构化指令模式；旧 v1 音色移至停用的兼容 Provider #4，没有删除。迁移前数据库备份位于 `.local-data/backups/app_test-before-cosyvoice-v3-20260713.db`。
 - 已真实调用 DashScope：Provider 测试 HTTP 200，并成功生成 3 个 v3 Instruct 兼容音色样例；项目 5/6/7 中原先使用 v1 女声的角色已改绑“元气女声·龙安欢”。
+- Edge-TTS 不支持自然语言表演指令或自定义分段 SSML，只能控制整句语速、音高和音量。当前实现把情绪、情绪/表达强度及可识别的声音指导近似映射到这三个参数，并确保 Edge 音色在自动路由下不会丢失指导。
+- 情绪候选扩展并分组为积极、愤怒、悲伤、恐惧、厌恶、惊讶和平稳等 33 个选项；每个候选都有 8 维情绪向量映射。强度固定表示情绪/表达强度，分为微弱、稍弱、中等、较强、强烈。
 
 ## 6. 用户偏好、要求和约束
 
@@ -163,7 +169,7 @@ Auralis 是一个本地优先的 AI 广播剧制作工具，技术栈为 Vue 3 +
 - `docs/project-map.md`：项目结构地图。
 - `docs/project-workspace-single-page.md`：单页工作台方案。
 - `docs/frontend-interaction-redesign.md`：交互重构说明。
-- `docs/auralis-langgraph-implementation-plan.md`：工作流与数据边界方案。
+- `docs/auralis-langgraph-implementation-plan.md`：已归档的早期 LangGraph 方案，仅用于理解迁移背景，不代表当前实现。
 - `sonicvale-front/src/router/index.js`：路由真相。
 - `sonicvale-front/src/pages/Home.vue`：动态首页。
 - `sonicvale-front/src/pages/ProjectWorkspace.vue`：项目工作台。
@@ -181,13 +187,13 @@ Auralis 是一个本地优先的 AI 广播剧制作工具，技术栈为 Vue 3 +
 
 - 开发数据目录：`.local-data/`，已被忽略，不得提交。
 - SQLite 与生成音频属于运行数据，不要在未备份时手工删除。
-- 音频版本保存在原音频目录的 `variants/` 子目录。
+- TTS 生成版本保存在原音频目录的 `generated_versions/`，后期处理版本保存在 `variants/`。
 
 ## 8. 未解决的问题和风险
 
 1. 音频版本随台词删除或重新生成时尚未做统一垃圾回收；当前只能从 UI 单独删除版本。
 2. 没有参考样音的自定义音色无法试听，UI 会明确提示；如果要求“所有音色必可试听”，需增加按 provider 动态生成预览样音的后端任务。
-3. 当前采用版本已经贯通播放和导出，但重新生成原音后旧处理版本尚未提供“上一 take”归档分组。
+3. 生成 take 与后期处理版本已经分层保存，但尚未提供按 take 分组清理其派生处理版本的批量垃圾回收。
 4. 女歌姬 PNG 约 1.4MB，可进一步输出 WebP/AVIF 降低首页首载，但必须保留透明边缘质量。
 5. Vite 构建仍提示主包超过 500kB，可通过 manualChunks 或进一步懒加载优化；目前不影响功能。
 6. WaveSurfer 和浏览器原生 `<audio>` 并存，后续若统一播放器，需要保证整章连播逻辑不回退。
@@ -195,7 +201,7 @@ Auralis 是一个本地优先的 AI 广播剧制作工具，技术栈为 Vue 3 +
 
 ## 9. 下一步具体行动计划
 
-1. 在重新生成台词原音时提示旧版本来自上一 take，允许保留、归档或批量删除。
+1. 为生成 take 增加删除和批量清理入口，并阻止删除仍被后期处理版本引用的源 take。
 2. 为音频版本 API 增加路由级 TestClient 测试和异常场景测试（缺文件、非法速度、重复删除）。
 3. 为音色试听抽取可复用 composable，覆盖人物草稿和人物档案，避免播放器状态代码重复。
 4. 如用户要求全音色试听，为无 `reference_path` 音色增加后台预览生成队列，而不是在 GET 请求里同步调用云端 TTS。

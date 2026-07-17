@@ -25,6 +25,21 @@ class ConfigurableCloudTTSEngineCapabilityTests(unittest.TestCase):
             "你说话的情感是happy。",
         )
 
+    def test_cosyvoice_structured_mode_understands_richer_emotion_aliases(self):
+        engine = self.make_engine("cosyvoice-v3-flash")
+        self.assertEqual(
+            engine._prepare_cosyvoice_instruction("情绪：委屈。情绪强度：较强"),
+            "你说话的情感是sad。",
+        )
+
+    def test_mapped_prosody_uses_emotional_strength(self):
+        kwargs = {}
+        ConfigurableCloudTTSEngine._apply_prosody_controls(
+            kwargs,
+            "情绪：愤怒。情绪强度：强烈。声音指导：大声",
+        )
+        self.assertEqual(kwargs["volume"], 65)
+
     def test_cosyvoice_v35_keeps_native_instruction(self):
         engine = self.make_engine("cosyvoice-v3.5-flash")
         self.assertEqual(engine._cosyvoice_instruction_mode(), "native")

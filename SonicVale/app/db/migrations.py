@@ -8,6 +8,7 @@ ADAPTATION_RUN_COLUMNS = {
     "is_conversational": "INTEGER DEFAULT 0 NOT NULL",
     "source_revision": "INTEGER DEFAULT 1 NOT NULL",
     "draft_revision": "INTEGER DEFAULT 1 NOT NULL",
+    "review_json": "TEXT",
     "committed_at": "DATETIME",
 }
 
