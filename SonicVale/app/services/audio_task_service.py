@@ -7,7 +7,7 @@ from uuid import uuid4
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.po import AudioTaskPO, ChatSessionPO, LinePO
+from app.models.po import AudioTaskPO, ChatSessionPO, LinePO, RolePO
 
 
 class AudioTaskService:
@@ -98,15 +98,20 @@ class AudioTaskService:
         if not session or session.deleted_at is not None:
             raise ValueError("改编会话不存在")
         rows = self.db.execute(
-            select(AudioTaskPO, LinePO)
+            select(AudioTaskPO, LinePO, RolePO)
             .join(LinePO, LinePO.id == AudioTaskPO.line_id)
+            .outerjoin(RolePO, RolePO.id == LinePO.role_id)
             .where(AudioTaskPO.session_id == session_id)
             .order_by(AudioTaskPO.created_at.asc())
         ).all()
-        return [self.serialize(task, line) for task, line in rows]
+        return [self.serialize(task, line, role) for task, line, role in rows]
 
     def summary(self, session_id: str) -> dict[str, Any]:
-        tasks = self.list_for_session(session_id)
+        task_history = self.list_for_session(session_id)
+        latest_by_line: dict[int, dict[str, Any]] = {}
+        for task in task_history:
+            latest_by_line[task["line_id"]] = task
+        tasks = sorted(latest_by_line.values(), key=lambda task: (task["line_order"] or 0, task["created_at"]))
         counts = {key: 0 for key in ["queued", "processing", "done", "failed", "skipped", "cancelled"]}
         for task in tasks:
             counts[task["status"]] = counts.get(task["status"], 0) + 1
@@ -119,6 +124,7 @@ class AudioTaskService:
             "completed": completed,
             "progress": round(completed / total * 100) if total else 0,
             "tasks": tasks,
+            "history_total": len(task_history),
         }
 
     def latest_for_line(self, session_id: str, line_id: int) -> AudioTaskPO | None:
@@ -146,7 +152,7 @@ class AudioTaskService:
         return task
 
     @staticmethod
-    def serialize(task: AudioTaskPO, line: LinePO | None = None) -> dict[str, Any]:
+    def serialize(task: AudioTaskPO, line: LinePO | None = None, role: RolePO | None = None) -> dict[str, Any]:
         return {
             "task_id": task.id,
             "project_id": task.project_id,
@@ -155,6 +161,9 @@ class AudioTaskService:
             "line_id": task.line_id,
             "line_order": line.line_order if line else None,
             "speaker_role_id": line.role_id if line else None,
+            "role_name": role.name if role else None,
+            "tts_route": role.tts_route if role else None,
+            "edge_voice": role.edge_voice if role else None,
             "text": line.text_content if line else None,
             "track": line.track if line else None,
             "status": task.status,

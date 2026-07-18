@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models.po import ProjectPO
 from app.services.workflow_llm_service import WorkflowLLMService
+from app.services.knowledge_voice_design import enrich_dialogue_performance
 from app.workflows.article.schemas import ArticleAnalysis, KnowledgeScript, LearningPlan
 
 
@@ -32,6 +33,7 @@ class KnowledgeScriptService:
             "先讲结论再解释原因；复杂概念给出通俗解释和例子；专业术语首次出现时解释；每隔一段安排自然小结或回忆提示。",
             "默认使用两位长期学习搭档：知夏是会追问、举反例并复述理解的学习者；闻舟是用问题、类比和证据引导的讲解者。角色名必须固定为“知夏”和“闻舟”。",
             "dialogue_lesson 必须是真对话：至少 80% 的可朗读字数来自 dialogue；两人都要实质参与；禁止一人连续长篇念稿、另一人只说“真的吗/原来如此”。单条可朗读台词不超过 220 个汉字。",
+            "每条双人对话都要填写 emotion、strength、voice_profile 和 production_note。知夏是清亮好奇的年轻女声，闻舟是沉稳耐心的成熟男声；情绪要随追问、惊讶、纠错、确认和总结自然变化，禁止全篇都是平静/中等。",
             "knowledge_drama 要把原文论点、案例或冲突改造成可理解的场景推进，但不能虚构文章事实。audio_lesson 仅在学习设计明确指定时使用。",
             "只有‘过往学习摘要’明确给出的内容才能被角色回忆；引用时要说明此前文章标题，不得假装记得未提供的文章。",
             "每条台词必须用 knowledge_point_ids 关联知识点，并用 content_origin 标明原文事实、原文观点、原文案例或 AI 解释。不得把 AI 解释写成原文事实。",
@@ -49,6 +51,7 @@ class KnowledgeScriptService:
         script = KnowledgeScript.model_validate(result).model_dump(mode="json")
         if validated_plan.adaptation_mode in {"audio_lesson", "dialogue_lesson", "knowledge_drama"}:
             script["adaptation_mode"] = validated_plan.adaptation_mode
+        script = enrich_dialogue_performance(script)
         self._validate_links(validated_analysis, script)
         self._validate_dialogue_quality(script)
         return script
@@ -67,6 +70,7 @@ class KnowledgeScriptService:
         ])
         result = self.llm.call_json(project, prompt, system_prompt=system_prompt, response_model=KnowledgeScript, schema_name="knowledge_script_revision")
         script = KnowledgeScript.model_validate(result).model_dump(mode="json")
+        script = enrich_dialogue_performance(script)
         self._validate_links(ArticleAnalysis.model_validate(analysis), script)
         self._validate_dialogue_quality(script)
         return script
@@ -94,6 +98,9 @@ class KnowledgeScriptService:
         counts = {name: sum(1 for line in dialogue if line.get("speaker") == name) for name in (cls.LEARNER, cls.GUIDE)}
         if min(counts.values()) < 3:
             raise ValueError("知夏和闻舟都必须至少有 3 次实质发言")
+        emotions = {line.get("emotion") for line in dialogue if line.get("emotion")}
+        if len(emotions) < 3 or any(not line.get("strength") or not line.get("production_note") for line in dialogue):
+            raise ValueError("双人对话必须包含至少 3 种自然情绪，并为每句提供强度和声音指导")
 
     @staticmethod
     def _validate_links(analysis: ArticleAnalysis, script: dict[str, Any]) -> None:

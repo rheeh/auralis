@@ -13,6 +13,7 @@ from app.services.article_workflow_service import ArticleWorkflowService
 from app.services.chat_session_service import ChatSessionService
 from app.services.content_adaptation_service import ContentAdaptationService
 from app.services.knowledge_production_service import KnowledgeProductionService
+from app.services.knowledge_voice_design import enrich_dialogue_performance
 from tests.test_article_workflow import analysis_payload
 
 
@@ -35,13 +36,13 @@ def script_payload(title="向量检索入门音频"):
     return {
         "title": title,
         "adaptation_mode": "dialogue_lesson",
-        "roles": [{"name": "讲解者"}, {"name": "学习者"}],
+        "roles": [{"name": "知夏"}, {"name": "闻舟"}],
         "segments": [{
             "id": "seg1", "title": "向量是什么", "segment_type": "knowledge_point",
             "knowledge_point_ids": ["k1"],
             "lines": [
-                {"type": "dialogue", "track": "voice", "speaker": "学习者", "text": "向量检索从哪里开始？", "knowledge_point_ids": ["k1"], "content_origin": "ai_explanation"},
-                {"type": "dialogue", "track": "voice", "speaker": "讲解者", "text": "先把文本表示为向量。", "knowledge_point_ids": ["k1"], "content_origin": "fact_from_source"},
+                {"type": "dialogue", "track": "voice", "speaker": "知夏", "text": "向量检索从哪里开始？", "knowledge_point_ids": ["k1"], "content_origin": "ai_explanation"},
+                {"type": "dialogue", "track": "voice", "speaker": "闻舟", "text": "先把文本表示为向量。", "knowledge_point_ids": ["k1"], "content_origin": "fact_from_source"},
             ],
         }],
         "review_questions": questions,
@@ -135,6 +136,22 @@ class KnowledgeProductionTest(unittest.TestCase):
             )),
             2,
         )
+
+    def test_dialogue_performance_uses_distinct_free_edge_voices(self):
+        payload = script_payload()
+        payload["segments"][0]["lines"].extend([
+            {"type": "dialogue", "track": "voice", "speaker": "知夏", "text": "原来是这样，我明白了。", "knowledge_point_ids": ["k1"], "content_origin": "ai_explanation"},
+            {"type": "dialogue", "track": "voice", "speaker": "闻舟", "text": "对，关键是比较向量之间的距离。", "knowledge_point_ids": ["k1"], "content_origin": "ai_explanation"},
+        ])
+
+        enriched = enrich_dialogue_performance(payload)
+
+        roles = {role["name"]: role for role in enriched["roles"]}
+        self.assertEqual(roles["知夏"]["edge_voice"], "zh-CN-XiaoyiNeural")
+        self.assertEqual(roles["闻舟"]["edge_voice"], "zh-CN-YunyangNeural")
+        lines = enriched["segments"][0]["lines"]
+        self.assertGreaterEqual(len({line["emotion"] for line in lines}), 3)
+        self.assertTrue(all(line["production_note"] for line in lines))
 
 
 if __name__ == "__main__":

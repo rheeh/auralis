@@ -194,7 +194,9 @@ class LineService:
         provider = self.tts_provider_repository.get_by_id(tts_provider_id) if self.tts_provider_repository and tts_provider_id else None
         if (getattr(provider, "provider_type", None) or "").lower() == "edge":
             route = "edge"
-        if self.resolve_cosyvoice_voice(voice):
+        # An explicit Edge route is authoritative. This matters for one-off
+        # knowledge audio, which must never fall through to a paid cloud voice.
+        if self.resolve_cosyvoice_voice(voice) and (getattr(role, "tts_route", None) or "").lower() != "edge":
             route = "cloud"
         if route == "skip":
             return b""

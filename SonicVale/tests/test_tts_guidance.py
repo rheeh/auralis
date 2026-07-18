@@ -75,6 +75,27 @@ class TTSGuidanceTest(unittest.TestCase):
         self.assertEqual(kwargs["production_note"], "轻声反问")
         self.assertIn("情绪强度：较强", kwargs["instruction"])
 
+    def test_explicit_edge_role_cannot_be_overridden_by_cloud_voice_tag(self):
+        service = LineService(None, None, FakeProviderRepository("cloud"))
+        service.generate_edge_audio = Mock(return_value=b"free-edge-audio")
+        service.generate_cloud_audio = Mock(side_effect=AssertionError("must not call paid cloud TTS"))
+        role = SimpleNamespace(
+            name="闻舟",
+            tts_route="edge",
+            role_importance="lead",
+            edge_voice="zh-CN-YunyangNeural",
+        )
+        stale_voice = SimpleNamespace(description="cosyvoice_voice:paid-voice")
+
+        result = service.generate_audio(
+            None, 1, "我们从关键结论开始。", None, [0.0] * 8,
+            "/tmp/unused.wav", role=role, voice=stale_voice,
+            line_type="dialogue", track="voice", emotion_name="坚定",
+        )
+
+        self.assertEqual(result, b"free-edge-audio")
+        service.generate_cloud_audio.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

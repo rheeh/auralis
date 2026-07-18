@@ -21,7 +21,7 @@ class KnowledgeReviewService:
             "你是独立的知识音频审查 Agent，不参与脚本创作。",
             "内容准确性：检查结论、限定条件、因果关系、数字和概念是否忠实原文；检查 AI 补充是否正确标记。",
             "学习质量：检查知识顺序、术语解释、例子、总结和回忆节点；不能为了戏剧效果牺牲准确性。",
-            "音频质量：检查对话节奏、长段信息倾倒，以及制作提示是否混入朗读文本。dialogue_lesson 必须由知夏和闻舟通过追问、反例、纠错和复述推进，不能是一人念稿、另一人只做捧哏。",
+            "音频质量：检查对话节奏、长段信息倾倒，以及制作提示是否混入朗读文本。dialogue_lesson 必须由知夏女声和闻舟男声通过追问、反例、纠错和复述推进；检查每句情绪与强度是否自然变化，不能全篇平静、不能是一人念稿或另一人只做捧哏。",
             "coverage 必须逐个报告 required 知识点是否被脚本覆盖。只返回符合响应结构的 JSON。",
         ])
         prompt = "\n\n".join([
@@ -67,6 +67,11 @@ class KnowledgeReviewService:
                 dialogue_issues.append("对话字数不足 80%，仍然接近旁白念稿")
             if any(len(line.text) > 220 for line in spoken):
                 dialogue_issues.append("存在超过 220 字的单条长篇念稿")
+            emotions = {line.emotion for line in dialogue if line.emotion}
+            if len(emotions) < 3:
+                dialogue_issues.append("对话情绪变化不足 3 种，听感仍会接近机器人念稿")
+            if any(not line.strength or not line.production_note for line in dialogue):
+                dialogue_issues.append("部分对话缺少情绪强度或声音指导")
         for message in dialogue_issues:
             report["issues"].append({"severity": "error", "category": "对话质量", "message": message})
         if missing or polluted_lines or dialogue_issues or report["unmarked_supplements"]:

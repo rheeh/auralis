@@ -225,6 +225,8 @@ Auralis 是一个本地优先的 AI 音频内容制作工作台，包含两条�
 - 后端复用一个 `workspace_kind=one_off` 的隐藏制作空间承载模型、TTS、会话和音频数据；普通项目 API 会过滤它，因此不会污染“我的项目”。
 - 知识文章页提供“双人学习对话 / 知识情景剧 / 单人讲解”选择，默认双人学习对话。
 - 双人模式固定使用“知夏 / 闻舟”，生成器和审查器共同执行对话字数占比、双方参与次数、长独白和角色名校验。
+- 双人模式固定使用免费 Edge-TTS：知夏绑定年轻女声 `zh-CN-XiaoyiNeural`，闻舟绑定成熟男声 `zh-CN-YunyangNeural`；提交时会清除遗留的 Cloud/CosyVoice 绑定，知识音频不会调用阿里云 TTS。
+- 脚本为每句对话保存 `emotion / strength / voice_profile / production_note`；Edge-TTS 只把它们近似映射为整句 `rate / pitch / volume`，用于减少机器人念稿感，不能宣称达到专业配音演员的情绪表现。
 - 两位角色的跨文章记忆是有界、可追溯的：最多读取隐藏空间内最近 6 篇文章的标题、摘要和知识点；当前没有用户账号、向量检索或全量长期记忆。
 - `App.vue` 在路由切换后重置主内容滚动位置，避免从长项目列表进入制作页时把关键入口卷出首屏。
 
@@ -470,6 +472,7 @@ API docs: http://127.0.0.1:8200/docs
 
 5. **如果用户继续调 TTS 效果**
    - 先确认当前 provider 是 Edge 还是 cloud。
+   - 知识文章双人音频已明确限制为免费 Edge-TTS，不要自动切换或推荐阿里云 TTS。
    - Edge 问题优先解释能力边界，再优化 rate/pitch/volume 映射。
    - Cloud provider 才考虑自然语言声音指导和结构化 instruction。
 

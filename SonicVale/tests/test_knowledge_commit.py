@@ -66,9 +66,19 @@ class KnowledgeCommitTest(unittest.TestCase):
         self.assertEqual(first["line_count"], 2)
         self.assertEqual(self.db.scalar(select(func.count(RolePO.id))), 2)
 
+        roles = {role.name: role for role in self.db.execute(select(RolePO)).scalars()}
+        self.assertEqual(roles["知夏"].edge_voice, "zh-CN-XiaoyiNeural")
+        self.assertEqual(roles["闻舟"].edge_voice, "zh-CN-YunyangNeural")
+        self.assertEqual(roles["知夏"].tts_route, "edge")
+        self.assertEqual(roles["闻舟"].tts_route, "edge")
+        self.assertIsNone(roles["知夏"].default_voice_id)
+        self.assertIsNone(roles["闻舟"].default_voice_id)
+
         lines = self.db.execute(select(LinePO).where(LinePO.chapter_id == first["chapter_id"]).order_by(LinePO.line_order)).scalars().all()
         self.assertEqual(lines[0].knowledge_metadata["knowledge_point_ids"], ["k1"])
         self.assertEqual(lines[1].knowledge_metadata["content_origin"], "fact_from_source")
+        self.assertTrue(all(line.voice_profile for line in lines))
+        self.assertTrue(all(line.production_note for line in lines))
         session = self.db.get(ChatSessionPO, self.session_id)
         self.assertEqual(session.current_stage, "completed")
 
@@ -77,6 +87,13 @@ class KnowledgeCommitTest(unittest.TestCase):
         task = AudioTaskService(self.db).enqueue(queue, self.project_id, first["chapter_id"], lines[0], dto, self.session_id)
         self.assertEqual(task.status, "queued")
         self.assertEqual(self.db.scalar(select(func.count(AudioTaskPO.id))), 1)
+
+        AudioTaskService(self.db).enqueue(queue, self.project_id, first["chapter_id"], lines[0], dto, self.session_id)
+        summary = AudioTaskService(self.db).summary(self.session_id)
+        self.assertEqual(summary["total"], 1)
+        self.assertEqual(summary["history_total"], 2)
+        self.assertEqual(summary["tasks"][0]["role_name"], "知夏")
+        self.assertEqual(summary["tasks"][0]["tts_route"], "edge")
 
     def test_study_queries_and_answer_storage(self):
         KnowledgeCommitService(self.db).commit_session(self.session_id)

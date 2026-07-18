@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import getConfigPath
 from app.models.po import AdaptationRunPO, ChapterPO, ChatSessionPO, EmotionPO, LinePO, ProjectPO, RolePO, StrengthPO
+from app.services.knowledge_voice_design import KNOWLEDGE_ROLE_VOICES, enrich_dialogue_performance
 from app.workflows.article.schemas import KnowledgeScript
 
 
@@ -27,6 +28,7 @@ class KnowledgeCommitService:
         if session.current_stage not in {"knowledge_script_ready", "completed"}:
             raise ValueError("当前阶段不能提交知识音频脚本")
         if run.committed_at and run.chapter_id:
+            self._upgrade_existing_audio_design(session, run)
             return self._existing_summary(session, run)
 
         token = uuid4().hex
@@ -43,7 +45,7 @@ class KnowledgeCommitService:
         project = self.db.get(ProjectPO, session.project_id)
         if not project:
             raise ValueError("项目不存在")
-        script = KnowledgeScript.model_validate(run.final_json).model_dump(mode="json")
+        script = enrich_dialogue_performance(KnowledgeScript.model_validate(run.final_json).model_dump(mode="json"))
         try:
             session.current_stage = "committing"
             target_title = chapter_title or script["title"] or run.title
@@ -80,6 +82,7 @@ class KnowledgeCommitService:
                         self.db.flush()
                         roles[speaker] = role
                         created_roles += 1
+                    self._apply_role_voice(role, speaker)
                     line_count += 1
                     point_ids = list(dict.fromkeys((raw_line.get("knowledge_point_ids") or []) + (segment.get("knowledge_point_ids") or [])))
                     line = LinePO(
@@ -104,6 +107,8 @@ class KnowledgeCommitService:
 
             now = datetime.now(timezone.utc)
             run.chapter_id = chapter.id
+            run.draft_json = script
+            run.final_json = script
             run.status = "committed"
             run.current_stage = "completed"
             run.committed_at = now
@@ -125,6 +130,55 @@ class KnowledgeCommitService:
                 locked.lease_expires_at = None
                 self.db.commit()
             raise
+
+    def _upgrade_existing_audio_design(self, session: ChatSessionPO, run: AdaptationRunPO) -> None:
+        script = enrich_dialogue_performance(KnowledgeScript.model_validate(run.final_json).model_dump(mode="json"))
+        roles = {
+            role.name: role
+            for role in self.db.execute(select(RolePO).where(RolePO.project_id == session.project_id)).scalars()
+        }
+        for speaker, role in roles.items():
+            self._apply_role_voice(role, speaker)
+
+        emotions = {item.name: item.id for item in self.db.execute(select(EmotionPO)).scalars()}
+        strengths = {item.name: item.id for item in self.db.execute(select(StrengthPO)).scalars()}
+        lines = list(self.db.execute(
+            select(LinePO).where(LinePO.chapter_id == run.chapter_id).order_by(LinePO.line_order.asc())
+        ).scalars())
+        raw_lines = [raw_line for segment in script["segments"] for raw_line in segment["lines"]]
+        for line, raw_line in zip(lines, raw_lines):
+            speaker = self._speaker(raw_line)
+            role = roles.get(speaker)
+            changed = False
+            updates = {
+                "role_id": role.id if role else line.role_id,
+                "voice_profile": raw_line.get("voice_profile") or None,
+                "production_note": raw_line.get("production_note") or None,
+                "emotion_id": emotions.get(raw_line.get("emotion")) or emotions.get("平静"),
+                "strength_id": strengths.get(raw_line.get("strength")) or strengths.get("中等"),
+            }
+            for field, value in updates.items():
+                if getattr(line, field) != value:
+                    setattr(line, field, value)
+                    changed = True
+            if changed and line.should_speak:
+                line.status = "pending"
+                line.is_done = 0
+        run.draft_json = script
+        run.final_json = script
+        self.db.commit()
+
+    @staticmethod
+    def _apply_role_voice(role: RolePO, speaker: str) -> None:
+        settings = KNOWLEDGE_ROLE_VOICES.get(speaker)
+        if not settings:
+            return
+        role.edge_voice = settings["edge_voice"]
+        role.tts_route = "edge"
+        role.role_importance = "lead"
+        # Knowledge-article audio is intentionally free-only. Clearing a stale
+        # cloud voice binding prevents the runtime from selecting Aliyun/CosyVoice.
+        role.default_voice_id = None
 
     def _existing_summary(self, session: ChatSessionPO, run: AdaptationRunPO) -> dict[str, Any]:
         count = self.db.scalar(select(func.count(LinePO.id)).where(LinePO.chapter_id == run.chapter_id))
