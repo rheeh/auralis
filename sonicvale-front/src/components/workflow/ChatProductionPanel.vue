@@ -150,6 +150,7 @@ const stageTagType = computed(()=>snapshot.value?.current_stage==='failed'?'dang
 
 onMounted(async()=>{try{const response=await fetchWorkflowCapabilities();if(response.code===200)Object.assign(capabilities,response.data||{})}catch{}const id=props.sessionId||route.params.sessionId||route.query.session_id;if(id)load(id,true)})
 watch(()=>props.sessionId,(id)=>{if(id&&id!==snapshot.value?.session_id)load(id,true)})
+watch(()=>route.query.content_type,(contentType)=>{if(!snapshot.value)sourceType.value=contentType==='knowledge_article'?'knowledge_article':'novel'})
 onBeforeUnmount(cleanup)
 
 function requestId(){ return globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}` }

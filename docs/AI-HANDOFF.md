@@ -217,6 +217,14 @@ Auralis 是一个本地优先的 AI 音频内容制作工作台，包含两条�
 - `SonicVale/app/workflows/article/schemas.py`
 - `sonicvale-front/src/components/article/`
 
+用户可见入口已经补齐：
+
+- 首页首屏直接展示“小说广播剧 / 知识文章音频”双入口。
+- 项目列表顶部提供两种新建入口，每张已有项目卡也可直接发起对应内容制作。
+- 新建项目弹窗必须先显示内容类型，创建后按类型进入小说工作台或知识文章导入页。
+- 知识文章制作页使用独立标题、说明和已选状态，路由为 `/studio?project_id=<id>&content_type=knowledge_article`。
+- `App.vue` 在路由切换后重置主内容滚动位置，避免从长项目列表进入制作页时把关键入口卷出首屏。
+
 已验证用户提供的公众号链接：`https://mp.weixin.qq.com/s/jw7pqTwco_lLGnN_KmExig`。当前抓取器能提取标题“如何看待 grill-me（拷问我）这个 Skill？”和约 4,882 字正文；如果微信返回验证码或访问限制，会返回 `access_restricted` 并引导粘贴正文。
 
 发布开关：
@@ -353,7 +361,11 @@ API docs: http://127.0.0.1:8200/docs
 
 ### 前端入口
 
+- `sonicvale-front/src/pages/Home.vue`
+- `sonicvale-front/src/pages/ProjectList.vue`
+- `sonicvale-front/src/pages/Studio.vue`
 - `sonicvale-front/src/pages/ProjectWorkspace.vue`
+- `sonicvale-front/src/components/article/ContentTypeSelector.vue`
 - `sonicvale-front/src/components/workflow/ChatComposer.vue`
 - `sonicvale-front/src/components/workflow/ChatMessageList.vue`
 - `sonicvale-front/src/components/workflow/ChatProductionPanel.vue`

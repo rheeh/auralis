@@ -8,6 +8,7 @@
       <button
         v-for="option in options" :key="option.value" type="button" class="type-card"
         :class="{ active:modelValue===option.value, disabled:option.disabled }" :disabled="option.disabled"
+        :data-content-type="option.value" :aria-pressed="modelValue===option.value"
         @click="$emit('update:modelValue',option.value)"
       >
         <span class="type-icon" aria-hidden="true">{{ option.icon }}</span>

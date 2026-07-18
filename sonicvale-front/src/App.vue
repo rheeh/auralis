@@ -86,7 +86,7 @@
         </div>
       </header>
 
-      <main class="page-surface">
+      <main ref="pageSurface" class="page-surface">
         <router-view />
       </main>
     </section>
@@ -94,7 +94,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   ArrowRight,
@@ -115,6 +115,7 @@ const route = useRoute()
 const sidebarCompact = ref(false)
 const isDark = ref(false)
 const activeProject = ref(null)
+const pageSurface = ref(null)
 
 const primaryNav = [
   { path: '/projects', label: '项目', icon: Tickets, match: ['/projects', '/home'] },
@@ -132,9 +133,9 @@ const utilityNav = [
 ]
 
 const routeInfo = {
-  Home: ['项目', '欢迎回来', '从一个项目开始，继续你的广播剧制作。'],
-  Scripts: ['项目', '我的项目', '创建、整理并继续最近的广播剧工程。'],
-  Studio: ['创作', 'AI 改编', '从原文到角色与台本，逐步确认并写入作品。'],
+  Home: ['项目', '欢迎回来', '选择小说广播剧或知识文章音频，开始新的声音作品。'],
+  Scripts: ['项目', '我的项目', '选择内容类型，创建、整理并继续最近的声音工程。'],
+  Studio: ['创作', 'AI 音频创作', '从小说或知识文章开始，逐步确认并写入作品。'],
   StudioSession: ['创作', '继续改编', '恢复上次会话，继续确认角色和台本。'],
   VoiceManager: ['资源', '音色库', '管理可跨作品复用的角色音色。'],
   Queue: ['生产', '任务队列', '查看生成进度，处理失败与等待任务。'],
@@ -199,6 +200,10 @@ onMounted(() => {
 })
 
 watch(activeProjectId, loadActiveProject)
+watch(() => route.fullPath, async () => {
+  await nextTick()
+  pageSurface.value?.scrollTo({ top: 0, left: 0 })
+})
 watch(isDark, (dark) => {
   applyTheme(dark)
   localStorage.setItem('sv_theme', dark ? 'dark' : 'light')
