@@ -19,6 +19,12 @@ cd "$ROOT_DIR/SonicVale"
   app/core/config.py \
   app/core/audio_engin.py \
   app/core/tts_runtime.py \
+  app/services/article_ingest_service.py \
+  app/services/article_workflow_service.py \
+  app/services/knowledge_production_service.py \
+  app/services/knowledge_commit_service.py \
+  app/routers/article_source_router.py \
+  app/routers/article_workflow_router.py \
   app/services/drama_adaptation_service.py \
   app/routers/drama_adaptation_router.py \
   app/routers/line_router.py \
@@ -37,6 +43,7 @@ from types import SimpleNamespace
 
 from app.main import app
 from app.core.config import WORKFLOW_TTS_REVIEW_ENABLED
+from app.core.config import KNOWLEDGE_ARTICLE_ENABLED, KNOWLEDGE_ARTICLE_URL_ENABLED
 from app.services.line_service import LineService
 from app.dto.line_dto import LineAudioProcessDTO
 from app.core.subtitle import subtitle_engine
@@ -53,6 +60,20 @@ required = {
     "/chat/sessions/{session_id}/audio-tasks/generate",
     "/chat/sessions/{session_id}/audio-tasks/{task_id}/retry",
     "/chat/sessions/{session_id}/audio-tasks/{task_id}/review",
+    "/chat/article-sources/preview",
+    "/chat/article-sources/import",
+    "/chat/article-sources/{source_id}",
+    "/chat/article-sources/{source_id}/normalize",
+    "/chat/sessions/{session_id}/article/analyze",
+    "/chat/sessions/{session_id}/article/analysis",
+    "/chat/sessions/{session_id}/article/outline/confirm",
+    "/chat/sessions/{session_id}/article/outline/revise",
+    "/chat/sessions/{session_id}/article/script/generate",
+    "/chat/sessions/{session_id}/article/script/revise",
+    "/chat/sessions/{session_id}/article/script/confirm",
+    "/chat/sessions/{session_id}/knowledge-points",
+    "/chat/sessions/{session_id}/review-questions",
+    "/chat/sessions/{session_id}/review-questions/{question_id}/answer",
     "/ws/projects/{project_id}/sessions/{session_id}",
     "/queue/status",
     "/queue/audio-tasks",
@@ -69,6 +90,8 @@ if missing:
 print(f"FastAPI routes ok: {len(app.routes)} routes")
 if not WORKFLOW_TTS_REVIEW_ENABLED:
     raise SystemExit("TTS review feature should be enabled by default")
+if not KNOWLEDGE_ARTICLE_ENABLED or not KNOWLEDGE_ARTICLE_URL_ENABLED:
+    raise SystemExit("Knowledge article and URL import should be enabled by default")
 
 with TestClient(app) as client:
     missing_session = client.get("/chat/sessions/sess_missing")

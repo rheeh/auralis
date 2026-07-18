@@ -6,13 +6,13 @@
 > 当前默认远端：`github` -> `git@github.com:rheeh/auralis.git`
 > 公开仓库：https://github.com/rheeh/auralis
 > 旧远端保留：`origin` -> `https://gitee.com/green1149/auralis-studio.git`
-> 最新关键提交：`f73fd04 feat: finalize Auralis interview showcase`
+> 最新提交：执行 `git log -1 --oneline` 获取，以当前 checkout 为准
 
 本文档给下一位 AI 助手接手执行用。它不是聊天总结，所有判断都应以当前 checkout 为准。
 
 ## 1. 项目背景和最终目标
 
-Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说或叙事文本改编成可审查、可修改、可配音、可连播的音频项目。
+Auralis 是一个本地优先的 AI 音频内容制作工作台，包含两条独立流水线：小说广播剧和知识文章音频。两条流水线共享项目、会话、TTS、音频版本、试听和导出基础设施，但使用不同的 Prompt、Schema、状态和审查规则。
 
 最终目标不是做一个通用 Agent 框架，也不是扩展成平台型产品，而是形成一个能给面试官展示的完整 AI 产品原型：
 
@@ -34,6 +34,7 @@ Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说�
 | P0 | 保持项目可启动、可验证、可演示 | 已通过 `./scripts/verify.sh` | 任意改动后至少运行相关测试；较大改动跑全量 verify |
 | P0 | 保持 README 和交接文档准确 | README 已重写，本文档已更新 | 不要再以“基于某项目二次开发”作为 README 开头 |
 | P0 | 稳定主流程：解析 -> 角色确认 -> 台本初稿 -> 审查/返修 -> 用户确认 -> 写入项目 | 已实现 | 修 bug 时不要重新引入 LangGraph |
+| P0 | 知识文章音频：导入 -> 分析 -> 大纲确认 -> 脚本/审查 -> 提交 -> TTS/复习 | 已实现核心闭环 | 外部联网查证仍关闭，不能把 AI 解释伪装成原文 |
 | P0 | 制作助手自由对话和工具调用 | 已实现 `ProductionAssistantService` | 后续只做能力补强，不要把小说解析提示词混进助手对话 |
 | P0 | 音频版本管理 | 已实现生成 take 和后期处理版本 | 修复时确保原音频不被覆盖 |
 | P1 | UI 继续收敛为工作台体验 | 已完成一轮重构 | 不要添加解释性大横幅或过多固定栏 |
@@ -183,7 +184,51 @@ Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说�
 - `sonicvale-front/src/components/workflow/ScriptDraftConfirmCard.vue`
 - `sonicvale-front/src/components/workflow/SessionStageStepper.vue`
 
-### 3.7 README 和 GitHub 同步
+### 3.7 知识文章音频大版本
+
+已按 `docs/knowledge-article-major-update-plan.md` 完成 Knowledge Audio v1 核心闭环：
+
+```text
+公众号 URL 或粘贴正文
+  -> 预览、清洗和用户正文确认
+  -> 独立文章分析 Prompt
+  -> 带原文依据的知识大纲
+  -> 用户确认或 revision
+  -> 学习结构和表现形式设计
+  -> 知识音频初稿
+  -> 内容准确性、学习质量、音频质量独立审查
+  -> 用户修改或确认
+  -> 幂等写入 Chapter / Role / Line
+  -> 复用 TTS take、试听、版本和导出
+  -> 知识点回顾、相关片段和复习问题
+```
+
+关键实现：
+
+- `SonicVale/app/services/article_ingest_service.py`
+- `SonicVale/app/services/article_analysis_service.py`
+- `SonicVale/app/services/article_workflow_service.py`
+- `SonicVale/app/services/learning_design_service.py`
+- `SonicVale/app/services/knowledge_script_service.py`
+- `SonicVale/app/services/knowledge_review_service.py`
+- `SonicVale/app/services/knowledge_production_service.py`
+- `SonicVale/app/services/knowledge_commit_service.py`
+- `SonicVale/app/services/knowledge_study_service.py`
+- `SonicVale/app/workflows/article/schemas.py`
+- `sonicvale-front/src/components/article/`
+
+已验证用户提供的公众号链接：`https://mp.weixin.qq.com/s/jw7pqTwco_lLGnN_KmExig`。当前抓取器能提取标题“如何看待 grill-me（拷问我）这个 Skill？”和约 4,882 字正文；如果微信返回验证码或访问限制，会返回 `access_restricted` 并引导粘贴正文。
+
+发布开关：
+
+- `KNOWLEDGE_ARTICLE_ENABLED=true`
+- `KNOWLEDGE_ARTICLE_URL_ENABLED=true`
+- `KNOWLEDGE_ARTICLE_EXTERNAL_VERIFY_ENABLED=false`
+- `KNOWLEDGE_ARTICLE_VISION_ENABLED=false`
+
+未完成范围必须保持明确：联网事实查证、截图/OCR、系列课程和长文分段合并尚未实现；当前“联网查证”选项保持禁用。
+
+### 3.8 README 和 GitHub 同步
 
 - README 已重写为英文面试项目说明。
 - README 开头直接介绍 Auralis，不再第一句话强调“基于某项目改编”。
@@ -197,7 +242,7 @@ Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说�
 当前 checkout 状态：
 
 - `master` 跟踪 `github/master`。
-- 最新项目提交：`f73fd04 feat: finalize Auralis interview showcase`。
+- 最新项目提交以 `git log -1 --oneline` 的当前输出为准，不在交接文档中固定易过期的哈希。
 - 工作区存在未跟踪目录 `personal-site/`，不属于 Auralis 交接文档任务；不要误提交。
 - `origin` Gitee 远端仍保留，但默认 push 目标已经是 GitHub。
 
@@ -209,7 +254,7 @@ Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说�
 
 结果：
 
-- Python unittest：41 tests OK。
+- Python unittest：58 tests OK。
 - FastAPI route smoke check 通过。
 - TTS review feature 默认开启检查通过。
 - 多轨非朗读行跳过 TTS 检查通过。

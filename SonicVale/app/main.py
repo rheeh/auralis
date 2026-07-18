@@ -22,7 +22,7 @@ from app.repositories.llm_provider_repository import LLMProviderRepository
 from app.repositories.tts_provider_repository import TTSProviderRepository
 from app.routers import project_router, chapter_router, role_router, voice_router, llm_provider_router, \
     tts_provider_router, line_router, emotion_router, strength_router, multi_emotion_voice_router, prompt_router, \
-    drama_adaptation_router, queue_router, chat_router
+    drama_adaptation_router, queue_router, chat_router, article_source_router, article_workflow_router
 from app.routers.chapter_router import get_strength_service, get_prompt_service, get_project_service
 from app.routers.emotion_router import get_emotion_service
 from app.routers.llm_provider_router import get_llm_service
@@ -377,6 +377,8 @@ app.include_router(prompt_router.router)
 app.include_router(drama_adaptation_router.router)
 app.include_router(queue_router.router)
 app.include_router(chat_router.router)
+app.include_router(article_source_router.router)
+app.include_router(article_workflow_router.router)
 # =========================
 # 健康检查接口
 # =========================

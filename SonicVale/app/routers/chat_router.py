@@ -10,7 +10,15 @@ from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.config import CHAT_EVENT_REPLAY_LIMIT, WORKFLOW_CHAT_UI_ENABLED, WORKFLOW_TTS_REVIEW_ENABLED
+from app.core.config import (
+    CHAT_EVENT_REPLAY_LIMIT,
+    KNOWLEDGE_ARTICLE_ENABLED,
+    KNOWLEDGE_ARTICLE_EXTERNAL_VERIFY_ENABLED,
+    KNOWLEDGE_ARTICLE_URL_ENABLED,
+    KNOWLEDGE_ARTICLE_VISION_ENABLED,
+    WORKFLOW_CHAT_UI_ENABLED,
+    WORKFLOW_TTS_REVIEW_ENABLED,
+)
 from app.core.config import getConfigPath
 from app.core.response import Res
 from app.db.database import SessionLocal, get_db
@@ -19,6 +27,7 @@ from app.dto.line_dto import LineCreateDTO
 from app.models.po import ChatSessionPO, LinePO
 from app.services.audio_task_service import AudioTaskService
 from app.services.chat_session_service import ChatSessionService
+from app.services.content_adaptation_service import ContentAdaptationService
 from app.services.drama_commit_service import DramaCommitService
 from app.services.drama_workflow_service import DramaWorkflowService, WorkflowConflictError
 from app.services.production_assistant_service import ProductionAssistantAgent
@@ -38,7 +47,7 @@ def get_chat_service(db: Session = Depends(get_db)) -> ChatSessionService:
 def _run_start(session_id: str) -> None:
     db = SessionLocal()
     try:
-        DramaWorkflowService(db).start(session_id)
+        ContentAdaptationService(db).start(session_id)
     except Exception:
         pass
     finally:
@@ -48,7 +57,10 @@ def _run_start(session_id: str) -> None:
 def _run_action(session_id: str, action: dict) -> None:
     db = SessionLocal()
     try:
-        DramaWorkflowService(db).submit_action(session_id, action)
+        if action.get("action") == "retry":
+            ContentAdaptationService(db).resume(session_id)
+        else:
+            DramaWorkflowService(db).submit_action(session_id, action)
     except Exception:
         pass
     finally:
@@ -85,6 +97,10 @@ def workflow_capabilities():
         "assistant_enabled": True,
         "chat_ui_enabled": WORKFLOW_CHAT_UI_ENABLED,
         "tts_review_enabled": WORKFLOW_TTS_REVIEW_ENABLED,
+        "knowledge_article_enabled": KNOWLEDGE_ARTICLE_ENABLED,
+        "knowledge_article_url_enabled": KNOWLEDGE_ARTICLE_URL_ENABLED,
+        "knowledge_article_external_verify_enabled": KNOWLEDGE_ARTICLE_EXTERNAL_VERIFY_ENABLED,
+        "knowledge_article_vision_enabled": KNOWLEDGE_ARTICLE_VISION_ENABLED,
         "python_version": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
         "state_backend": "sqlalchemy",
     }, message="工作流能力可用")
@@ -104,7 +120,8 @@ def create_session(dto: ChatSessionCreateDTO, tasks: BackgroundTasks, service: C
     try:
         snapshot = service.create(dto)
         tasks.add_task(_run_start, snapshot["session_id"])
-        return Res(data=snapshot, code=202, message="会话已创建，正在解析小说")
+        message = "文章会话已创建，正在保存正文" if dto.source_type == "knowledge_article" else "会话已创建，正在解析小说"
+        return Res(data=snapshot, code=202, message=message)
     except ValueError as exc:
         return _error(400, str(exc))
 

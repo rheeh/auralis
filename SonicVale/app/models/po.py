@@ -138,6 +138,7 @@ class LinePO(Base):
     voice_profile = Column(Text, nullable=True)
     production_note = Column(Text, nullable=True)
     audio_events = Column(JSON, nullable=True)
+    knowledge_metadata = Column(JSON, nullable=True)
     audio_versions = Column(JSON, nullable=True)
     active_audio_version_id = Column(String(64), nullable=True)
     audio_variants = Column(JSON, nullable=True)
@@ -196,6 +197,10 @@ class AdaptationRunPO(Base):
     draft_json = Column(JSON, nullable=True)
     review_json = Column(JSON, nullable=True)
     final_json = Column(JSON, nullable=True)
+    article_analysis_json = Column(JSON, nullable=True)
+    learning_plan_json = Column(JSON, nullable=True)
+    knowledge_review_json = Column(JSON, nullable=True)
+    external_sources_json = Column(JSON, nullable=True)
     session_id = Column(String(64), nullable=True, index=True)
     is_conversational = Column(Boolean, default=False, nullable=False)
     source_revision = Column(Integer, default=1, nullable=False)
@@ -216,8 +221,15 @@ class ChatSessionPO(Base):
     current_stage = Column(String(64), default="created", nullable=False)
     active_confirm_type = Column(String(32), nullable=True)
     title = Column(String(255), nullable=True)
+    source_type = Column(String(50), default="novel", nullable=False, index=True)
+    adaptation_mode = Column(String(50), default="drama", nullable=False)
+    article_category = Column(String(50), nullable=True)
+    learning_goal = Column(String(50), nullable=True)
+    target_duration_minutes = Column(Integer, nullable=True)
+    verification_mode = Column(String(50), nullable=True)
     source_text = Column(Text, nullable=True)
     source_document_id = Column(Integer, nullable=True)
+    article_source_id = Column(Integer, ForeignKey("article_sources.id"), nullable=True, index=True)
     instruction = Column(Text, nullable=True)
     pending_confirm_json = Column(JSON, nullable=True)
     last_error_code = Column(String(80), nullable=True)
@@ -246,6 +258,48 @@ class SourceDocumentPO(Base):
     content = Column(Text, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+
+
+class ArticleSourcePO(Base):
+    __tablename__ = "article_sources"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    project_id = Column(Integer, nullable=False, index=True)
+    session_id = Column(String(64), ForeignKey("chat_sessions.id"), nullable=True, index=True)
+    input_method = Column(String(32), nullable=False)
+    source_url = Column(String(2000), nullable=True)
+    title = Column(String(500), nullable=False)
+    author = Column(String(255), nullable=True)
+    account_name = Column(String(255), nullable=True)
+    published_at = Column(DateTime, nullable=True)
+    raw_content = Column(Text, nullable=False)
+    normalized_content = Column(Text, nullable=False)
+    content_hash = Column(String(64), nullable=False, index=True)
+    fetch_status = Column(String(32), default="ready", nullable=False, index=True)
+    fetch_error = Column(Text, nullable=True)
+    rights_confirmed = Column(Boolean, default=False, nullable=False)
+    source_metadata_json = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+
+    __table_args__ = (
+        Index("idx_article_source_project_created", "project_id", "created_at"),
+    )
+
+
+class KnowledgeReviewAnswerPO(Base):
+    __tablename__ = "knowledge_review_answers"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(String(64), ForeignKey("chat_sessions.id"), nullable=False, index=True)
+    question_id = Column(String(64), nullable=False)
+    answer = Column(Text, nullable=False)
+    matches_reference = Column(Boolean, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    __table_args__ = (
+        Index("idx_knowledge_answer_session_question", "session_id", "question_id"),
+    )
 
 
 class ChatMessagePO(Base):
