@@ -25,6 +25,10 @@ export function previewArticleSource(data) {
   return request.post('/chat/article-sources/preview', data)
 }
 
+export function ensureInstantArticleWorkspace() {
+  return request.post('/chat/article-sources/instant-workspace')
+}
+
 export function importArticleSource(data) {
   return request.post('/chat/article-sources/import', data)
 }

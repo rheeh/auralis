@@ -22,6 +22,8 @@ class ProjectPO(Base):
     is_precise_fill = Column(Integer, default=0, nullable=False)
     # 项目根地址
     project_root_path = Column(String(255), nullable=True)
+    # 普通项目会展示在项目列表；one_off 是公众号知识音频的内部制作空间。
+    workspace_kind = Column(String(32), default="project", nullable=False, index=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 

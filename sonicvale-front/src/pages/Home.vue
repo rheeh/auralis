@@ -30,7 +30,7 @@
               <span><small>故事改编</small><strong>小说广播剧</strong><em>人物 · 台本 · 多角色配音</em></span>
               <b aria-hidden="true">→</b>
             </RouterLink>
-            <RouterLink class="creation-choice knowledge-choice" to="/projects?create=knowledge_article">
+            <RouterLink class="creation-choice knowledge-choice" to="/studio?content_type=knowledge_article">
               <span class="choice-mark" aria-hidden="true">知</span>
               <span><small>学习创作</small><strong>知识文章音频</strong><em>公众号 · 证据 · 复习问题</em></span>
               <b aria-hidden="true">→</b>
@@ -102,7 +102,7 @@ const pointer = ref({ x:0, y:0 })
 const latestProject = computed(() => projects.value[0] || null)
 const features = [
   { icon:'≋', title:'小说广播剧', caption:'声音优先，克制旁白', to:'/projects?create=novel' },
-  { icon:'◎', title:'知识文章音频', caption:'观点可追溯，听完可复习', to:'/projects?create=knowledge_article' },
+  { icon:'◎', title:'知识文章音频', caption:'观点可追溯，听完可复习', to:'/studio?content_type=knowledge_article' },
   { icon:'♬', title:'多角色声线', caption:'人物卡绑定独立音色', to:'/voices' },
   { icon:'⌁', title:'逐句音频精修', caption:'语速、音量、停顿与裁剪', to:'/projects' },
 ]

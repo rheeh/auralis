@@ -21,7 +21,7 @@ class KnowledgeReviewService:
             "你是独立的知识音频审查 Agent，不参与脚本创作。",
             "内容准确性：检查结论、限定条件、因果关系、数字和概念是否忠实原文；检查 AI 补充是否正确标记。",
             "学习质量：检查知识顺序、术语解释、例子、总结和回忆节点；不能为了戏剧效果牺牲准确性。",
-            "音频质量：检查对话节奏、长段信息倾倒，以及制作提示是否混入朗读文本。",
+            "音频质量：检查对话节奏、长段信息倾倒，以及制作提示是否混入朗读文本。dialogue_lesson 必须由知夏和闻舟通过追问、反例、纠错和复述推进，不能是一人念稿、另一人只做捧哏。",
             "coverage 必须逐个报告 required 知识点是否被脚本覆盖。只返回符合响应结构的 JSON。",
         ])
         prompt = "\n\n".join([
@@ -54,6 +54,21 @@ class KnowledgeReviewService:
             report["issues"].append({"severity": "error", "category": "知识覆盖", "message": f"遗漏必须知识点：{', '.join(missing)}"})
         if polluted_lines:
             report["issues"].append({"severity": "error", "category": "TTS 文本", "message": "朗读文本包含内容来源或制作标签"})
-        if missing or polluted_lines or report["unmarked_supplements"]:
+        dialogue_issues: list[str] = []
+        if validated_script.adaptation_mode == "dialogue_lesson":
+            spoken = [line for segment in validated_script.segments for line in segment.lines if line.should_speak]
+            dialogue = [line for line in spoken if line.type == "dialogue"]
+            speakers = {line.speaker for line in dialogue}
+            total_chars = sum(len(line.text) for line in spoken) or 1
+            dialogue_chars = sum(len(line.text) for line in dialogue)
+            if speakers != {"知夏", "闻舟"}:
+                dialogue_issues.append("未严格使用知夏、闻舟两位固定学习搭档")
+            if dialogue_chars / total_chars < 0.8:
+                dialogue_issues.append("对话字数不足 80%，仍然接近旁白念稿")
+            if any(len(line.text) > 220 for line in spoken):
+                dialogue_issues.append("存在超过 220 字的单条长篇念稿")
+        for message in dialogue_issues:
+            report["issues"].append({"severity": "error", "category": "对话质量", "message": message})
+        if missing or polluted_lines or dialogue_issues or report["unmarked_supplements"]:
             report["passed"] = False
         return report

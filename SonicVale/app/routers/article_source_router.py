@@ -24,6 +24,14 @@ def get_service(db: Session = Depends(get_db)) -> ArticleIngestService:
     return ArticleIngestService(db)
 
 
+@router.post("/instant-workspace", response_model=Res[dict])
+def ensure_instant_workspace(service: ArticleIngestService = Depends(get_service)):
+    try:
+        return Res(data=service.ensure_instant_workspace(), message="一次性知识音频制作空间已准备")
+    except ValueError as exc:
+        return _error(400, str(exc))
+
+
 @router.post("/preview", response_model=Res[dict])
 def preview_article(dto: ArticleSourcePreviewDTO, service: ArticleIngestService = Depends(get_service)):
     try:

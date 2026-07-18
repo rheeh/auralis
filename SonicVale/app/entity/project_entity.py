@@ -19,9 +19,9 @@ class ProjectEntity:
     is_precise_fill: Optional[int] = None
     # 项目保存地址
     project_root_path: Optional[str] = None
+    workspace_kind: str = "project"
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-
 
 
 

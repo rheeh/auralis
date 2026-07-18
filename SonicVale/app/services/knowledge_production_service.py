@@ -5,7 +5,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models.po import AdaptationDraftRevisionPO
+from app.models.po import AdaptationDraftRevisionPO, AdaptationRunPO
 from app.services.article_workflow_service import ArticleWorkflowService
 from app.services.drama_workflow_service import WorkflowConflictError
 from app.services.knowledge_review_service import KnowledgeReviewService
@@ -43,7 +43,13 @@ class KnowledgeProductionService(ArticleWorkflowService):
                 plan = LearningPlan.model_validate(run.learning_plan_json).model_dump(mode="json")
 
             self._set_stage(session, run, "generating_knowledge_script")
-            script = self.script_writer.generate(project, analysis, plan, session.instruction)
+            script = self.script_writer.generate(
+                project,
+                analysis,
+                plan,
+                session.instruction,
+                prior_learning_context=self._prior_learning_context(project.id, session.id),
+            )
             run.draft_json = script
             revision = self._save_script_revision(session.id, run.id, script, feedback=None, status="reviewing")
             self._set_stage(session, run, "reviewing_knowledge_script")
@@ -155,6 +161,29 @@ class KnowledgeProductionService(ArticleWorkflowService):
             AdaptationDraftRevisionPO.draft_type == "knowledge_script",
         ).order_by(AdaptationDraftRevisionPO.revision.asc())).scalars().all()
         return [{"revision": row.revision, "script": (row.payload_json or {}).get("script"), "status": (row.payload_json or {}).get("status"), "review": (row.payload_json or {}).get("review"), "feedback": row.feedback, "created_at": row.created_at} for row in rows]
+
+    def _prior_learning_context(self, project_id: int, session_id: str) -> list[dict[str, Any]]:
+        """Bounded, source-grounded memory for the recurring learning partners."""
+        runs = self.db.execute(
+            select(AdaptationRunPO).where(
+                AdaptationRunPO.project_id == project_id,
+                AdaptationRunPO.source_kind == "knowledge_article",
+                AdaptationRunPO.session_id != session_id,
+                AdaptationRunPO.article_analysis_json.is_not(None),
+            ).order_by(AdaptationRunPO.updated_at.desc()).limit(6)
+        ).scalars().all()
+        context: list[dict[str, Any]] = []
+        for run in runs:
+            analysis = run.article_analysis_json or {}
+            context.append({
+                "title": analysis.get("title") or run.title,
+                "summary": analysis.get("summary", ""),
+                "key_points": [
+                    point.get("one_sentence_summary") or point.get("title")
+                    for point in (analysis.get("key_points") or [])[:5]
+                ],
+            })
+        return context
 
     @staticmethod
     def _require_script_confirmation(session) -> None:

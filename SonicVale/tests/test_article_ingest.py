@@ -12,6 +12,7 @@ from app.models.po import ArticleSourcePO, ChatSessionPO, ProjectPO
 from app.services.article_ingest_service import ArticleFetchError, ArticleIngestService
 from app.services.chat_session_service import ChatSessionService
 from app.services.content_adaptation_service import ContentAdaptationService
+from app.repositories.project_repository import ProjectRepository
 
 
 class FakeResponse:
@@ -91,6 +92,26 @@ class ArticleIngestTest(unittest.TestCase):
                 source_text="未确认权利的文章正文",
             ))
 
+    def test_instant_workspace_is_reused_and_hidden_from_project_list(self):
+        project = self.db.get(ProjectPO, self.project_id)
+        project.llm_provider_id = 7
+        project.llm_model = "template-model"
+        project.tts_provider_id = 9
+        self.db.commit()
+
+        service = ArticleIngestService(self.db)
+        first = service.ensure_instant_workspace()
+        workspace = self.db.get(ProjectPO, first["project_id"])
+        self.assertEqual(workspace.workspace_kind, "one_off")
+        self.assertEqual(workspace.llm_model, "template-model")
+
+        workspace.llm_model = "verified-model"
+        self.db.commit()
+        second = service.ensure_instant_workspace()
+        self.assertEqual(second["project_id"], first["project_id"])
+        self.assertEqual(self.db.get(ProjectPO, first["project_id"]).llm_model, "verified-model")
+        self.assertNotIn(first["project_id"], [item.id for item in ProjectRepository(self.db).get_all()])
+
     @patch("app.services.article_ingest_service.socket.getaddrinfo", return_value=[(None, None, None, None, ("93.184.216.34", 443))])
     def test_wechat_captcha_is_reported_as_access_restricted(self, _getaddrinfo):
         response = FakeResponse(
@@ -124,6 +145,44 @@ class ArticleIngestTest(unittest.TestCase):
         self.assertIn("标题", result)
         self.assertIn("正文内容", result)
         self.assertNotIn("bad", result)
+
+    @patch("app.services.article_ingest_service.socket.getaddrinfo", return_value=[(None, None, None, None, ("93.184.216.34", 443))])
+    def test_wechat_article_root_stops_before_page_shell(self, _getaddrinfo):
+        body = """
+        <html><head><title>测试文章</title></head><body>
+          <div id="js_content" class="rich_media_content"><h1>标题</h1><p>这是足够长的文章正文，用来验证提取器只读取文章容器内部的内容。文章还包含第二句解释，以及第三句结论，确保正文长度符合预览要求并能稳定完成解析。这里继续补充一段真实内容，验证正文结束之后的微信按钮、弹窗提示和操作文案都不会混入结果。</p></div>
+          <div>预览时标签不可点</div><div>阅读原文</div><div>微信扫一扫</div><div>关注该公众号</div>
+        </body></html>
+        """
+        service = ArticleIngestService(self.db, FakeHTTPSession([FakeResponse(body=body)]))
+        with patch("app.services.article_ingest_service.KNOWLEDGE_ARTICLE_URL_ENABLED", True):
+            preview = service.preview(ArticleSourcePreviewDTO(
+                project_id=self.project_id,
+                input_method="url",
+                source_url="https://mp.weixin.qq.com/s/example",
+            ))
+        self.assertIn("这是足够长的文章正文", preview["normalized_content"])
+        self.assertNotIn("预览时标签不可点", preview["normalized_content"])
+        self.assertNotIn("阅读原文", preview["normalized_content"])
+        self.assertEqual(preview["raw_content"], preview["normalized_content"])
+
+    def test_wechat_footer_fallback_removes_ui_cluster(self):
+        text = "\n".join([
+            "文章标题",
+            "这是一段较长的正文内容。" * 30,
+            "最后一个有效结论。",
+            "预览时标签不可点",
+            "阅读原文",
+            "微信扫一扫",
+            "关注该公众号",
+            "知道了",
+            "赞",
+            "在看",
+        ])
+        result = ArticleIngestService.normalize_text(text)
+        self.assertIn("最后一个有效结论", result)
+        self.assertNotIn("预览时标签不可点", result)
+        self.assertNotIn("微信扫一扫", result)
 
 
 if __name__ == "__main__":

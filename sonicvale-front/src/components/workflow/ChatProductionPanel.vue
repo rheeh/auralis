@@ -1,22 +1,24 @@
 <template>
   <section class="chat-production">
     <template v-if="!snapshot">
-      <ContentTypeSelector v-model="sourceType" :knowledge-article-enabled="capabilities.knowledge_article_enabled" />
+      <ContentTypeSelector v-if="!dedicatedArticleEntry" v-model="sourceType" :knowledge-article-enabled="capabilities.knowledge_article_enabled" />
       <div class="creation-grid">
         <section class="creation-form">
           <div class="panel-heading"><div><p class="eyebrow">新会话</p><h2>{{ isArticle ? '从文章开始制作' : '从小说开始制作' }}</h2></div><el-tag effect="plain">草稿隔离</el-tag></div>
           <div class="sound-first-hint" :class="{ 'article-hint':isArticle }">
-            <strong>{{ isArticle ? '理解与记忆优先' : '声音优先改编' }}</strong>
-            <span>{{ isArticle ? '文章模式使用独立知识工作流；原文观点、AI 解释和外部补充会分别标记。' : '先分类原文，再用对白、动作声和音乐推进；旁白只保留无法声音化的必要信息、文学金句和视角跳转。' }}</span>
+            <strong>{{ isArticle ? '知夏 × 闻舟 · 一次性学习音频' : '声音优先改编' }}</strong>
+            <span>{{ isArticle ? '无需新建项目。两位固定学习搭档会把文章改成追问、反例和复述组成的真实对话；原文观点与 AI 解释仍会分别标记。' : '先分类原文，再用对白、动作声和音乐推进；旁白只保留无法声音化的必要信息、文学金句和视角跳转。' }}</span>
           </div>
           <el-form label-position="top" @submit.prevent>
-            <el-form-item label="目标项目" required>
+            <el-form-item v-if="!isArticle" label="目标项目" required>
               <el-select :model-value="projectId" filterable class="full" placeholder="选择项目" @update:model-value="$emit('update:projectId',$event)">
                 <el-option v-for="project in projects" :key="project.id" :label="project.name" :value="project.id" />
               </el-select>
             </el-form-item>
+            <div v-else class="instant-workspace-note"><strong>本次制作独立保存</strong><span>不会出现在“我的项目”中；确认台本后可直接生成本次音频。</span></div>
             <el-form-item :label="isArticle ? '音频标题' : '本章标题'"><el-input v-model="draft.title" :placeholder="isArticle ? '默认使用文章标题' : '例如：第一章 · 雨夜来信'" /></el-form-item>
             <div v-if="isArticle" class="article-settings-grid">
+              <el-form-item label="改编形式"><el-select v-model="draft.adaptation_mode" class="full"><el-option label="双人学习对话（推荐）" value="dialogue_lesson" /><el-option label="知识情景剧" value="knowledge_drama" /><el-option label="单人讲解" value="audio_lesson" /></el-select></el-form-item>
               <el-form-item label="文章领域"><el-select v-model="draft.article_category" class="full"><el-option label="自动判断" value="auto" /><el-option label="科普" value="science" /><el-option label="技术" value="technology" /><el-option label="商业" value="business" /><el-option label="管理" value="management" /></el-select></el-form-item>
               <el-form-item label="学习目标"><el-select v-model="draft.learning_goal" class="full"><el-option label="快速理解" value="quick_understanding" /><el-option label="掌握概念" value="concept_mastery" /><el-option label="了解实际应用" value="practical_application" /><el-option label="强化记忆" value="memory_reinforcement" /></el-select></el-form-item>
               <el-form-item label="音频时长"><el-select v-model="draft.target_duration_minutes" class="full"><el-option label="5 分钟" :value="5" /><el-option label="10 分钟" :value="10" /><el-option label="15 分钟" :value="15" /></el-select></el-form-item>
@@ -63,8 +65,8 @@
       <ArticleScriptPanel v-if="isArticleSession && snapshot.knowledge_script && ['reviewing_knowledge_script','awaiting_script_confirmation'].includes(snapshot.current_stage)" :script="snapshot.knowledge_script" :review="snapshot.knowledge_review" :reviewing="snapshot.current_stage==='reviewing_knowledge_script'" :can-confirm="snapshot.current_stage==='awaiting_script_confirmation'" :loading="isSubmitting" @confirm="confirmArticleScript" @revise="reviseArticleScript" />
 
       <section v-if="isArticleSession && snapshot.current_stage==='knowledge_script_ready'" class="article-ready-card">
-        <div><p class="eyebrow">知识脚本已确认</p><h3>可以写入项目并进入配音</h3><p>{{ snapshot.review_questions?.length || 0 }} 个复习问题和知识点映射已经保存。</p></div>
-        <el-button type="primary" :loading="isSubmitting" @click="commit">写入项目并进入配音</el-button>
+        <div><p class="eyebrow">知识脚本已确认</p><h3>可以生成本次音频</h3><p>{{ snapshot.review_questions?.length || 0 }} 个复习问题和知识点映射已经保存。</p></div>
+        <el-button type="primary" :loading="isSubmitting" @click="commit">生成本次音频</el-button>
       </section>
 
       <RoleDraftConfirmCard
@@ -124,7 +126,7 @@ const route = useRoute()
 const router = useRouter()
 const sourceType = ref(route.query.content_type === 'knowledge_article' ? 'knowledge_article' : 'novel')
 const capabilities = reactive({ knowledge_article_enabled:false, knowledge_article_url_enabled:false, knowledge_article_external_verify_enabled:false })
-const draft = reactive({ title:'', instruction:'', source_text:'', article_source_id:null, article_category:'auto', learning_goal:'quick_understanding', target_duration_minutes:10, verification_mode:'source_only' })
+const draft = reactive({ title:'', instruction:'', source_text:'', article_source_id:null, adaptation_mode:'dialogue_lesson', article_category:'auto', learning_goal:'quick_understanding', target_duration_minutes:10, verification_mode:'source_only' })
 const snapshot = ref(null)
 const messages = ref([])
 const isSubmitting = ref(false)
@@ -138,6 +140,7 @@ let reconnectDelay = 1000
 
 const sourceChars = computed(()=>draft.source_text.trim().length)
 const isArticle = computed(()=>sourceType.value==='knowledge_article')
+const dedicatedArticleEntry = computed(()=>route.query.content_type==='knowledge_article')
 const isArticleSession = computed(()=>snapshot.value?.source_type==='knowledge_article')
 const canCreate = computed(()=>props.projectId && sourceChars.value>0)
 const roleDrafts = computed(()=>snapshot.value?.role_drafts?.roles || [])
@@ -145,7 +148,7 @@ const isGenerating = computed(()=>['created','parsing','analyzing_article','desi
 const canRevise = computed(()=>['awaiting_role_confirmation','awaiting_script_confirmation'].includes(snapshot.value?.current_stage))
 const canCancel = computed(()=>snapshot.value && !isArticleSession.value && !['completed','cancelled'].includes(snapshot.value.current_stage))
 const stageLabel = computed(()=>({created:'准备处理',source_ready:'文章正文已保存',analyzing_article:'正在分析文章',awaiting_outline_confirmation:'等待确认知识大纲',outline_ready:'知识大纲已确认',designing_learning_plan:'正在设计学习结构',learning_plan_ready:'学习结构已生成',generating_knowledge_script:'正在生成知识脚本',reviewing_knowledge_script:'知识初稿已出 · 审查中',awaiting_script_confirmation:'等待确认脚本',knowledge_script_ready:'知识脚本已确认',parsing:'正在解析原文',awaiting_role_confirmation:'等待确认角色',generating_script:'正在生成剧本',reviewing_script:'初稿已出 · 审查中',script_draft_ready:'等待写入项目',committing:'正在写入项目',completed:'制作已完成',failed:'需要处理',cancelled:'已取消'}[snapshot.value?.current_stage]||'准备中'))
-const stageDescription = computed(()=>({source_ready:'文章正文和学习设置已保存，可从此状态恢复。',analyzing_article:'正在识别文章结构、观点、术语和原文证据。',awaiting_outline_confirmation:'请确认核心知识点和对应的原文依据。',outline_ready:'知识大纲已确认，可以继续设计知识音频。',designing_learning_plan:'正在安排知识顺序、音频形式和复习节点。',generating_knowledge_script:'正在把确认后的知识点转成可朗听脚本。',reviewing_knowledge_script:'知识初稿已经可读，正在进行三维独立审查。',awaiting_script_confirmation:'请检查脚本、知识点映射、审查结果和复习问题。',knowledge_script_ready:'知识脚本已确认，可以进入正式项目和配音流程。',awaiting_role_confirmation:'角色草稿已准备好，需要你的确认。',reviewing_script:'初稿已经可读，独立审查完成后会保留审查与返修版本。',script_draft_ready:'剧本已确认，正式项目数据尚未写入。',failed:'当前步骤未完成，可查看原因并重试。'}[snapshot.value?.current_stage]||'系统会保存每一步，页面刷新后仍可继续。'))
+const stageDescription = computed(()=>({source_ready:'文章正文和学习设置已保存，可从此状态恢复。',analyzing_article:'正在识别文章结构、观点、术语和原文证据。',awaiting_outline_confirmation:'请确认核心知识点和对应的原文依据。',outline_ready:'知识大纲已确认，可以继续设计知识音频。',designing_learning_plan:'正在安排知识顺序、音频形式和复习节点。',generating_knowledge_script:'知夏和闻舟正在把确认后的知识点改成可朗听的双人对话。',reviewing_knowledge_script:'知识初稿已经可读，正在检查是否仍有念稿、长独白或事实偏差。',awaiting_script_confirmation:'请检查双人对话、知识点映射、审查结果和复习问题。',knowledge_script_ready:'知识脚本已确认，可以生成本次音频。',awaiting_role_confirmation:'角色草稿已准备好，需要你的确认。',reviewing_script:'初稿已经可读，独立审查完成后会保留审查与返修版本。',script_draft_ready:'剧本已确认，正式项目数据尚未写入。',failed:'当前步骤未完成，可查看原因并重试。'}[snapshot.value?.current_stage]||'系统会保存每一步，页面刷新后仍可继续。'))
 const stageTagType = computed(()=>snapshot.value?.current_stage==='failed'?'danger':snapshot.value?.current_stage==='completed'?'success':canRevise.value?'warning':'info')
 
 onMounted(async()=>{try{const response=await fetchWorkflowCapabilities();if(response.code===200)Object.assign(capabilities,response.data||{})}catch{}const id=props.sessionId||route.params.sessionId||route.query.session_id;if(id)load(id,true)})
@@ -160,7 +163,7 @@ async function create(){
   isSubmitting.value=true
   try{
     const payload={project_id:props.projectId,title:draft.title||null,instruction:draft.instruction||null,source_type:sourceType.value}
-    if(isArticle.value)Object.assign(payload,{article_source_id:draft.article_source_id,adaptation_mode:'auto',article_category:draft.article_category,learning_goal:draft.learning_goal,target_duration_minutes:draft.target_duration_minutes,verification_mode:draft.verification_mode})
+    if(isArticle.value)Object.assign(payload,{article_source_id:draft.article_source_id,adaptation_mode:draft.adaptation_mode,article_category:draft.article_category,learning_goal:draft.learning_goal,target_duration_minutes:draft.target_duration_minutes,verification_mode:draft.verification_mode})
     else payload.source_text=draft.source_text
     const response=await createChatSession(payload)
     if(![200,202].includes(response.code))throw new Error(response.message||'创建会话失败')
@@ -191,7 +194,7 @@ async function sendFeedback(message){isSubmitting.value=true;try{const response=
 async function retry(){isSubmitting.value=true;try{const response=await resumeChatSession(snapshot.value.session_id);if(![200,202].includes(response.code))throw new Error(response.message);ElMessage.success('正在重试当前步骤');startPolling()}catch(error){ElMessage.error(apiError(error,'重试失败'))}finally{isSubmitting.value=false}}
 async function commit(){
   isSubmitting.value=true
-  try{const response=await commitChatSession(snapshot.value.session_id,{chapter_title:snapshot.value.title,replace_chapter_lines:true,client_request_id:requestId()});if(response.code!==200)throw new Error(response.message);ElMessage.success(response.message||'剧本已写入项目');await refresh();emit('committed',response.data)}catch(error){ElMessage.error(apiError(error,'写入失败'))}finally{isSubmitting.value=false}
+  try{const response=await commitChatSession(snapshot.value.session_id,{chapter_title:snapshot.value.title,replace_chapter_lines:true,client_request_id:requestId()});if(response.code!==200)throw new Error(response.message);ElMessage.success(isArticleSession.value?'本次音频制作已准备':'剧本已写入项目');await refresh();emit('committed',response.data)}catch(error){ElMessage.error(apiError(error,isArticleSession.value?'音频制作准备失败':'写入失败'))}finally{isSubmitting.value=false}
 }
 async function cancel(){
   try{await ElMessageBox.confirm('取消后将保留会话历史，但不会写入项目数据。','取消改编会话',{confirmButtonText:'确认取消',cancelButtonText:'继续制作',type:'warning'})}catch{return}
@@ -210,6 +213,7 @@ function cleanup(){clearInterval(pollTimer);clearTimeout(reconnectTimer);if(sock
 </script>
 
 <style scoped>
+.instant-workspace-note{display:grid;gap:3px;margin:0 0 16px;padding:10px 12px;border:1px dashed color-mix(in srgb,var(--el-color-success) 42%,var(--el-border-color));border-radius:10px}.instant-workspace-note span{color:var(--el-text-color-secondary);font-size:12px;line-height:1.5}
 .chat-production{display:grid;gap:16px}.creation-grid{display:grid;grid-template-columns:minmax(280px,360px) minmax(0,1fr);gap:16px}.creation-form,.source-card,.conversation-card,.session-header,.generating-card,.commit-card,.article-ready-card{padding:16px;border:1px solid var(--el-border-color-light);border-radius:12px;background:var(--el-bg-color);box-shadow:0 14px 34px rgba(17,24,39,.06)}.panel-heading,.session-header,.create-actions,.session-actions,.commit-card{display:flex;align-items:center;justify-content:space-between;gap:12px}.panel-heading h2,.session-header h2,.commit-card h3,.eyebrow{margin:0}.panel-heading h2,.session-header h2{font-size:18px}.eyebrow{margin-bottom:4px;color:var(--el-color-primary);font-size:12px;text-transform:uppercase}.full{width:100%}.source-card{display:grid;gap:12px}.article-settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 10px}.article-hint{background:color-mix(in srgb,var(--el-color-success) 7%,var(--el-bg-color))}.article-ready-card{display:flex;align-items:center;justify-content:space-between;gap:16px;border-color:color-mix(in srgb,var(--el-color-success) 38%,var(--el-border-color))}.article-ready-card h3,.article-ready-card p{margin:0}.article-ready-card p:last-child{margin-top:6px;color:var(--el-text-color-secondary);line-height:1.55}.create-actions{align-items:flex-end}.create-actions small{max-width:420px;color:var(--el-text-color-secondary);line-height:1.5}.session-header>div>p:not(.eyebrow),.commit-card p,.generating-card p{margin:6px 0 0;color:var(--el-text-color-secondary);line-height:1.55}.session-actions{flex-wrap:wrap}.generating-card{display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,320px);align-items:center}.commit-card{border-color:color-mix(in srgb,var(--el-color-success) 40%,var(--el-border-color));background:color-mix(in srgb,var(--el-color-success) 6%,var(--el-bg-color))}.conversation-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,390px);gap:16px;align-items:start}.conversation-card{display:grid;gap:12px}.sound-first-hint{display:grid;gap:4px;margin:12px 0 16px;padding:11px 12px;border:1px solid color-mix(in srgb,var(--el-color-primary) 28%,var(--el-border-color));border-radius:10px;background:linear-gradient(135deg,color-mix(in srgb,var(--el-color-primary) 9%,var(--el-bg-color)),color-mix(in srgb,#d88bd5 7%,var(--el-bg-color)))}.sound-first-hint strong{font-size:13px}.sound-first-hint span{color:var(--el-text-color-secondary);font-size:12px;line-height:1.55}
 @media(max-width:900px){.creation-grid,.conversation-grid{grid-template-columns:1fr}.article-settings-grid{grid-template-columns:1fr}.session-header,.commit-card,.article-ready-card{align-items:flex-start;flex-direction:column}.generating-card{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}

@@ -8,7 +8,7 @@
         <span class="tile-copy"><strong>小说广播剧</strong><small>粘贴小说，确认人物与台本，再进入逐句配音。</small></span>
         <span class="tile-arrow" aria-hidden="true">→</span>
       </button>
-      <button class="quick-tile primary-tile knowledge-tile" type="button" @click="openCreateDialog('knowledge_article')">
+      <button class="quick-tile primary-tile knowledge-tile" type="button" @click="startKnowledgeAudio">
         <span class="tile-icon knowledge-icon">
           <el-icon><Headset /></el-icon>
         </span>
@@ -149,7 +149,11 @@
         class="dialog-type-selector"
         :knowledge-article-enabled="capabilities.knowledge_article_enabled"
       />
-      <el-form :model="form" ref="formRef" label-position="top" @submit.prevent>
+      <section v-if="selectedContentType === 'knowledge_article'" class="dialog-intro knowledge-one-off">
+        <div><p class="eyebrow">ONE-OFF KNOWLEDGE AUDIO</p><h3>直接导入文章，不创建项目</h3><p>系统会使用知夏和闻舟两位固定学习搭档，把文章改成真实问答，并保留原文证据与复习问题。</p></div>
+        <el-tag type="success" effect="plain">一次性制作</el-tag>
+      </section>
+      <el-form v-else :model="form" ref="formRef" label-position="top" @submit.prevent>
         <section class="dialog-intro">
           <div>
             <p class="eyebrow">{{ selectedContentType === 'knowledge_article' ? 'Knowledge Audio' : 'Audio Drama' }}</p>
@@ -232,7 +236,7 @@
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="isCreating" @click="submitAndOpen">
-          {{ selectedContentType === 'knowledge_article' ? '创建并导入文章' : '创建并改编小说' }}
+          {{ selectedContentType === 'knowledge_article' ? '直接导入文章' : '创建并改编小说' }}
         </el-button>
       </template>
     </el-dialog>
@@ -332,6 +336,10 @@ function openCreateDialog(contentType = 'novel') {
   form.value = createEmptyForm()
   applySmartDefaults()
   dialogVisible.value = true
+}
+
+function startKnowledgeAudio() {
+  router.push('/studio?content_type=knowledge_article')
 }
 
 function applySmartDefaults() {
@@ -480,7 +488,7 @@ function startInProject(project, contentType) {
 
 function creationRoute(projectId, contentType) {
   if (contentType === 'knowledge_article') {
-    return `/studio?project_id=${projectId}&content_type=knowledge_article`
+    return '/studio?content_type=knowledge_article'
   }
   return `/projects/${projectId}/workspace`
 }
@@ -503,6 +511,11 @@ async function handleDelete(id) {
 }
 
 async function submitAndOpen() {
+  if (selectedContentType.value === 'knowledge_article') {
+    dialogVisible.value = false
+    startKnowledgeAudio()
+    return
+  }
   await createProjectFromCanvas(selectedContentType.value)
 }
 

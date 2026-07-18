@@ -23,7 +23,9 @@ class ProjectRepository:
 
     def get_all(self) -> Sequence[ProjectPO]:
         """获取所有项目"""
-        return self.db.execute(select(ProjectPO)).scalars().all()
+        return self.db.execute(
+            select(ProjectPO).where(ProjectPO.workspace_kind == "project")
+        ).scalars().all()
 
     def create(self, project_data: ProjectPO) -> ProjectPO:
         """新建项目"""
@@ -73,5 +75,8 @@ class ProjectRepository:
 
     def search(self, keyword: str) -> Sequence[ProjectPO]:
         """模糊搜索"""
-        stmt = select(ProjectPO).where(ProjectPO.name.ilike(f"%{keyword}%"))
+        stmt = select(ProjectPO).where(
+            ProjectPO.workspace_kind == "project",
+            ProjectPO.name.ilike(f"%{keyword}%"),
+        )
         return self.db.execute(stmt).scalars().all()

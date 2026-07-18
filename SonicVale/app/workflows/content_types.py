@@ -4,7 +4,7 @@ from typing import Literal
 
 
 SourceType = Literal["novel", "knowledge_article"]
-AdaptationMode = Literal["drama", "auto", "audio_lesson", "knowledge_drama"]
+AdaptationMode = Literal["drama", "auto", "audio_lesson", "dialogue_lesson", "knowledge_drama"]
 ArticleCategory = Literal["auto", "science", "technology", "business", "management"]
 LearningGoal = Literal["quick_understanding", "concept_mastery", "practical_application", "memory_reinforcement"]
 VerificationMode = Literal["source_only", "external_verification"]

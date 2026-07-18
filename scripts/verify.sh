@@ -61,6 +61,7 @@ required = {
     "/chat/sessions/{session_id}/audio-tasks/{task_id}/retry",
     "/chat/sessions/{session_id}/audio-tasks/{task_id}/review",
     "/chat/article-sources/preview",
+    "/chat/article-sources/instant-workspace",
     "/chat/article-sources/import",
     "/chat/article-sources/{source_id}",
     "/chat/article-sources/{source_id}/normalize",
