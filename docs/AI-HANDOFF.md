@@ -1,242 +1,474 @@
-# Auralis 项目执行交接
+# Auralis 项目交接文档
 
-> 状态日期：2026-07-12
+> 状态日期：2026-07-18
 > 工作目录：`/Users/go/Desktop/sonic-drama-studio`
-> 主分支：`master`
-> 唯一远程：`https://gitee.com/green1149/auralis-studio.git`
+> 当前分支：`master`
+> 当前默认远端：`github` -> `git@github.com:rheeh/auralis.git`
+> 公开仓库：https://github.com/rheeh/auralis
+> 旧远端保留：`origin` -> `https://gitee.com/green1149/auralis-studio.git`
+> 最新关键提交：`f73fd04 feat: finalize Auralis interview showcase`
+
+本文档给下一位 AI 助手接手执行用。它不是聊天总结，所有判断都应以当前 checkout 为准。
 
 ## 1. 项目背景和最终目标
 
-Auralis 是一个本地优先的 AI 广播剧制作工具，技术栈为 Vue 3 + Element Plus + Electron 前端、FastAPI + SQLAlchemy + SQLite 后端。产品目标不是“把小说朗读出来”，而是在一个项目工作台内完成：
+Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说或叙事文本改编成可审查、可修改、可配音、可连播的音频项目。
 
-1. 用户新建或打开项目；
-2. 在左侧与制作助手交流并提交小说；
-3. AI 先解析人物卡，用户确认人物、头像和独立音色；
-4. AI 生成声音优先、旁白克制的广播剧台本；
-5. 用户逐句生成音频、修改声音提示、试听并做非破坏性后期处理；
-6. 台本、角色、音色、声音事件和音频结果始终在同一工作台内完成，不额外跳转。
+最终目标不是做一个通用 Agent 框架，也不是扩展成平台型产品，而是形成一个能给面试官展示的完整 AI 产品原型：
 
-最终产品应兼顾普通创作者的低门槛和广播剧制作所需的可控性，所有 UI 文案默认使用中文。
+- 用户在一个项目工作台内提交小说正文。
+- AI 完成小说解析、人物草稿、广播剧台本初稿、独立审查和必要返修。
+- 用户能看到中间产物和每轮迭代，而不是只看到一个漫长等待。
+- 用户能通过左侧制作助手自由提出修改意见，由系统定位到角色、场景或台词再修改。
+- 用户确认后再写入正式项目，避免未确认草稿污染项目数据。
+- 每句台词可以绑定音色、生成 TTS、重生成多个 take、选择当前版本、连播和导出。
+
+产品表达上要清楚：Auralis 是“AI 广播剧制作助手”，不是单纯的小说朗读器，也不是只会线性跑流程的工作流 Demo。
 
 ## 2. 当前任务和优先级
 
-截至本文件提交，最近一轮三个高优先级需求已经实现并通过验证：
+当前项目已经进入面试展示整理阶段。下一位助手不要默认继续大规模扩展，优先级如下：
 
-| 优先级 | 功能 | 状态 |
-|---|---|---|
-| P0 | 首页用二次元女歌姬替换几何剪影 | 已完成 |
-| P0 | 同一条原音频可保存多个不同速度/音量处理版本 | 已完成 |
-| P0 | 处理版本可设为当前采用，播放、连播和导出读取当前版本 | 已完成 |
-| P0 | 单条音频支持选区局部变速，区间外保持原速 | 已完成 |
-| P0 | 角色绑定音色时可直接试听，不必离开工作台 | 已完成 |
-| P0 | 把本轮代码提交并推送到 Gitee | 已完成 |
-| P1 | 保持广播剧台词为纯净 TTS 文本，声音提示进入独立字段 | 已完成 |
-| P1 | 工作台左助手承担阶段引导和快捷操作 | 已完成 |
+| 优先级 | 任务 | 当前状态 | 下一步标准 |
+|---|---|---|---|
+| P0 | 保持项目可启动、可验证、可演示 | 已通过 `./scripts/verify.sh` | 任意改动后至少运行相关测试；较大改动跑全量 verify |
+| P0 | 保持 README 和交接文档准确 | README 已重写，本文档已更新 | 不要再以“基于某项目二次开发”作为 README 开头 |
+| P0 | 稳定主流程：解析 -> 角色确认 -> 台本初稿 -> 审查/返修 -> 用户确认 -> 写入项目 | 已实现 | 修 bug 时不要重新引入 LangGraph |
+| P0 | 制作助手自由对话和工具调用 | 已实现 `ProductionAssistantService` | 后续只做能力补强，不要把小说解析提示词混进助手对话 |
+| P0 | 音频版本管理 | 已实现生成 take 和后期处理版本 | 修复时确保原音频不被覆盖 |
+| P1 | UI 继续收敛为工作台体验 | 已完成一轮重构 | 不要添加解释性大横幅或过多固定栏 |
+| P1 | 真实模型/TTS 适配 | 已做能力分层 | 新 provider 必须明确能力差异 |
+
+当前用户偏向“面试可展示、结构清楚、不要过度扩展”。任何新任务都要服务这个目标。
 
 ## 3. 已完成的工作和关键产出
 
-### 3.1 首页
+### 3.1 架构调整
 
-- `/` 进入 `/home`，首页不再显示后台侧栏和工作区顶栏。
-- 首页圆环由四层 SVG 独立动画组成，包含顺/逆时针旋转、呼吸发光和流动光点。
-- Canvas 波形使用 `requestAnimationFrame`，Demo 播放时提高振幅，页面隐藏及组件卸载时停止动画。
-- 30 个低透明粒子围绕圆环漂浮；桌面视差最大不超过 8px，移动端关闭。
-- 首页导航和按钮都连接真实页面：作品库、音色库、模型设置和最近项目。
-- 女歌姬通过内置生图工具生成，使用绿色背景抠图为透明 PNG；项目最终素材：
-  - `sonicvale-front/src/assets/visuals/auralis-anime-singer.png`
-  - 约 1.4MB，946×1663，RGBA，透明四角。
-- 生成规格：银蓝长发、深蓝与珍珠白舞台服、金色细节、耳机、全身、日系动画立绘、无文字和水印。
+- 已去掉 LangGraph 运行架构。
+- `SonicVale/app/workflows/drama/graph.py`、`checkpoint.py`、`state.py` 已删除。
+- 主流程改为 SQLAlchemy 数据库状态机和显式 service 编排。
+- 数据库会话、adaptation run、draft revision 是业务状态源，不再依赖额外 graph checkpoint。
+- `docs/auralis-langgraph-implementation-plan.md` 仍保留为历史方案文档，只能用于理解背景，不能当作当前实现。
 
-### 3.2 单页项目工作台
+关键文件：
 
-- 主入口：`sonicvale-front/src/pages/ProjectWorkspace.vue`。
-- 左侧制作助手显示当前任务、阶段说明和快捷操作；消息为左右气泡。
-- 右侧按阶段显示人物卡、台本确认、人物档案以及逐句音频制作。
-- 小说原文折叠在逐句台本上方；人物卡在确认后仍可独立查看。
-- 结果区顶栏只保留“当前制作 / 人物卡”；点击台词卡空白处展开编辑，再点一次收起。
-- 逐句制作组件：`sonicvale-front/src/components/workflow/ProductionScriptPanel.vue`。
-- 每条可朗读台词都可单独生成音频，不必先生成全部。
-- 每个角色必须绑定不同音色；音色按 TTS 模型来源分组。
+- `SonicVale/app/services/drama_workflow_service.py`
+- `SonicVale/app/services/chat_session_service.py`
+- `SonicVale/app/services/source_parser_service.py`
+- `SonicVale/app/services/role_draft_service.py`
+- `SonicVale/app/services/script_draft_service.py`
+- `SonicVale/app/services/script_review_service.py`
+- `SonicVale/app/services/workflow_llm_service.py`
 
-### 3.3 广播剧台本规则
+### 3.2 制作助手
 
-- 核心规则在 `SonicVale/app/core/prompts.py` 和 `SonicVale/app/services/script_draft_service.py`。
-- `dialogue/narration` 的朗读文本严禁包含 `()、（）、[]、【】` 中的音效或表演提示。
-- 表演、语速、重音、停顿进入 `productionNote`。
-- 音效、环境音、BGM、混响、静音进入 `audioEvents`，包含 timing/type/content/volume_db。
-- Pydantic 在 `SonicVale/app/workflows/drama/schemas.py` 做第二层清洗；TTS 前 `LineService.clean_tts_text` 再次防御，旧台本也不会朗读括号提示。
-- 空 SFX/BGM 会补场景相关声音提示，不再显示空内容。
+- 已新增常驻制作助手：`SonicVale/app/services/production_assistant_service.py`。
+- 制作助手用于自由对话、定位用户修改意图、调用项目/角色/台词/音频相关工具。
+- 用户可以在左侧输入框提出修改意见，不再只依赖右侧按钮点击。
+- 输入框按钮已简化为“发送”，不再显示冗长的“发送给制作助手”。
+- 顶部固定的“制作助手”栏已按用户要求移除或压缩，不再浪费空间。
 
-### 3.4 非破坏性音频版本
+重要决策：
 
-- `lines` 用 `audio_versions / active_audio_version_id` 保存每次 TTS 重新生成的不可变 take，用 `audio_variants / active_audio_variant_id` 保存变速、音量等后期处理版本；SQLite 启动迁移由 `add_drama_line_columns()` 自动完成。
-- TTS worker 在覆盖固定输出路径前会归档旧音频，生成完成后再保存新版本；逐句播放器显示 `版本 n/N` 下拉框，选择后播放、后期处理、连播和导出统一读取当前生成版本。
-- 每次处理都复制 `line.audio_path` 原音频，再应用速度、音量、裁剪或停顿，绝不覆盖原始文件，也不从上一个变速版本继续叠加。
-- 后端接口：
-  - `POST /lines/{line_id}/audio-variants`
-  - `GET /lines/{line_id}/audio-variants/{variant_id}/audio`
-  - `DELETE /lines/{line_id}/audio-variants/{variant_id}`
-- 前端展开某句后点击“保存为新音频版本”，版本列表可独立播放和删除。
-- 新保存版本自动设为“当前采用”，也可手动切换；顶部播放、整章连播和导出统一读取当前版本，编辑器仍固定从生成原音派生。
-- 可在波形中选择局部变速区间，例如仅把 0–1.5 秒设为 0.8×，后半段继续保持 1.0×；后端按前段、变速选区、后段重新拼接。
-- 自动标签包含速度和音量，例如 `0.75x 速度 · 1x 音量`。
-- 单元测试 `SonicVale/tests/test_audio_variants.py` 已验证 0.8× 与 1.25× 生成不同文件、时长不同且源文件 SHA-256 不变。
+- 制作助手可以复用项目配置中的通用 LLM provider/model。
+- 但制作助手、小说解析、角色设计、台本生成、台本审查必须使用各自独立的 system prompt。
+- 每轮对话不能自动带入小说解析 prompt，避免自由对话变成“解析小说任务”。
 
-### 3.5 音色试听
+### 3.3 小说改编和审查流程
 
-- `RoleDraftConfirmCard.vue` 的每个音色选项右侧都有试听/停止按钮。
-- 已选音色下方也有明确的试听按钮。
-- 已确认人物档案 `CharacterCardsArchive.vue` 也可试听绑定音色。
-- 人物档案不再重复显示 AI 声线建议框，逐句卡也不再重复提供角色音色下拉框。
-- 人物档案可重新选择项目角色音色；每个候选音色右侧均有独立试听按钮，更新后逐句制作会提示按新音色重新生成。
-- 试听复用 `GET /voices/{voice_id}/audio`；真实浏览器验证返回 HTTP 206 音频流。
-- 没有 `reference_path` 的音色显示“暂无试听样音”，不会触发必然失败的请求。
+主流程已调整为：
+
+```text
+小说输入
+  -> source parser 解析原文
+  -> role draft 生成人物草稿
+  -> 用户确认或修改角色
+  -> script draft 生成第一版台本
+  -> script reviewer 审查广播剧规范
+  -> 如有问题，编剧按审查报告返修
+  -> 用户看到初稿、审查状态和修订结果
+  -> 用户确认台本
+  -> 幂等写入正式项目
+```
+
+广播剧审查重点：
+
+- 零旁白优先，能用角色对话表达的不要写旁白。
+- 所有信息尽量转成可听元素：对白、音效、动作声、沉默、环境声。
+- 听众视角按“看不到画面”处理。
+- 心理活动应外化成台词、呼吸、沉默或动作声。
+- 视觉描述要删除或转化为可听内容。
+- 时间跳转必须有听觉标记。
+
+已修复的结构化输出问题：
+
+- `SourceAnalysis` 收到 `[]` 时不再直接崩溃。
+- `RoleDraftList` 收到 `characters` 而不是 `roles` 时有兼容处理。
+- 工作流对空数据、非字典模型输出、字段缺失有更清晰的兜底和错误信息。
+
+相关测试：
+
+- `SonicVale/tests/test_drama_workflow.py`
+- `SonicVale/tests/test_workflow_llm_service.py`
+- `SonicVale/tests/test_llm_engine_messages.py`
+- `SonicVale/tests/test_audio_drama_prompts.py`
+
+### 3.4 TTS 指导和模型能力适配
+
+已新增：
+
+- `SonicVale/app/core/tts_guidance.py`
+- `SonicVale/app/core/tts_runtime.py`
+- `SonicVale/tests/test_tts_guidance.py`
+- `SonicVale/tests/test_tts_engine_capabilities.py`
+
+当前策略：
+
+- Cloud TTS 根据 provider 能力接收 richer instruction 或结构化指令。
+- Edge-TTS 不理解自然语言表演提示，不支持精细情绪语义和分段停顿。
+- Edge-TTS 只能近似映射整句 `rate / pitch / volume`。
+- UI 文案应明确区分：声音指导对不同模型的效果不同。
+
+强度含义已确定：
+
+- 强度指“情绪/表达强度”，不是音量。
+- 例如同样是“愤怒”，强度越高，表达越激烈；落到不同模型时由能力映射决定。
+
+情绪候选已扩展，不应只保留“平静/开心/生气”这种窄集合。
+
+### 3.5 音频版本管理
+
+已实现两层版本概念：
+
+- TTS 重新生成的 take：保留多个生成版本。
+- 后期处理版本：基于当前 take 做速度、音量、局部变速等处理。
+
+用户要求的能力已经落地：
+
+- 每句音频处显示版本序号，例如 `版本 n/N`。
+- 有多个版本时可用下拉框选择当前采用版本。
+- 播放、连播、后期处理、导出应读取当前采用版本。
+- 重新生成不会破坏旧版本。
+
+关键文件：
+
+- `SonicVale/app/services/line_service.py`
+- `SonicVale/app/routers/line_router.py`
+- `SonicVale/app/entity/line_entity.py`
+- `SonicVale/app/dto/line_dto.py`
+- `sonicvale-front/src/api/line.js`
+- `sonicvale-front/src/components/workflow/ProductionScriptPanel.vue`
+- `SonicVale/tests/test_audio_variants.py`
+
+### 3.6 UI 重构
+
+已按用户反馈完成一轮工作台 UI 收敛：
+
+- 下方连播控件不再过度突兀。
+- 左侧发送按钮文案简化为“发送”。
+- 用户气泡不再使用渐变。
+- 制作助手顶部固定栏已移除或压缩。
+- 助手区和侧边栏之间的浪费空白已减少。
+- 侧边栏收缩展开箭头缩小，减少占位。
+
+相关文件：
+
+- `sonicvale-front/src/App.vue`
+- `sonicvale-front/src/pages/ProjectWorkspace.vue`
+- `sonicvale-front/src/components/workflow/ChatComposer.vue`
+- `sonicvale-front/src/components/workflow/ChatMessageList.vue`
+- `sonicvale-front/src/components/workflow/ChatProductionPanel.vue`
+- `sonicvale-front/src/components/workflow/ProductionScriptPanel.vue`
+- `sonicvale-front/src/components/workflow/ScriptDraftConfirmCard.vue`
+- `sonicvale-front/src/components/workflow/SessionStageStepper.vue`
+
+### 3.7 README 和 GitHub 同步
+
+- README 已重写为英文面试项目说明。
+- README 开头直接介绍 Auralis，不再第一句话强调“基于某项目改编”。
+- 许可与原项目署名保留在末尾的 `License And Attribution`，满足合规但不喧宾夺主。
+- GitHub 仓库已创建并推送：`https://github.com/rheeh/auralis`。
+- 用户已明确表示仓库可以保持 public，不再继续做 private 切换。
+- 本地 `master` 已跟踪 `github/master`。
 
 ## 4. 当前进展状态
 
-- 前端生产构建通过：`npm --prefix sonicvale-front run build`。
-- 后端 7 项音频/广播剧测试通过。
-- Python 关键模块 `py_compile` 通过。
-- 临时 API 集成测试成功创建 0.75× 和 1.3× 两个版本，版本音频 HTTP 200；临时台词、版本文件和数据库记录均已删除。
-- 桌面首页 1600×900 和移动端 390×844 已做截图检查，无横向溢出。
-- 女歌姬透明图已验证 natural size 946×1663，桌面和移动端都完整显示。
-- 人物档案音色试听真实请求成功，按钮切换为“停止”。
-- 真实 API 验证原音 2.808s、0.8× 版本 3.482s、1.25× 版本 2.232s；切换后顶部音频接口返回对应时长，原音 SHA-256 不变。
-- 局部变速实测原音 2.016s，仅 0–1.5s 使用 0.8× 后为 2.374s；验证版本和数据库记录均已清理。
-- 旧台词缺失的情绪/强度已在启动时补为“平静/中等”；新台本在结构化校验和提交时双重兜底。
+当前 checkout 状态：
 
-开发服务通常运行在：
+- `master` 跟踪 `github/master`。
+- 最新项目提交：`f73fd04 feat: finalize Auralis interview showcase`。
+- 工作区存在未跟踪目录 `personal-site/`，不属于 Auralis 交接文档任务；不要误提交。
+- `origin` Gitee 远端仍保留，但默认 push 目标已经是 GitHub。
 
-- 前端：http://127.0.0.1:5173
-- 后端：http://127.0.0.1:8200
-- API 文档：http://127.0.0.1:8200/docs
+最近完整验证：
 
-若端口未监听，从 README 的启动命令重新启动，不要假设旧进程仍存在。
+```bash
+./scripts/verify.sh
+```
+
+结果：
+
+- Python unittest：41 tests OK。
+- FastAPI route smoke check 通过。
+- TTS review feature 默认开启检查通过。
+- 多轨非朗读行跳过 TTS 检查通过。
+- project readiness repair smoke check 通过。
+- audio asset attach 检查通过。
+- TTS route policy 检查通过。
+- 前端 `vite build` 通过。
+- Vite 仍提示部分 chunk 超过 500kB，这是体积优化提示，不是失败。
+
+开发服务通常使用：
+
+```text
+Frontend: http://127.0.0.1:5173
+Backend:  http://127.0.0.1:8200
+API docs: http://127.0.0.1:8200/docs
+```
+
+不要假设服务正在运行。需要联调时先执行 `./scripts/dev.sh`。
 
 ## 5. 已确定的方案、决策和原因
 
-1. **工作台不拆成多页**：人物确认、台本确认、音色与音频必须在同一页面，减少上下文丢失。
-2. **人物卡先于台本**：人物身份和说话方式直接影响台词写法，也让音色在台本生成前确定。
-3. **数据库是唯一状态源**：SQLAlchemy 项目表、会话表和草稿 revision 同时承担业务与工作流状态；制作助手只通过受控工具读写这些数据，不能把状态只留在对话里。
-4. **模型配置共享、提示词职责隔离**：同一项目可以复用一个 LLM provider/model，但制作助手、小说解析、角色设计和剧本生成分别使用独立 system 指令；动态素材只进入 user 消息，不能把小说解析提示词注入每轮助手对话。
-5. **结构化输出渐进兼容**：JSON 任务优先使用 `json_schema`，不支持时依次回退到 `json_object` 和提示词约束 JSON，兼容非 OpenAI 官方的 OpenAI-compatible 服务。
-6. **台词与制作控制分离**：TTS 文本必须纯净，声音提示进入结构化字段，防止模型朗读括号。
-7. **音频处理非破坏性**：不同速度必须从同一原音频生成，避免 0.8× 后再做 1.2× 导致累计失真，也方便 A/B 比较。
-8. **编剧和审查职责分离**：制作助手只转交用户意见；`ScriptDraftService` 生成或返修；`ScriptReviewService` 只输出验收报告。初稿未通过时由编剧按报告返修，再交审查器复核，审查器不直接改稿。
-9. **音色试听放在绑定现场**：选择前可试听比跳到音色库更符合决策路径。
-10. **首页角色使用项目内透明 PNG**：视觉质量优先于代码生成剪影，同时保留 Canvas、SVG 圆环和粒子的实时动画。
-11. **Gitee 使用干净历史**：当前仓库 `master` 从 Auralis 单一根提交开始，不推送旧 SonicVale 上游多人历史；远程只保留 `origin`。
+1. **不使用 LangGraph 作为当前架构**
+   - 原因：当前流程是清晰的业务状态机，SQLAlchemy 会话和 revision 已足够表达状态；引入 LangGraph 会让面试项目显得架构过重。
 
-### 2026-07-13 全站视觉统一
+2. **主流程是工作流，但制作助手是常驻 agent-like 入口**
+   - 原因：解析、角色确认、台本确认、写入项目属于确定性阶段流；用户自由修改、定位问题、调用制作工具需要常驻助手。
 
-- 非首页页面改为与首页同源的浅蓝、暖白渐变背景和半透明白色卡片，侧栏不再使用深色霓虹底。
-- 侧栏“作品”统一改名为“项目”，顶部面包屑与项目页文案同步使用“项目”。
-- 首页和应用侧栏的 Auralis 标志都改为七段动态均衡器；标志仍链接 `/home`。
-- 首页横向声场改为蓝青到珊瑚色的双向柱状波形，播放 Demo 时有移动光点；歌姬从 `340×500` 缩小至约 `226×334`。
-- 项目页新增声场式横幅和抽象音频封面，保留原有创建、配置检查、工作流节点、删除与进入工作台能力。
-- 已浏览器巡检 `/home`、`/projects`、`/voices`、`/queue`、`/prompts`、`/config`；桌面视口无横向溢出，控制台无 error/warning。
+3. **编剧和审查分离，但不必包装成两个长期 agent**
+   - 原因：当前实现本质上是两次或多次受控 LLM 调用。可以称为 writer/reviewer service，但不要为了名词引入多 Agent 框架。
 
-### 2026-07-13 TTS 模型能力适配
+4. **初稿要先显示，再进行审查**
+   - 原因：用户明确担心速度慢时会误以为模型卡住；中间产物可见能展示实际工作内容。
 
-- `ConfigurableCloudTTSEngine` 不再把所有云端 TTS 当成相同能力：`instruction_mode` 支持 `native`、`structured`、`mapped`、`none`。
-- CosyVoice v1/v2 只做语速、音高、音量参数映射；v3 Flash/Plus 将台词情绪和声音指导转换为 DashScope 系统音色接受的结构化 Instruct；v3.5 复刻/设计音色可透传自然语言指令。
-- 通用 HTTP TTS 模板新增 `{{instruction}}`，也可用 `instruction_field` 配置 `instructions`、`input.instruction` 等厂商字段路径。
-- 配置中心 TTS 表格会显示“原生指令 / 结构化指令 / 基础参数映射 / 基础生成”，测试接口也会返回实际使用的模式。
-- 本机 Provider #2 已迁移为 `cosyvoice-v3-flash` 结构化指令模式；旧 v1 音色移至停用的兼容 Provider #4，没有删除。迁移前数据库备份位于 `.local-data/backups/app_test-before-cosyvoice-v3-20260713.db`。
-- 已真实调用 DashScope：Provider 测试 HTTP 200，并成功生成 3 个 v3 Instruct 兼容音色样例；项目 5/6/7 中原先使用 v1 女声的角色已改绑“元气女声·龙安欢”。
-- Edge-TTS 不支持自然语言表演指令或自定义分段 SSML，只能控制整句语速、音高和音量。当前实现把情绪、情绪/表达强度及可识别的声音指导近似映射到这三个参数，并确保 Edge 音色在自动路由下不会丢失指导。
-- 情绪候选扩展并分组为积极、愤怒、悲伤、恐惧、厌恶、惊讶和平稳等 33 个选项；每个候选都有 8 维情绪向量映射。强度固定表示情绪/表达强度，分为微弱、稍弱、中等、较强、强烈。
+5. **用户修改意见由制作助手接收，再转给对应 service**
+   - 原因：用户自然语言反馈需要意图识别和定位，但实际改稿仍由台本服务执行，避免助手直接乱改底层数据。
 
-## 6. 用户偏好、要求和约束
+6. **TTS 文本和声音指导分离**
+   - 原因：否则括号里的情绪、停顿、音效会被模型朗读，广播剧输出会失真。
 
-- 用户希望直接修改真实项目，不只提供建议或伪代码。
-- 较大改动完成后默认提交并推送 Gitee。
-- 中文界面与中文交付文档优先。
-- 工作台减少无关顶部说明，保留与当前任务直接相关的信息。
-- 风格偏二次元，但要高级、克制、可用于生产工具，避免廉价游戏特效。
-- 不同人物必须使用不同音色。
-- 音色需要覆盖所有已安装模型来源，不只 Edge。
-- 广播剧旁白要克制：先删除视觉无效信息、环境、动作、转场、背景信息，再处理心理描写；目标旁白占比不超过15%。
-- 不得朗读括号音效、情绪和停顿提示。
-- 不得关联或推送到别人的仓库；唯一目标仓库是 `https://gitee.com/green1149/auralis-studio.git`。
-- 工作区中 `image/` 下的删除是既有未提交状态。除非用户明确要求，不要恢复、提交或清理这些删除。
+7. **Edge-TTS 做能力降级，不做虚假承诺**
+   - 原因：Edge 的情绪和自然语言提示并不等价于云端指令模型；UI 和后端都要让用户知道参数只是近似映射。
 
-## 7. 已有文件、素材、代码、数据和链接
+8. **音频生成版本必须可逆**
+   - 原因：用户需要比较不同 take；重新生成不能覆盖旧音频。
 
-### 必读入口
+9. **README 面向面试展示**
+   - 原因：用户明确表示项目不准备扩展成长期平台，README 只要清楚表达项目能力和架构，不要强调“基于某项目改编”。
 
-- `README.md`：真实启动与验证命令。
-- `docs/project-map.md`：项目结构地图。
-- `docs/project-workspace-single-page.md`：单页工作台方案。
+10. **GitHub 仓库保持 public**
+    - 原因：用户在 2026-07-18 明确表示“不用，就一直保持 public”。
+
+## 6. 用户偏好、要求和约束条件
+
+- 用户希望 AI 直接在真实项目里执行，不要只给建议。
+- 较大改动完成后默认提交并推送。
+- 当前默认推送目标是 GitHub `rheeh/auralis`，不是 Gitee。
+- 用户更重视面试展示效果和架构清晰度，不希望继续无边界扩展。
+- 中文沟通优先；产品界面当前主要是中文。
+- UI 要工作台化、克制、紧凑，少解释性固定栏，少浪费空间。
+- 左侧制作助手必须真的能承接自由输入，而不是只有形式上的输入框。
+- 不同角色应使用不同音色。
+- 广播剧旁白要克制，优先把视觉和心理描写转成可听内容。
+- 不得朗读括号里的音效、情绪、停顿或制作提示。
+- 不要把制作助手和小说解析共用同一套 system prompt。
+- 不要恢复旧 LangGraph 架构，除非用户明确要求重新评估。
+- 不要把 `.local-data/`、`.verify-data/`、`.venv/`、`node_modules/`、`dist/`、数据库、生成音频、密钥提交到 git。
+- 不要误提交当前未跟踪的 `personal-site/`。
+- 不要继续尝试把 GitHub 仓库改 private；用户已经取消该要求。
+
+## 7. 已有文件、素材、代码、数据或重要链接
+
+### 必读文件
+
+- `README.md`：当前项目定位、启动、验证和架构说明。
+- `docs/AI-HANDOFF.md`：当前交接文档。
+- `docs/project-map.md`：历史项目结构地图，可能部分过期，读后要用当前文件验证。
+- `docs/project-workspace-single-page.md`：单页工作台早期方案。
 - `docs/frontend-interaction-redesign.md`：交互重构说明。
-- `docs/auralis-langgraph-implementation-plan.md`：已归档的早期 LangGraph 方案，仅用于理解迁移背景，不代表当前实现。
-- `sonicvale-front/src/router/index.js`：路由真相。
-- `sonicvale-front/src/pages/Home.vue`：动态首页。
-- `sonicvale-front/src/pages/ProjectWorkspace.vue`：项目工作台。
-- `sonicvale-front/src/components/workflow/ProductionScriptPanel.vue`：逐句制作、音频版本和播放。
-- `SonicVale/app/routers/line_router.py`：台词音频与版本 API。
-- `SonicVale/app/services/line_service.py`：TTS 清洗和音频处理实现。
-- `SonicVale/app/services/script_draft_service.py`：台本提示词与旁白审校。
+- `docs/auralis-langgraph-implementation-plan.md`：旧 LangGraph 方案，只能当历史背景。
 
-### 外部链接
+### 后端入口
 
-- Gitee：https://gitee.com/green1149/auralis-studio
-- 音谷参考 Wiki（可能需要登录）：https://sw4s2hg7k5y.feishu.cn/wiki/WjbUw1t7JiWIa7k2pFXcxqSbnde
+- `SonicVale/app/main.py`
+- `SonicVale/app/models/po.py`
+- `SonicVale/app/db/migrations.py`
+- `SonicVale/app/routers/chat_router.py`
+- `SonicVale/app/routers/line_router.py`
+- `SonicVale/app/services/drama_workflow_service.py`
+- `SonicVale/app/services/production_assistant_service.py`
+- `SonicVale/app/services/script_review_service.py`
+- `SonicVale/app/services/workflow_llm_service.py`
+- `SonicVale/app/core/llm_engine.py`
+- `SonicVale/app/core/tts_engine.py`
+- `SonicVale/app/core/tts_guidance.py`
+- `SonicVale/app/core/tts_runtime.py`
 
-### 本地数据
+### 前端入口
 
-- 开发数据目录：`.local-data/`，已被忽略，不得提交。
-- SQLite 与生成音频属于运行数据，不要在未备份时手工删除。
-- TTS 生成版本保存在原音频目录的 `generated_versions/`，后期处理版本保存在 `variants/`。
+- `sonicvale-front/src/pages/ProjectWorkspace.vue`
+- `sonicvale-front/src/components/workflow/ChatComposer.vue`
+- `sonicvale-front/src/components/workflow/ChatMessageList.vue`
+- `sonicvale-front/src/components/workflow/ChatProductionPanel.vue`
+- `sonicvale-front/src/components/workflow/ProductionScriptPanel.vue`
+- `sonicvale-front/src/components/workflow/RoleDraftConfirmCard.vue`
+- `sonicvale-front/src/components/workflow/ScriptDraftConfirmCard.vue`
+- `sonicvale-front/src/pages/ConfigCenter.vue`
+- `sonicvale-front/src/pages/QueueBoard.vue`
+
+### 测试入口
+
+- `SonicVale/tests/test_drama_workflow.py`
+- `SonicVale/tests/test_production_assistant.py`
+- `SonicVale/tests/test_workflow_llm_service.py`
+- `SonicVale/tests/test_llm_engine_messages.py`
+- `SonicVale/tests/test_tts_guidance.py`
+- `SonicVale/tests/test_tts_engine_capabilities.py`
+- `SonicVale/tests/test_audio_variants.py`
+- `SonicVale/tests/test_audio_drama_prompts.py`
+
+### 重要链接
+
+- 当前 GitHub 仓库：https://github.com/rheeh/auralis
+- 旧 Gitee 远端：https://gitee.com/green1149/auralis-studio
+- 原 SonicVale 项目：https://github.com/xcLee001/SonicVale
+
+### 本地运行数据
+
+- `.local-data/`：本地开发数据，已忽略，不得提交。
+- `.verify-data/`：验证数据，已忽略，不得提交。
+- `SonicVale/.venv/`：Python 虚拟环境，已忽略，不得提交。
+- `sonicvale-front/node_modules/`、`sonicvale-front/dist/`：前端依赖和构建产物，已忽略，不得提交。
+- Provider 本地备份通常在用户本机目录下，README 已提示不要把 API Key 写入仓库。
 
 ## 8. 未解决的问题和风险
 
-1. 音频版本随台词删除或重新生成时尚未做统一垃圾回收；当前只能从 UI 单独删除版本。
-2. 没有参考样音的自定义音色无法试听，UI 会明确提示；如果要求“所有音色必可试听”，需增加按 provider 动态生成预览样音的后端任务。
-3. 生成 take 与后期处理版本已经分层保存，但尚未提供按 take 分组清理其派生处理版本的批量垃圾回收。
-4. 女歌姬 PNG 约 1.4MB，可进一步输出 WebP/AVIF 降低首页首载，但必须保留透明边缘质量。
-5. Vite 构建仍提示主包超过 500kB，可通过 manualChunks 或进一步懒加载优化；目前不影响功能。
-6. WaveSurfer 和浏览器原生 `<audio>` 并存，后续若统一播放器，需要保证整章连播逻辑不回退。
-7. 飞书 Wiki 曾无法通过自动浏览器公开读取；不要声称已完整同步其中全部规范。
+1. **GitHub 仓库当前是 public**
+   - 用户已接受 public 状态，但如果后续要私有化，需要 GitHub sudo mode 密码确认，AI 不能代输密码。
+
+2. **存在未跟踪目录 `personal-site/`**
+   - 当前不属于 Auralis 工作范围。任何 `git add -A` 前必须再次检查，避免误提交。
+
+3. **真实 LLM/TTS 端到端速度和稳定性仍依赖外部 provider**
+   - 本地 verify 覆盖结构、路由、服务、构建和 mock/smoke 场景；不等价于每次都真实调用云模型。
+
+4. **审查/返修质量取决于模型输出**
+   - 已做 schema 校验和 fallback，但模型可能给出保守或过度审查结论；需要真实项目样本继续调 prompt。
+
+5. **Edge-TTS 参数效果有限**
+   - 用户曾反馈 Edge 下改声音指导差异不明显，这是模型能力限制，不应包装成 bug 修复完成。
+
+6. **Vite chunk 体积提示仍存在**
+   - 当前不影响构建，但面试演示若关注性能，可做 code splitting。
+
+7. **音频版本垃圾回收还可继续完善**
+   - 生成 take、后期处理版本、导出文件之间的批量清理策略仍有提升空间。
+
+8. **历史文档可能有过期内容**
+   - 特别是 LangGraph、Gitee、旧 UI 相关文档。下一位助手必须以当前代码和 README/本文档为准。
+
+9. **AGPL 署名需要保留**
+   - README 末尾已保留 SonicVale 许可与署名。不要为了“看起来完全原创”删除合规信息。
 
 ## 9. 下一步具体行动计划
 
-1. 为生成 take 增加删除和批量清理入口，并阻止删除仍被后期处理版本引用的源 take。
-2. 为音频版本 API 增加路由级 TestClient 测试和异常场景测试（缺文件、非法速度、重复删除）。
-3. 为音色试听抽取可复用 composable，覆盖人物草稿和人物档案，避免播放器状态代码重复。
-4. 如用户要求全音色试听，为无 `reference_path` 音色增加后台预览生成队列，而不是在 GET 请求里同步调用云端 TTS。
-5. 优化首页女歌姬素材体积，并复测 1600×900、1366×768、390×844 三个视口。
-6. 处理任何新改动后运行全套验证并按用户偏好提交推送。
+建议下一位助手从高价值、低风险事项继续：
+
+1. **先做状态确认**
+   - 运行 `git status -sb`、`git log -1 --oneline`、`git remote -v`。
+   - 确认 `master...github/master` 且只有预期未跟踪文件。
+
+2. **保持演示可用**
+   - 任意功能改动后运行对应后端测试。
+   - UI 改动至少运行前端 build。
+   - 较大改动运行 `./scripts/verify.sh`。
+
+3. **如果用户继续调工作台 UI**
+   - 只围绕 `ProjectWorkspace.vue` 和 `components/workflow/*` 做小步修改。
+   - 改完用真实浏览器检查，不要只凭代码判断。
+
+4. **如果用户继续调改编质量**
+   - 先检查 `script_draft_service.py`、`script_review_service.py`、`workflow_llm_service.py`。
+   - 保持“初稿可见 -> 审查中 -> 返修结果可见”的进度表达。
+   - 不要把审查器改成直接写稿的组件。
+
+5. **如果用户继续调 TTS 效果**
+   - 先确认当前 provider 是 Edge 还是 cloud。
+   - Edge 问题优先解释能力边界，再优化 rate/pitch/volume 映射。
+   - Cloud provider 才考虑自然语言声音指导和结构化 instruction。
+
+6. **如果用户要求再次发布**
+   - 默认推 GitHub：
+
+     ```bash
+     git push
+     ```
+
+   - 不要推旧 Gitee，除非用户明确要求。
+
+7. **如果有较大修改**
+   - 提交前检查敏感文件和未跟踪目录。
+   - 提交后推送 GitHub。
+   - 最终回复给出提交哈希、验证结果、关键文件和风险。
 
 ## 10. 给下一位 AI 助手的启动指令
 
-1. 进入 `/Users/go/Desktop/sonic-drama-studio`，先运行：
+请从这里继续，不要重新做已经完成的架构迁移或产品判断。
 
-   ```bash
-   git status --short
-   git log -1 --oneline
-   git remote -v
-   ```
+第一步运行：
 
-2. 确认唯一远程仍是 `https://gitee.com/green1149/auralis-studio.git`；不要重新添加原 SonicVale GitHub upstream。
-3. 不要处理 `image/` 下已有删除，除非用户明确授权。
-4. 阅读本文件、`README.md`、`docs/project-map.md`，然后从用户最新需求涉及的文件继续；不要重新设计已经完成的单页工作台、台词纯净化、音频多版本或音色试听。
-5. 启动项目：
+```bash
+cd /Users/go/Desktop/sonic-drama-studio
+git status -sb
+git log -1 --oneline
+git remote -v
+```
 
-   ```bash
-   ./scripts/dev.sh
-   ```
+预期状态：
 
-6. 最低验证命令：
+```text
+master...github/master
+github git@github.com:rheeh/auralis.git
+origin https://gitee.com/green1149/auralis-studio.git
+```
 
-   ```bash
-   cd SonicVale
-   .venv/bin/python -m unittest discover -s tests -p 'test_audio*.py' -v
-   cd ../sonicvale-front
-   npm run build
-   cd ..
-   git diff --check
-   ```
+注意：可能存在未跟踪 `personal-site/`，不要提交它。
 
-7. 涉及 UI 时必须做真实浏览器检查；涉及音频处理时必须验证原文件没有被覆盖，并清理临时数据库记录和文件。
-8. 较大改动完成后提交并推送 `master`，最终回复中给出提交哈希、测试结果、关键文件和仍存在的风险。
+继续工作前阅读：
+
+```bash
+sed -n '1,220p' README.md
+sed -n '1,260p' docs/AI-HANDOFF.md
+```
+
+不要重复做这些事：
+
+- 不要重新引入 LangGraph。
+- 不要重新把 README 改成“基于 SonicVale 二次开发”的开头。
+- 不要继续把 GitHub 仓库改 private。
+- 不要恢复已删除的旧 `image/` 截图，除非用户明确要求。
+- 不要把制作助手和小说解析 prompt 合并。
+- 不要把括号音效、停顿、情绪写回 TTS 朗读文本。
+- 不要用 `git add -A` 直接提交所有文件，除非先确认未跟踪文件全都属于本次任务。
+
+最低验证策略：
+
+```bash
+./scripts/verify.sh
+git diff --check
+```
+
+如果只是文档改动，可至少运行：
+
+```bash
+git diff --check
+```
+
+最终交付格式：
+
+- 说明改了哪些文件。
+- 给出验证命令和结果。
+- 如果提交推送，给出 commit hash 和远端链接。
+- 明确剩余风险，不要假装没有不确定性。
