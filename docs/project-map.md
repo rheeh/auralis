@@ -331,7 +331,7 @@ flowchart TD
 - `/voices` -> `VoiceManager.vue`：音色库。
 - `/roles` -> `RolesBoard.vue`：角色声线绑定。
 - `/media` -> `MediaBoard.vue`：素材库。
-- `/timeline` -> `TimelineBoard.vue`：多轨内容概览（当前页面仍是检查视图，不代表可编辑真实时间线）。
+- `/timeline` -> `TimelineBoard.vue`：多轨内容概览（读取真实时间线 API，展示真实片段时长/位置；暂未提供拖拽编辑）。
 - `/queue` -> `QueueBoard.vue`：任务队列和改编运行历史。
 - `/prompts` -> `PromptManager.vue`：提示词管理。
 

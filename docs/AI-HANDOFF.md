@@ -6,7 +6,7 @@
 > 当前默认远端：`github` -> `git@github.com:rheeh/auralis.git`
 > 公开仓库：https://github.com/rheeh/auralis
 > 旧远端保留：`origin` -> `https://gitee.com/green1149/auralis-studio.git`
-> 最新关键提交：`42bd99f feat: establish real audio timeline foundation`
+> 最新关键提交：`bcf6182 feat: close timeline lifecycle and frontend loop`
 
 本文档给下一位 AI 助手接手执行用。它不是聊天总结，所有判断都应以当前 checkout 为准。
 
@@ -185,12 +185,15 @@ Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说�
 
 ### 3.7 Auralis 0.3：真实时间线与音频工程底座
 
-- “多轨时间线”页面已改名为“多轨内容概览”，明确当前页面仍是按文字长度估算的检查视图，不冒充真实可编辑时间线。
-- SQLite 已改为版本化迁移入口 `SonicVale/app/db/migrations.py`，当前 schema version 为 2；历史字段迁移集中管理，`main.py` 不再继续堆叠 `add_*_column()`。
+- “多轨时间线”页面已改名为“多轨内容概览”。页面现在通过真实时间线 API 展示 `start_ms`、`duration_ms`、音频资产状态和构建状态，不再按文字长度估算片段宽度。
+- SQLite 已改为版本化迁移入口 `SonicVale/app/db/migrations.py`，当前 schema version 为 3；历史字段迁移集中管理，`main.py` 不再继续堆叠 `add_*_column()`。
 - 新增 `AudioAssetPO`、`TimelineTrackPO`、`TimelineClipPO`，保留现有 `lines.audio_path`、`audio_versions` 和 `audio_variants` 作为兼容来源。
 - `TimelineService` 会探测真实音频时长，按人物声、旁白、音效、BGM 四条固定轨道生成章节内容概览。
 - 新增只读接口 `GET /projects/{project_id}/chapters/{chapter_id}/timeline` 和显式构建接口 `POST /projects/{project_id}/chapters/{chapter_id}/timeline/build`。
-- 当前刻意未实现拖拽、音量编辑和混音导出；下一步应先做接口/数据验证，再进入最小可编辑交互。
+- 时间线支持 `not_built`、`building`、`ready`、`stale`、`missing_audio`、`failed` 状态；台词、音频版本或素材变化会通过失效钩子和来源指纹标记旧结果。
+- 删除台词、章节、项目或替换章节台词时会清理轨道、片段和音频资产；SQLite 连接已启用外键约束。手工编辑片段默认受保护，只有显式 `overwrite_manual=true` 才允许重建覆盖。
+- 数据库迁移失败会阻止应用继续启动，避免半迁移状态继续对外提供 API。
+- 当前刻意未实现拖拽、音量编辑、重叠编排和混音导出；这些属于 Auralis 0.4，0.3.1 先保证真实数据可见且生命周期安全。
 
 ### 3.8 README 和 GitHub 同步
 
@@ -206,7 +209,7 @@ Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说�
 当前 checkout 状态：
 
 - `master` 跟踪 `github/master`。
-- 最新项目提交：`a9833af docs: record Auralis 0.3 timeline foundation`。
+- 最新项目提交：`bcf6182 feat: close timeline lifecycle and frontend loop`；随后会有本交接文档更新提交。
 - 工作区存在未跟踪目录 `personal-site/`，不属于 Auralis 交接文档任务；不要误提交。
 - `origin` Gitee 远端仍保留，但默认 push 目标已经是 GitHub。
 
@@ -218,7 +221,7 @@ Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说�
 
 结果：
 
-- Python unittest：44 tests OK（包含真实音频时长时间线构建、幂等性和旧 SQLite 数据迁移测试）。
+- Python unittest：46 tests OK（包含真实音频时长、幂等构建、旧 SQLite 迁移、失效保护和章节清理测试）。
 - FastAPI route smoke check 通过。
 - TTS review feature 默认开启检查通过。
 - 多轨非朗读行跳过 TTS 检查通过。
@@ -226,6 +229,7 @@ Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说�
 - audio asset attach 检查通过。
 - TTS route policy 检查通过。
 - SQLite schema migration 和时间线 API 路由检查通过。
+- 前端时间线页面已静态校验为调用 `src/api/timeline.js`，不再调用章节台词接口或文字长度估算。
 - 前端 `vite build` 通过。
 - Vite 仍提示部分 chunk 超过 500kB，这是体积优化提示，不是失败。
 
