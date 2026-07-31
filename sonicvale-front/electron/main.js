@@ -70,6 +70,10 @@ async function startBackend() {
     command = path.join(process.resourcesPath, 'app.asar.unpacked', 'electron', 'main.exe')
     args = []
     cwd = path.dirname(command)
+    env = {
+      ...process.env,
+      AURALIS_STOCK_AUDIO_DIR: path.join(process.resourcesPath, 'assets', 'audio', 'cc0'),
+    }
   }
 
   console.log('启动后端：', command, args.join(' '))

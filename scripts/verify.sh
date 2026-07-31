@@ -20,6 +20,7 @@ cd "$ROOT_DIR/SonicVale"
   app/core/audio_engin.py \
   app/core/tts_runtime.py \
   app/services/drama_adaptation_service.py \
+  app/services/sound_library_service.py \
   app/routers/drama_adaptation_router.py \
   app/routers/line_router.py \
   app/routers/queue_router.py
@@ -60,6 +61,11 @@ required = {
     "/lines/{line_id}/attach-audio",
     "/lines/{line_id}/audio",
     "/lines/{line_id}/audio-versions/{version_id}/activate",
+    "/sound-library/assets",
+    "/sound-library/assets/import-path",
+    "/sound-library/assets/upload",
+    "/sound-library/assets/{asset_id}/audio",
+    "/sound-library/assets/{asset_id}/bind/{line_id}",
     "/projects/{project_id}/readiness",
     "/projects/{project_id}/readiness/repair",
     "/projects/{project_id}/chapters/{chapter_id}/timeline",
@@ -76,6 +82,26 @@ with TestClient(app) as client:
     missing_session = client.get("/chat/sessions/sess_missing")
     if missing_session.status_code != 404 or missing_session.json().get("code") != 404:
         raise SystemExit(f"missing chat session status invalid: {missing_session.status_code} {missing_session.text}")
+
+    library = client.get("/sound-library/assets", params={"source_type": "builtin"}).json()
+    builtin_assets = library.get("data", [])
+    if library.get("code") != 200 or len(builtin_assets) != 32:
+        raise SystemExit(f"builtin sound library invalid: {library}")
+    builtin_id = builtin_assets[0]["id"]
+    builtin_audio = client.get(f"/sound-library/assets/{builtin_id}/audio")
+    if builtin_audio.status_code != 200 or len(builtin_audio.content) < 100:
+        raise SystemExit(f"builtin sound audio invalid: status={builtin_audio.status_code}")
+    uploaded = client.post(
+        "/sound-library/assets/upload",
+        data={"name": "验证素材", "category": "foley", "tags": "验证,短音"},
+        files={"file": ("verify.ogg", builtin_audio.content, "audio/ogg")},
+    ).json()
+    user_asset_id = uploaded.get("data", {}).get("id")
+    if uploaded.get("code") != 200 or not str(user_asset_id).startswith("user_"):
+        raise SystemExit(f"user sound upload invalid: {uploaded}")
+    deleted = client.delete(f"/sound-library/assets/{user_asset_id}").json()
+    if deleted.get("code") != 200 or deleted.get("data") is not True:
+        raise SystemExit(f"user sound delete invalid: {deleted}")
 
     res = client.post("/lines/generate-audio/1/1", json={
         "chapter_id": 1,
@@ -151,6 +177,12 @@ with TestClient(app) as client:
             raise SystemExit(f"repaired line invalid: {line_after}")
         if "[AURALIS_PLACEHOLDER_MATERIAL]" not in (line_data.get("production_note") or ""):
             raise SystemExit(f"placeholder note missing: {line_after}")
+        bound = client.post(f"/sound-library/assets/{builtin_id}/bind/{line_id}").json()
+        if bound.get("code") != 200 or not os.path.exists(bound.get("data", {}).get("audio_path", "")):
+            raise SystemExit(f"sound library bind invalid: {bound}")
+        bound_line = client.get(f"/lines/{line_id}").json().get("data", {})
+        if "[AURALIS_PLACEHOLDER_MATERIAL]" in (bound_line.get("production_note") or ""):
+            raise SystemExit(f"sound library bind did not clear placeholder: {bound_line}")
         audio_res = client.get(f"/lines/{line_id}/audio")
         if audio_res.status_code != 200 or len(audio_res.content) < 100:
             raise SystemExit(f"line audio endpoint invalid: status={audio_res.status_code} size={len(audio_res.content)}")
@@ -165,6 +197,7 @@ with TestClient(app) as client:
         client.delete(f"/projects/{project_id}")
 print("Multi-track TTS skip ok")
 print("Project readiness repair ok")
+print("Sound library browse/upload/bind/delete ok")
 
 class FakeRepo:
     def __init__(self, line):

@@ -16,7 +16,7 @@ from sqlalchemy import Engine, inspect, text
 
 
 SCHEMA_MIGRATIONS_TABLE = "schema_migrations"
-CURRENT_SCHEMA_VERSION = 3
+CURRENT_SCHEMA_VERSION = 4
 
 
 def _table_exists(engine: Engine, table_name: str) -> bool:
@@ -131,10 +131,19 @@ def _migration_003_timeline_lifecycle(engine: Engine) -> None:
     })
 
 
+def _migration_004_sound_library(engine: Engine) -> None:
+    """Persist reusable user-imported audio separately from project assets."""
+
+    from app.models.po import SoundLibraryAssetPO
+
+    SoundLibraryAssetPO.__table__.create(bind=engine, checkfirst=True)
+
+
 MIGRATIONS = {
     1: _migration_001_legacy_columns,
     2: _migration_002_timeline_foundation,
     3: _migration_003_timeline_lifecycle,
+    4: _migration_004_sound_library,
 }
 
 

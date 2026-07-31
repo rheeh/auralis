@@ -6,7 +6,7 @@
 > 当前默认远端：`github` -> `git@github.com:rheeh/auralis.git`
 > 公开仓库：https://github.com/rheeh/auralis
 > 旧远端保留：`origin` -> `https://gitee.com/green1149/auralis-studio.git`
-> 最新关键提交：`54f0ced fix: stabilize shared timeline assets and coordinates`
+> 最新提交：接手时执行 `git log -1 --oneline`，不要依赖交接文档中的静态提交号
 
 本文档给下一位 AI 助手接手执行用。它不是聊天总结，所有判断都应以当前 checkout 为准。
 
@@ -186,7 +186,7 @@ Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说�
 ### 3.7 Auralis 0.3.2：真实时间线正确性与前端坐标
 
 - “多轨时间线”页面已改名为“多轨内容概览”。页面现在通过真实时间线 API 展示 `start_ms`、`duration_ms`、音频资产状态和构建状态，不再按文字长度估算片段宽度。
-- SQLite 已改为版本化迁移入口 `SonicVale/app/db/migrations.py`，当前 schema version 为 3；历史字段迁移集中管理，`main.py` 不再继续堆叠 `add_*_column()`。
+- SQLite 已改为版本化迁移入口 `SonicVale/app/db/migrations.py`，当前 schema version 为 4；历史字段迁移集中管理，`main.py` 不再继续堆叠 `add_*_column()`。
 - 新增 `AudioAssetPO`、`TimelineTrackPO`、`TimelineClipPO`，保留现有 `lines.audio_path`、`audio_versions` 和 `audio_variants` 作为兼容来源。
 - `TimelineService` 会探测真实音频时长，按人物声、旁白、音效、BGM 四条固定轨道生成章节内容概览。
 - 新增只读接口 `GET /projects/{project_id}/chapters/{chapter_id}/timeline` 和显式构建接口 `POST /projects/{project_id}/chapters/{chapter_id}/timeline/build`。
@@ -207,12 +207,23 @@ Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说�
 - 用户已明确表示仓库可以保持 public，不再继续做 private 切换。
 - 本地 `master` 已跟踪 `github/master`。
 
+### 3.9 Auralis 0.3.3：共享音效素材库
+
+- `assets/audio/cc0/` 内置 32 个 CC0 环境音和拟音文件，包含来源、作者、许可、分类、中英文标签和 SHA-256 清单。
+- “音频素材库”页面分为“项目素材”和“共享素材库”：可按内置/我的素材、分类和标签筛选，并通过后端接口试听。
+- 用户可在 Electron 中选择本地音频，或在浏览器模式上传 wav/mp3/m4a/ogg/flac；文件会复制到 `Auralis/sound_library/user/`，数据库保存管理信息。
+- 用户素材使用独立的 `SoundLibraryAssetPO`，不复用时间线 `AudioAssetPO`，避免项目生命周期误删共享原件。
+- 内置素材只读，用户素材可删除；删除素材库原件不影响已经复制到项目中的音频。
+- 素材只能绑定到音效或 BGM 台词。绑定继续调用 `LineService.attach_audio_asset()`，会清除占位标记、更新台词状态并使旧时间线失效。
+- 固定资产以常用环境音和拟音为主，不内置版权边界较复杂的商业 BGM；用户可自行导入合法音乐素材。
+- Electron 打包通过 `extraResources` 携带固定素材，并给后端设置 `AURALIS_STOCK_AUDIO_DIR`；不能只验证源码目录下的开发路径。
+
 ## 4. 当前进展状态
 
 当前 checkout 状态：
 
 - `master` 跟踪 `github/master`。
-- 最新项目提交：`54f0ced fix: stabilize shared timeline assets and coordinates`。
+- 最新提交号以 `git log -1 --oneline` 为准。
 - 工作区存在未跟踪目录 `personal-site/`，不属于 Auralis 交接文档任务；不要误提交。
 - `origin` Gitee 远端仍保留，但默认 push 目标已经是 GitHub。
 
@@ -224,7 +235,7 @@ Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说�
 
 结果：
 
-- Python unittest：49 tests OK（包含真实音频时长、空轨道 ready、幂等构建、旧 SQLite 迁移、失效保护、共享资产回收、音频版本切换和章节清理测试）。
+- Python unittest：52 tests OK（包含真实音频时长、空轨道 ready、幂等构建、旧 SQLite 迁移、失效保护、共享资产回收、音频版本切换、章节清理和素材库测试）。
 - FastAPI route smoke check 通过。
 - TTS review feature 默认开启检查通过。
 - 多轨非朗读行跳过 TTS 检查通过。
@@ -232,10 +243,11 @@ Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说�
 - audio asset attach 检查通过。
 - TTS route policy 检查通过。
 - SQLite schema migration 和时间线 API 路由检查通过。
+- 共享素材库 32 个内置文件读取、音频流、用户上传、删除和项目绑定 smoke check 通过。
 - 前端时间线页面已静态校验为调用 `src/api/timeline.js`，不再调用章节台词接口或文字长度估算。
 - 前端 `vite build` 通过。
 - Vite 仍提示部分 chunk 超过 500kB，这是体积优化提示，不是失败。
-- 产品版本已统一为 `0.3.2`：前端 `package.json`、FastAPI metadata 和本次交接状态一致。
+- 产品版本已统一为 `0.3.3`：前端 `package.json`、FastAPI metadata 和本次交接状态一致。
 
 开发服务通常使用：
 
@@ -315,10 +327,12 @@ API docs: http://127.0.0.1:8200/docs
 - `SonicVale/app/db/migrations.py`
 - `SonicVale/app/routers/chat_router.py`
 - `SonicVale/app/routers/line_router.py`
+- `SonicVale/app/routers/sound_library_router.py`
 - `SonicVale/app/services/drama_workflow_service.py`
 - `SonicVale/app/services/production_assistant_service.py`
 - `SonicVale/app/services/script_review_service.py`
 - `SonicVale/app/services/workflow_llm_service.py`
+- `SonicVale/app/services/sound_library_service.py`
 - `SonicVale/app/core/llm_engine.py`
 - `SonicVale/app/core/tts_engine.py`
 - `SonicVale/app/core/tts_guidance.py`
@@ -335,6 +349,8 @@ API docs: http://127.0.0.1:8200/docs
 - `sonicvale-front/src/components/workflow/ScriptDraftConfirmCard.vue`
 - `sonicvale-front/src/pages/ConfigCenter.vue`
 - `sonicvale-front/src/pages/QueueBoard.vue`
+- `sonicvale-front/src/pages/MediaBoard.vue`
+- `sonicvale-front/src/components/SoundLibraryPanel.vue`
 
 ### 测试入口
 

@@ -15,6 +15,8 @@
       </div>
     </header>
 
+    <el-tabs v-model="activeTab" class="media-tabs">
+      <el-tab-pane label="项目素材" name="project">
     <section class="media-toolbar">
       <el-segmented v-model="trackFilter" :options="trackOptions" />
       <el-select v-model="assetFilter" class="status-filter">
@@ -49,6 +51,14 @@
         </div>
         <audio v-if="line.audio_path" controls :src="toAudioUrl(line)" />
         <footer class="media-actions">
+          <el-button
+            v-if="['sfx', 'bgm'].includes(line.track)"
+            size="small"
+            type="success"
+            plain
+            :icon="FolderOpened"
+            @click="selectFromLibrary(line)"
+          >从素材库选择</el-button>
           <el-button size="small" :disabled="!line.audio_path" @click="copyPath(line.audio_path)">复制路径</el-button>
           <el-button size="small" :disabled="!line.audio_path" @click="openAudioFolder(line.audio_path)">打开目录</el-button>
           <el-button size="small" type="primary" plain @click="openDubbingProject">编辑台词</el-button>
@@ -56,13 +66,24 @@
       </article>
     </div>
     <el-empty v-if="!filteredLines.length" description="暂无素材" />
+      </el-tab-pane>
+      <el-tab-pane label="共享素材库" name="library">
+        <SoundLibraryPanel
+          :material-lines="materialLines"
+          :target-line-id="libraryTargetLineId"
+          @bound="handleLibraryBound"
+        />
+      </el-tab-pane>
+    </el-tabs>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { FolderOpened } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import SoundLibraryPanel from '../components/SoundLibraryPanel.vue'
 import { fetchProjectReadiness, fetchProjects, repairProjectReadiness } from '../api/project'
 import { getChaptersByProject } from '../api/chapter'
 import { getLineAudioUrl, getLinesByChapter } from '../api/line'
@@ -80,6 +101,8 @@ const assetFilter = ref('all')
 const keyword = ref('')
 const readiness = ref(null)
 const isRepairing = ref(false)
+const activeTab = ref('project')
+const libraryTargetLineId = ref(null)
 
 const trackOptions = [
   { label: '全部', value: 'all' },
@@ -120,6 +143,8 @@ const placeholderLineIds = computed(() => {
   ;(readiness.value?.placeholder_material_lines || []).forEach((line) => ids.add(line.line_id))
   return ids
 })
+
+const materialLines = computed(() => lines.value.filter((line) => ['sfx', 'bgm'].includes(line.track || line.line_type)))
 
 onMounted(async () => {
   projects.value = await fetchProjects()
@@ -292,6 +317,15 @@ function openDubbingProject() {
   router.push(`/projects/${projectId.value}/dubbing`)
 }
 
+function selectFromLibrary(line) {
+  libraryTargetLineId.value = line.id
+  activeTab.value = 'library'
+}
+
+async function handleLibraryBound() {
+  await loadLines()
+}
+
 function dirname(path) {
   return String(path).replace(/[\\/][^\\/]*$/, '')
 }
@@ -341,6 +375,10 @@ function dirname(path) {
   border: 1px solid var(--el-border-color-light);
   border-radius: 8px;
   background: var(--el-bg-color);
+}
+
+.media-tabs :deep(.el-tabs__header) {
+  margin-bottom: 14px;
 }
 
 .status-filter {

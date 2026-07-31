@@ -12,6 +12,7 @@ The project is built as an interview-ready product prototype: the emphasis is on
 - Provides a resident production assistant for free-form requests such as revising a scene, locating a line, changing a voice, regenerating audio, or checking missing takes.
 - Supports targeted user revision: user feedback is routed to the relevant character, scene, or line instead of blindly rerunning the whole pipeline.
 - Manages generated audio versions per line. Re-generated takes are preserved, and the user can choose which version is currently active for playback and export.
+- Includes a reusable sound library with 32 bundled CC0 ambience/Foley assets, searchable tags, audio preview, user uploads, and direct binding to SFX/BGM lines.
 - Makes TTS capability differences explicit. Cloud TTS models can receive richer voice guidance; Edge-TTS receives approximate rate, pitch, and volume mappings rather than natural-language acting instructions.
 - Provides a single project workspace for source text, roles, script lines, voice binding, TTS queue state, audio preview, continuous playback, and project-level checks.
 

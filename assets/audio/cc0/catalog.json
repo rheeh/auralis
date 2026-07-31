@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "license_policy": "CC0-1.0-only",
+  "sources": {
+    "rubberduck_sfx100_v2": {
+      "author": "rubberduck",
+      "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+      "license": "CC0-1.0"
+    },
+    "rain_window": {
+      "author": "alxl",
+      "source_url": "https://opengameart.org/content/rain-on-window-loop",
+      "license": "CC0-1.0"
+    },
+    "fire_crackle": {
+      "author": "AntumDeluge",
+      "source_url": "https://opengameart.org/content/fire-crackling",
+      "license": "CC0-1.0"
+    },
+    "forest_ambience": {
+      "author": "TinyWorlds",
+      "source_url": "https://opengameart.org/node/23888",
+      "license": "CC0-1.0"
+    },
+    "wind": {
+      "author": "IgnasD",
+      "source_url": "https://opengameart.org/content/wind",
+      "license": "CC0-1.0"
+    },
+    "clock_tick": {
+      "author": "IgnasD",
+      "source_url": "https://opengameart.org/content/clock-tick-0",
+      "license": "CC0-1.0"
+    },
+    "doorbell": {
+      "author": "Dub",
+      "source_url": "https://opengameart.org/content/doorbell-ring",
+      "license": "CC0-1.0"
+    },
+    "book_flip": {
+      "author": "Voltiment555",
+      "source_url": "https://opengameart.org/content/book-flip-sounds",
+      "license": "CC0-1.0"
+    }
+  },
+  "groups": [
+    {
+      "id": "ambience",
+      "label": "Ambience",
+      "source": "rubberduck_sfx100_v2",
+      "tags": ["环境", "循环", "空间底噪", "background", "room-tone"],
+      "files": [
+        "rubberduck-sfx100-v2/sfx100v2_loop_ambient_01.ogg",
+        "rubberduck-sfx100-v2/sfx100v2_loop_ambient_02.ogg",
+        "rubberduck-sfx100-v2/sfx100v2_loop_ambient_03.ogg",
+        "rubberduck-sfx100-v2/sfx100v2_loop_ambient_04.ogg",
+        "rubberduck-sfx100-v2/sfx100v2_loop_highway.ogg",
+        "rubberduck-sfx100-v2/sfx100v2_loop_water_01.ogg",
+        "rubberduck-sfx100-v2/sfx100v2_loop_water_02.ogg"
+      ]
+    },
+    {
+      "id": "weather",
+      "label": "Weather",
+      "source": "rubberduck_sfx100_v2",
+      "tags": ["天气", "风", "雷", "air", "wind", "thunder"],
+      "files": [
+        "rubberduck-sfx100-v2/sfx100v2_air_01.ogg",
+        "rubberduck-sfx100-v2/sfx100v2_air_02.ogg",
+        "rubberduck-sfx100-v2/sfx100v2_thunder_01.ogg"
+      ]
+    },
+    {
+      "id": "doors",
+      "label": "Doors And Mechanisms",
+      "source": "rubberduck_sfx100_v2",
+      "tags": ["门", "开锁", "开关", "door", "lock", "switch"],
+      "files": [
+        "rubberduck-sfx100-v2/sfx100v2_door_01.ogg",
+        "rubberduck-sfx100-v2/sfx100v2_door_02.ogg",
+        "rubberduck-sfx100-v2/sfx100v2_door_03.ogg",
+        "rubberduck-sfx100-v2/sfx100v2_lock_open_01.ogg",
+        "rubberduck-sfx100-v2/sfx100v2_switch_01.ogg"
+      ]
+    },
+    {
+      "id": "footsteps",
+      "label": "Footsteps",
+      "source": "rubberduck_sfx100_v2",
+      "tags": ["脚步", "湿地", "木地板", "footstep", "wet", "wood"],
+      "files": [
+        "rubberduck-sfx100-v2/sfx100v2_footstep_01.ogg",
+        "rubberduck-sfx100-v2/sfx100v2_footstep_02.ogg",
+        "rubberduck-sfx100-v2/sfx100v2_footstep_wet_01.ogg",
+        "rubberduck-sfx100-v2/sfx100v2_footstep_wood_01.ogg",
+        "rubberduck-sfx100-v2/sfx100v2_footstep_wood_02.ogg"
+      ]
+    },
+    {
+      "id": "impacts",
+      "label": "Impacts",
+      "source": "rubberduck_sfx100_v2",
+      "tags": ["撞击", "玻璃", "木材", "glass", "hit", "wood"],
+      "files": [
+        "rubberduck-sfx100-v2/sfx100v2_glass_01.ogg",
+        "rubberduck-sfx100-v2/sfx100v2_hit_01.ogg",
+        "rubberduck-sfx100-v2/sfx100v2_wood_hit_01.ogg"
+      ]
+    },
+    {
+      "id": "supplemental_ambience",
+      "label": "Supplemental Ambience",
+      "tags": ["雨", "火焰", "森林", "风", "rain", "fire", "forest", "wind"],
+      "items": [
+        {"file": "supplemental/ambience_rain_window.wav", "source": "rain_window", "title": "窗边雨声", "tags": ["雨", "窗户", "循环", "rain", "window"]},
+        {"file": "supplemental/ambience_fire_crackle.ogg", "source": "fire_crackle", "title": "火焰燃烧", "tags": ["火焰", "壁炉", "燃烧", "fire", "crackle"]},
+        {"file": "supplemental/ambience_forest.mp3", "source": "forest_ambience", "title": "森林环境", "tags": ["森林", "自然", "鸟鸣", "forest", "nature"]},
+        {"file": "supplemental/ambience_wind_01.ogg", "source": "wind", "title": "风声 1", "tags": ["风", "天气", "wind", "weather"]},
+        {"file": "supplemental/ambience_wind_02.ogg", "source": "wind", "title": "风声 2", "tags": ["风", "天气", "wind", "weather"]}
+      ]
+    },
+    {
+      "id": "supplemental_foley",
+      "label": "Supplemental Foley",
+      "tags": ["时钟", "门铃", "书本", "翻页", "clock", "doorbell", "book", "page"],
+      "items": [
+        {"file": "supplemental/foley_clock_tick.ogg", "source": "clock_tick", "title": "时钟滴答", "tags": ["时钟", "滴答", "clock", "tick"]},
+        {"file": "supplemental/foley_doorbell.ogg", "source": "doorbell", "title": "门铃", "tags": ["门铃", "提示", "doorbell", "ring"]},
+        {"file": "supplemental/foley_page_turn_01.wav", "source": "book_flip", "title": "单次翻页", "tags": ["书本", "翻页", "单次", "book", "page"]},
+        {"file": "supplemental/foley_page_flip_sequence.wav", "source": "book_flip", "title": "连续翻页", "tags": ["书本", "翻页", "连续", "book", "page"]}
+      ]
+    }
+  ]
+}

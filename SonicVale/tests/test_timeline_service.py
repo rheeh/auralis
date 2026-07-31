@@ -92,10 +92,11 @@ class TimelineServiceTest(unittest.TestCase):
 
         with engine.connect() as conn:
             self.assertEqual(conn.execute(text("SELECT name FROM projects WHERE id = 7")).scalar_one(), "旧项目")
-            self.assertEqual(conn.execute(text("SELECT MAX(version) FROM schema_migrations")).scalar_one(), 3)
+            self.assertEqual(conn.execute(text("SELECT MAX(version) FROM schema_migrations")).scalar_one(), 4)
             columns = {row[1] for row in conn.execute(text("PRAGMA table_info(projects)"))}
             self.assertIn("project_root_path", columns)
             self.assertEqual(conn.execute(text("SELECT COUNT(*) FROM audio_assets")).scalar_one(), 0)
+            self.assertEqual(conn.execute(text("SELECT COUNT(*) FROM sound_library_assets")).scalar_one(), 0)
         engine.dispose()
 
     def test_invalidation_marks_stale_and_manual_clips_are_protected(self):

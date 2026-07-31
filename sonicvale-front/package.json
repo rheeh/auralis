@@ -1,7 +1,7 @@
 {
   "name": "auralis",
   "productName": "Auralis",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "author": "lxc",
   "main": "electron/main.js",
   "scripts": {
@@ -21,6 +21,13 @@
     },
     "files": [
       "**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../assets/audio/cc0",
+        "to": "assets/audio/cc0",
+        "filter": ["**/*"]
+      }
     ],
     "asar": true,
     "asarUnpack": [

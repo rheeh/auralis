@@ -355,6 +355,28 @@ class AudioAssetPO(Base):
     )
 
 
+class SoundLibraryAssetPO(Base):
+    """用户导入的可复用音效原件，与项目时间线资产分开管理。"""
+
+    __tablename__ = "sound_library_assets"
+
+    id = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    name = Column(String(255), nullable=False)
+    category = Column(String(50), nullable=False, default="foley", index=True)
+    tags = Column(JSON, nullable=True)
+    path = Column(String(1000), nullable=False, unique=True)
+    original_name = Column(String(255), nullable=True)
+    source_type = Column(String(32), nullable=False, default="user", index=True)
+    license = Column(String(100), nullable=False, default="user-provided")
+    duration_ms = Column(Integer, nullable=False, default=0)
+    sample_rate = Column(Integer, nullable=True)
+    channels = Column(Integer, nullable=True)
+    mime_type = Column(String(100), nullable=True)
+    checksum = Column(String(64), nullable=False, unique=True, index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+
+
 class TimelineTrackPO(Base):
     """章节下固定的四类广播剧轨道。"""
 

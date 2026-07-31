@@ -23,7 +23,7 @@ from app.repositories.tts_provider_repository import TTSProviderRepository
 from app.routers import project_router, chapter_router, role_router, voice_router, llm_provider_router, \
     tts_provider_router, line_router, emotion_router, strength_router, multi_emotion_voice_router, prompt_router, \
     drama_adaptation_router, queue_router, chat_router
-from app.routers import timeline_router
+from app.routers import sound_library_router, timeline_router
 from app.routers.chapter_router import get_strength_service, get_prompt_service, get_project_service
 from app.routers.emotion_router import get_emotion_service
 from app.routers.llm_provider_router import get_llm_service
@@ -57,7 +57,7 @@ logging.info(f"日志文件路径: {log_file_path}")
 app = FastAPI(
     title="Auralis - AI Radio Drama Studio",
     description="面向个人创作的 AI 广播剧制作系统，支持小说改编、多角色台本、混合 TTS、素材轨和音频导出。",
-    version="0.3.2",
+    version="0.3.3",
 )
 # 跨域
 # 允许的前端地址
@@ -245,6 +245,7 @@ app.include_router(drama_adaptation_router.router)
 app.include_router(queue_router.router)
 app.include_router(chat_router.router)
 app.include_router(timeline_router.router)
+app.include_router(sound_library_router.router)
 # =========================
 # 健康检查接口
 # =========================
