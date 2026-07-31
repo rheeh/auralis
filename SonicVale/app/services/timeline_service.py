@@ -15,6 +15,7 @@ import soundfile as sf
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
+from app.dto.timeline_dto import TimelineClipUpdateDTO
 from app.models.po import (
     AudioAssetPO,
     ChapterPO,
@@ -203,6 +204,51 @@ class TimelineService:
                 track.last_error = str(exc)[:1000]
             self.db.commit()
             raise
+        return self.get_chapter_timeline(project_id, chapter_id)
+
+    def update_clip(
+        self,
+        project_id: int,
+        chapter_id: int,
+        clip_id: int,
+        dto: TimelineClipUpdateDTO,
+    ) -> dict[str, Any]:
+        self._get_chapter(project_id, chapter_id)
+        clip = (
+            self.db.query(TimelineClipPO)
+            .filter(
+                TimelineClipPO.id == clip_id,
+                TimelineClipPO.project_id == project_id,
+                TimelineClipPO.chapter_id == chapter_id,
+            )
+            .one_or_none()
+        )
+        if clip is None:
+            raise ValueError("时间线片段不存在")
+        asset = self.db.get(AudioAssetPO, clip.asset_id)
+        if asset is None:
+            raise ValueError("片段关联的音频资产不存在")
+
+        values = dto.model_dump(exclude_unset=True)
+        duration_ms = int(values.get("duration_ms", clip.duration_ms))
+        fade_in_ms = int(values.get("fade_in_ms", clip.fade_in_ms))
+        fade_out_ms = int(values.get("fade_out_ms", clip.fade_out_ms))
+        if duration_ms > asset.duration_ms:
+            raise ValueError(f"片段长度不能超过源音频时长 {asset.duration_ms} ms")
+        if fade_in_ms + fade_out_ms > duration_ms:
+            raise ValueError("淡入和淡出总时长不能超过片段长度")
+
+        for field, value in values.items():
+            setattr(clip, field, value)
+        clip.is_user_edited = True
+        clip.revision += 1
+        track = self.db.get(TimelineTrackPO, clip.track_id)
+        if track:
+            track.build_mode = "manual"
+            track.status = "ready"
+            track.last_error = None
+            track.revision += 1
+        self.db.commit()
         return self.get_chapter_timeline(project_id, chapter_id)
 
     @staticmethod

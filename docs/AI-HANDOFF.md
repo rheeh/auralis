@@ -185,18 +185,18 @@ Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说�
 
 ### 3.7 Auralis 0.3.2：真实时间线正确性与前端坐标
 
-- “多轨时间线”页面已改名为“多轨内容概览”。页面现在通过真实时间线 API 展示 `start_ms`、`duration_ms`、音频资产状态和构建状态，不再按文字长度估算片段宽度。
+- 时间线页面通过真实时间线 API 展示 `start_ms`、`duration_ms`、音频资产状态和构建状态，不再按文字长度估算片段宽度。
 - SQLite 已改为版本化迁移入口 `SonicVale/app/db/migrations.py`，当前 schema version 为 4；历史字段迁移集中管理，`main.py` 不再继续堆叠 `add_*_column()`。
 - 新增 `AudioAssetPO`、`TimelineTrackPO`、`TimelineClipPO`，保留现有 `lines.audio_path`、`audio_versions` 和 `audio_variants` 作为兼容来源。
-- `TimelineService` 会探测真实音频时长，按人物声、旁白、音效、BGM 四条固定轨道生成章节内容概览。
+- `TimelineService` 会探测真实音频时长，按人物声、旁白、音效、BGM 四条固定轨道生成章节时间线。
 - 新增只读接口 `GET /projects/{project_id}/chapters/{chapter_id}/timeline` 和显式构建接口 `POST /projects/{project_id}/chapters/{chapter_id}/timeline/build`。
 - 时间线支持 `not_built`、`building`、`ready`、`stale`、`missing_audio`、`failed` 状态；台词、音频版本或素材变化会通过失效钩子和来源指纹标记旧结果。
 - 删除台词、章节、项目或替换章节台词时会清理轨道、片段和音频资产；SQLite 连接已启用外键约束。手工编辑片段默认受保护，只有显式 `overwrite_manual=true` 才允许重建覆盖。
 - 空轨道只有在该轨道确实存在台词且其中有台词缺少音频时才显示 `missing_audio`；正常空轨道显示为 `ready`。
 - `AudioAsset` 是项目级共享资源，`TimelineClip` 承担引用关系；删除台词/章节/项目时只删除无任何片段引用的资产。BGM、环境音等跨章节复用由测试覆盖。
-- 多轨内容概览使用统一时间坐标画布：所有轨道共享同一标尺，片段位置由 `start_ms × scale`，宽度由 `duration_ms × scale` 计算。
+- 多轨时间线使用统一时间坐标画布：所有轨道共享同一标尺，片段位置由 `start_ms × scale`，宽度由 `duration_ms × scale` 计算。
 - 数据库迁移失败会阻止应用继续启动，避免半迁移状态继续对外提供 API。
-- 当前刻意未实现拖拽、音量编辑、重叠编排和混音导出；这些属于 Auralis 0.4。未来渲染服务必须把时间线作为成片导出的唯一真实来源，旧的按台词顺序导出仅保留为兼容路径，不能冒充时间线渲染。
+- Auralis 0.4 已实现参数式片段编辑、重叠编排和混音导出；拖拽移动、拖拽裁剪和波形显示仍未实现。旧的按台词顺序导出仅保留为兼容路径，不能冒充时间线渲染。
 
 ### 3.8 README 和 GitHub 同步
 
@@ -218,6 +218,28 @@ Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说�
 - 固定资产以常用环境音和拟音为主，不内置版权边界较复杂的商业 BGM；用户可自行导入合法音乐素材。
 - Electron 打包通过 `extraResources` 携带固定素材，并给后端设置 `AURALIS_STOCK_AUDIO_DIR`；不能只验证源码目录下的开发路径。
 
+### 3.10 Auralis 0.4.0：时间线驱动的真实混音导出
+
+- 多轨页面已正式命名为“多轨时间线”。点击片段可编辑开始时间、片段长度、音量、静音、淡入和淡出；编辑结果持久化到 `TimelineClipPO`，并把轨道标记为手工编排。
+- 新增 `PATCH /projects/{project_id}/chapters/{chapter_id}/timeline/clips/{clip_id}`。片段长度不能超过源音频，淡入和淡出总长不能超过片段长度。
+- 新增 `TimelineRenderService` 和章节渲染接口：`POST/GET /projects/{project_id}/chapters/{chapter_id}/timeline/render`、`GET .../render/audio`。
+- FFmpeg 渲染以数据库时间线为唯一输入，应用真实 `start_ms`、`duration_ms`、`volume_db`、`fade_in_ms`、`fade_out_ms`、`is_muted`，支持人物声、旁白、音效和 BGM 重叠混合。
+- 输出固定为 44.1 kHz、双声道、PCM 16-bit WAV，并生成 `timeline_render_manifest.json`。清单记录渲染指纹、轨道 revision、片段参数和源资产，方便复现与排查。
+- 片段或源文件变化后，旧成片会因 fingerprint 不一致而被判定过期；前端不会把过期文件继续当作当前结果。
+- 渲染保护边界为单章最多 500 个片段、最长 4 小时；空时间线、缺失资产、stale/missing_audio 状态会拒绝渲染。
+- 旧接口 `/lines/export-audio/{chapter_id}` 仍按台词顺序拼接，仅用于兼容旧调用。面试演示中的“最终混音”必须走时间线渲染接口。
+- 前端支持生成后直接试听和下载 WAV。桌面和 390px 窄屏已通过真实浏览器检查，无页面横向溢出或控制台错误。
+
+关键文件：
+
+- `SonicVale/app/services/timeline_render_service.py`
+- `SonicVale/app/services/timeline_service.py`
+- `SonicVale/app/routers/timeline_router.py`
+- `SonicVale/app/dto/timeline_dto.py`
+- `SonicVale/tests/test_timeline_render_service.py`
+- `sonicvale-front/src/pages/TimelineBoard.vue`
+- `sonicvale-front/src/api/timeline.js`
+
 ## 4. 当前进展状态
 
 当前 checkout 状态：
@@ -235,19 +257,20 @@ Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说�
 
 结果：
 
-- Python unittest：52 tests OK（包含真实音频时长、空轨道 ready、幂等构建、旧 SQLite 迁移、失效保护、共享资产回收、音频版本切换、章节清理和素材库测试）。
+- Python unittest：55 tests OK（包含真实音频时长、时间线片段编辑、重叠混音、音量/淡入/静音、成片过期保护、共享资产回收、音频版本切换、章节清理和素材库测试）。
 - FastAPI route smoke check 通过。
 - TTS review feature 默认开启检查通过。
 - 多轨非朗读行跳过 TTS 检查通过。
 - project readiness repair smoke check 通过。
 - audio asset attach 检查通过。
 - TTS route policy 检查通过。
-- SQLite schema migration 和时间线 API 路由检查通过。
+- SQLite schema migration、时间线编辑和渲染 API 路由检查通过。
 - 共享素材库 32 个内置文件读取、音频流、用户上传、删除和项目绑定 smoke check 通过。
+- 时间线编辑 -> FFmpeg 渲染 -> 最新成片读取 -> WAV 下载的 API smoke chain 通过。
 - 前端时间线页面已静态校验为调用 `src/api/timeline.js`，不再调用章节台词接口或文字长度估算。
 - 前端 `vite build` 通过。
 - Vite 仍提示部分 chunk 超过 500kB，这是体积优化提示，不是失败。
-- 产品版本已统一为 `0.3.3`：前端 `package.json`、FastAPI metadata 和本次交接状态一致。
+- 产品版本已统一为 `0.4.0`：前端 `package.json`、FastAPI metadata 和本次交接状态一致。
 
 开发服务通常使用：
 
@@ -400,10 +423,13 @@ API docs: http://127.0.0.1:8200/docs
 7. **音频版本垃圾回收还可继续完善**
    - 生成 take、后期处理版本、导出文件之间的批量清理策略仍有提升空间。
 
-8. **历史文档可能有过期内容**
+8. **时间线交互仍是参数表单，不是完整 DAW**
+   - 当前可精确编辑和真实渲染，但还没有拖拽移动、边缘裁剪、波形、吸附和撤销。不要在演示中宣称已具备专业音频工作站能力。
+
+9. **历史文档可能有过期内容**
    - 特别是 LangGraph、Gitee、旧 UI 相关文档。下一位助手必须以当前代码和 README/本文档为准。
 
-9. **AGPL 署名需要保留**
+10. **AGPL 署名需要保留**
    - README 末尾已保留 SonicVale 许可与署名。不要为了“看起来完全原创”删除合规信息。
 
 ## 9. 下一步具体行动计划
@@ -419,19 +445,18 @@ API docs: http://127.0.0.1:8200/docs
    - UI 改动至少运行前端 build。
    - 较大改动运行 `./scripts/verify.sh`。
 
-3. **如果用户继续调工作台 UI**
-   - 只围绕 `ProjectWorkspace.vue` 和 `components/workflow/*` 做小步修改。
-   - 改完用真实浏览器检查，不要只凭代码判断。
+3. **下一项首选：时间线直接操作**
+   - 在 `TimelineBoard.vue` 上增加片段拖拽移动和边缘裁剪，沿用当前 PATCH 接口提交最终值。
+   - 增加时间刻度吸附和“撤销本次编辑”，但不要在第一步引入复杂 DAW 状态框架。
+   - 继续保留参数弹窗作为精确输入入口。
 
-4. **如果用户继续调改编质量**
-   - 先检查 `script_draft_service.py`、`script_review_service.py`、`workflow_llm_service.py`。
-   - 保持“初稿可见 -> 审查中 -> 返修结果可见”的进度表达。
-   - 不要把审查器改成直接写稿的组件。
+4. **第二优先：自动声音设计建议**
+   - 根据台本中的 `sfx`、`bgm` 和场景信息，从共享素材库给出可审查的候选素材与建议位置。
+   - 先做“建议 -> 用户确认 -> 写入时间线”，不要让模型未经确认直接覆盖手工编排。
 
-5. **如果用户继续调 TTS 效果**
-   - 先确认当前 provider 是 Edge 还是 cloud。
-   - Edge 问题优先解释能力边界，再优化 rate/pitch/volume 映射。
-   - Cloud provider 才考虑自然语言声音指导和结构化 instruction。
+5. **第三优先：项目级成片导出**
+   - 在章节时间线渲染稳定后，再实现多章节排序、章间停顿、章节级清单和项目总 WAV/压缩格式导出。
+   - 项目导出必须消费各章节最新且未过期的时间线成片，不能回退到旧台词顺序拼接。
 
 6. **如果用户要求再次发布**
    - 默认推 GitHub：

@@ -81,7 +81,7 @@
                   <p class="eyebrow">最近导出</p>
                   <h2>导出文件</h2>
                 </div>
-                <el-button size="small" type="primary" plain @click="router.push(`/timeline?project_id=${projectId}`)">打开多轨内容概览</el-button>
+                <el-button size="small" type="primary" plain @click="router.push(`/timeline?project_id=${projectId}`)">打开多轨时间线</el-button>
               </div>
               <div class="export-empty">
                 <strong>{{ readiness?.ready_for_export ? '可以进入预览导出' : '还不能导出' }}</strong>
@@ -236,7 +236,7 @@ const progressSteps = computed(() => {
     },
     {
       key: 'export',
-      title: '多轨内容概览',
+      title: '多轨时间线',
       caption: readiness.value?.ready_for_final_export ? '可以导出正式制作包' : '仍有缺口需要处理',
       metric: `占位素材 ${counts.placeholder_material_lines || 0}`,
       status: readiness.value?.ready_for_final_export ? 'complete' : (readiness.value?.ready_for_export ? 'current' : 'not-started'),
@@ -331,7 +331,7 @@ const nextAction = computed(() => {
   if (counts.missing_voice_roles) return action('分配角色声线', '先把角色和音色绑定好，再批量生成配音。', '去绑定声线', 'roles', Collection)
   if (counts.missing_speakable_audio_lines) return action('生成人物和旁白音频', '进入配音制作页批量生成剩余台词音频。', '批量生成', 'dubbing', Headset)
   if (counts.missing_material_lines) return action('补齐音效和 BGM 素材', '处理素材缺口，必要时先生成占位素材。', '打开素材库', 'media-missing', FolderOpened)
-  return action('检查多轨内容概览', '当前工程已具备导出条件，可以先检查各轨道的台词和素材。', '打开内容概览', 'timeline', VideoPlay)
+  return action('编排多轨时间线', '当前工程已具备渲染条件，可以调整片段参数并生成章节成片。', '打开时间线', 'timeline', VideoPlay)
 })
 
 onMounted(loadAll)

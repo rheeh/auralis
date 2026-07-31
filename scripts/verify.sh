@@ -21,9 +21,11 @@ cd "$ROOT_DIR/SonicVale"
   app/core/tts_runtime.py \
   app/services/drama_adaptation_service.py \
   app/services/sound_library_service.py \
+  app/services/timeline_render_service.py \
   app/routers/drama_adaptation_router.py \
   app/routers/line_router.py \
-  app/routers/queue_router.py
+  app/routers/queue_router.py \
+  app/routers/timeline_router.py
 
 .venv/bin/python -m unittest discover -s tests -p 'test_*.py'
 
@@ -70,6 +72,9 @@ required = {
     "/projects/{project_id}/readiness/repair",
     "/projects/{project_id}/chapters/{chapter_id}/timeline",
     "/projects/{project_id}/chapters/{chapter_id}/timeline/build",
+    "/projects/{project_id}/chapters/{chapter_id}/timeline/clips/{clip_id}",
+    "/projects/{project_id}/chapters/{chapter_id}/timeline/render",
+    "/projects/{project_id}/chapters/{chapter_id}/timeline/render/audio",
 }
 missing = required - paths
 if missing:
@@ -193,11 +198,41 @@ with TestClient(app) as client:
         timeline_read = client.get(f"/projects/{project_id}/chapters/{chapter_id}/timeline").json()
         if timeline_read.get("code") != 200 or timeline_read.get("data", {}).get("duration_ms", 0) <= 0 or timeline_read.get("data", {}).get("status") != "ready":
             raise SystemExit(f"timeline read invalid: {timeline_read}")
+        clips = [
+            clip
+            for track in timeline_read.get("data", {}).get("tracks", [])
+            for clip in track.get("clips", [])
+        ]
+        if len(clips) != 1:
+            raise SystemExit(f"timeline clips invalid: {timeline_read}")
+        clip_id = clips[0]["id"]
+        timeline_edit = client.patch(
+            f"/projects/{project_id}/chapters/{chapter_id}/timeline/clips/{clip_id}",
+            json={"start_ms": 100, "volume_db": -3, "fade_in_ms": 10},
+        ).json()
+        edited_clip = next(
+            clip
+            for track in timeline_edit.get("data", {}).get("tracks", [])
+            for clip in track.get("clips", [])
+        )
+        if timeline_edit.get("code") != 200 or edited_clip.get("start_ms") != 100 or edited_clip.get("volume_db") != -3:
+            raise SystemExit(f"timeline edit invalid: {timeline_edit}")
+        timeline_render = client.post(f"/projects/{project_id}/chapters/{chapter_id}/timeline/render").json()
+        render_data = timeline_render.get("data", {})
+        if timeline_render.get("code") != 200 or not os.path.exists(render_data.get("audio_path", "")) or not os.path.exists(render_data.get("manifest_path", "")):
+            raise SystemExit(f"timeline render invalid: {timeline_render}")
+        latest_render = client.get(f"/projects/{project_id}/chapters/{chapter_id}/timeline/render").json()
+        if latest_render.get("code") != 200 or latest_render.get("data", {}).get("render_fingerprint") != render_data.get("render_fingerprint"):
+            raise SystemExit(f"latest timeline render invalid: {latest_render}")
+        rendered_audio = client.get(f"/projects/{project_id}/chapters/{chapter_id}/timeline/render/audio")
+        if rendered_audio.status_code != 200 or len(rendered_audio.content) < 100:
+            raise SystemExit(f"timeline render audio invalid: status={rendered_audio.status_code} size={len(rendered_audio.content)}")
     finally:
         client.delete(f"/projects/{project_id}")
 print("Multi-track TTS skip ok")
 print("Project readiness repair ok")
 print("Sound library browse/upload/bind/delete ok")
+print("Timeline edit/render/download ok")
 
 class FakeRepo:
     def __init__(self, line):
@@ -305,8 +340,8 @@ print("Mixed-format export and processing ok")
 PY
 
 cd "$ROOT_DIR/sonicvale-front"
-if ! rg -q "fetchChapterTimeline|buildChapterTimeline" src/pages/TimelineBoard.vue; then
-  echo "TimelineBoard must use the real timeline API" >&2
+if ! rg -q "fetchChapterTimeline|buildChapterTimeline|updateTimelineClip|renderChapterTimeline" src/pages/TimelineBoard.vue; then
+  echo "TimelineBoard must use the real timeline edit and render APIs" >&2
   exit 1
 fi
 if rg -q "getLinesByChapter|estimateSeconds|text_content.length" src/pages/TimelineBoard.vue; then

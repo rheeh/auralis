@@ -57,7 +57,7 @@ logging.info(f"日志文件路径: {log_file_path}")
 app = FastAPI(
     title="Auralis - AI Radio Drama Studio",
     description="面向个人创作的 AI 广播剧制作系统，支持小说改编、多角色台本、混合 TTS、素材轨和音频导出。",
-    version="0.3.3",
+    version="0.4.0",
 )
 # 跨域
 # 允许的前端地址

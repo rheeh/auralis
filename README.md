@@ -13,6 +13,7 @@ The project is built as an interview-ready product prototype: the emphasis is on
 - Supports targeted user revision: user feedback is routed to the relevant character, scene, or line instead of blindly rerunning the whole pipeline.
 - Manages generated audio versions per line. Re-generated takes are preserved, and the user can choose which version is currently active for playback and export.
 - Includes a reusable sound library with 32 bundled CC0 ambience/Foley assets, searchable tags, audio preview, user uploads, and direct binding to SFX/BGM lines.
+- Provides a persisted four-track timeline where users can adjust clip timing, duration, gain, fades, and mute state, then render the chapter into a real FFmpeg-mixed WAV file.
 - Makes TTS capability differences explicit. Cloud TTS models can receive richer voice guidance; Edge-TTS receives approximate rate, pitch, and volume mappings rather than natural-language acting instructions.
 - Provides a single project workspace for source text, roles, script lines, voice binding, TTS queue state, audio preview, continuous playback, and project-level checks.
 
@@ -24,7 +25,8 @@ The project is built as an interview-ready product prototype: the emphasis is on
 4. Let the reviewer check whether the script follows audio-drama rules such as minimizing narration, externalizing inner thoughts, and replacing visual-only description with audible information.
 5. Review the revised script and make targeted changes through the assistant when needed.
 6. Write the confirmed script into the project.
-7. Assign voices, generate audio, compare takes, and choose active versions for playback/export.
+7. Assign voices, generate audio, compare takes, and choose active versions.
+8. Arrange voice, narration, SFX, and BGM clips on the timeline, then render and download the mixed chapter WAV.
 
 ## Architecture
 
@@ -65,6 +67,7 @@ The current production workflow is implemented with explicit SQL-backed service 
 - Reviewer pass after initial script generation to enforce audio-drama adaptation rules before the user is asked to approve the final script.
 - Evented workflow updates through WebSocket plus REST recovery, so long-running AI steps can still show visible progress in the UI.
 - Audio take versioning at the line level, so regeneration is reversible and playback/export reads the user's selected take.
+- Timeline rendering uses persisted clip coordinates as the final-mix source of truth, with a reproducible manifest and stale-output detection.
 - Local provider snapshots for recovery from accidental provider configuration changes.
 
 ## Local Setup
