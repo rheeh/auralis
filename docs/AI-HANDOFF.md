@@ -6,7 +6,7 @@
 > 当前默认远端：`github` -> `git@github.com:rheeh/auralis.git`
 > 公开仓库：https://github.com/rheeh/auralis
 > 旧远端保留：`origin` -> `https://gitee.com/green1149/auralis-studio.git`
-> 最新关键提交：`bcf6182 feat: close timeline lifecycle and frontend loop`
+> 最新关键提交：`54f0ced fix: stabilize shared timeline assets and coordinates`
 
 本文档给下一位 AI 助手接手执行用。它不是聊天总结，所有判断都应以当前 checkout 为准。
 
@@ -212,7 +212,7 @@ Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说�
 当前 checkout 状态：
 
 - `master` 跟踪 `github/master`。
-- 最新项目提交：`bcf6182 feat: close timeline lifecycle and frontend loop`；随后会有本交接文档更新提交。
+- 最新项目提交：`54f0ced fix: stabilize shared timeline assets and coordinates`。
 - 工作区存在未跟踪目录 `personal-site/`，不属于 Auralis 交接文档任务；不要误提交。
 - `origin` Gitee 远端仍保留，但默认 push 目标已经是 GitHub。
 
