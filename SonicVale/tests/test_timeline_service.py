@@ -3,7 +3,7 @@ import tempfile
 import unittest
 
 import soundfile as sf
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import sessionmaker
 
 from app.db.database import Base
@@ -15,6 +15,11 @@ from app.services.timeline_service import TimelineService
 class TimelineServiceTest(unittest.TestCase):
     def setUp(self):
         self.engine = create_engine("sqlite:///:memory:")
+        @event.listens_for(self.engine, "connect")
+        def _enable_foreign_keys(dbapi_connection, _connection_record):
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
         Base.metadata.create_all(self.engine)
         apply_schema_migrations(self.engine)
         self.session = sessionmaker(bind=self.engine)()
@@ -53,6 +58,8 @@ class TimelineServiceTest(unittest.TestCase):
 
         self.assertEqual(payload["track_count"], 4)
         self.assertEqual(payload["clip_count"], 3)
+        self.assertEqual(payload["status"], "ready")
+        self.assertEqual({track["status"] for track in payload["tracks"]}, {"ready"})
         clips = [clip for track in payload["tracks"] for clip in track["clips"]]
         self.assertEqual(sorted(clip["duration_ms"] for clip in clips), [750, 1250, 2500])
         self.assertEqual(sorted(clip["start_ms"] for clip in clips), [0, 1250, 3750])
@@ -133,6 +140,70 @@ class TimelineServiceTest(unittest.TestCase):
         self.assertEqual(self.session.query(TimelineTrackPO).count(), 0)
         self.assertEqual(self.session.query(TimelineClipPO).count(), 0)
         self.assertEqual(self.session.query(AudioAssetPO).count(), 0)
+
+    def test_shared_asset_survives_first_chapter_cleanup_and_is_collected_after_last_reference(self):
+        project = ProjectPO(name="Shared asset timeline")
+        self.session.add(project)
+        self.session.flush()
+        chapter_one = ChapterPO(project_id=project.id, title="第一场")
+        chapter_two = ChapterPO(project_id=project.id, title="第二场")
+        self.session.add_all([chapter_one, chapter_two])
+        self.session.flush()
+        shared_path = self._wav("shared-bgm.wav", 0.5)
+        line_one = LinePO(chapter_id=chapter_one.id, line_order=1, track="bgm", line_type="bgm", should_speak=0, audio_path=shared_path)
+        line_two = LinePO(chapter_id=chapter_two.id, line_order=1, track="bgm", line_type="bgm", should_speak=0, audio_path=shared_path)
+        self.session.add_all([line_one, line_two])
+        self.session.commit()
+        service = TimelineService(self.session)
+        service.build_chapter_timeline(project.id, chapter_one.id)
+        service.build_chapter_timeline(project.id, chapter_two.id)
+        self.assertEqual(self.session.query(AudioAssetPO).count(), 1)
+        self.assertEqual(self.session.query(TimelineClipPO).count(), 2)
+
+        service.clear_line_timeline(self.session, line_one.id)
+        self.session.commit()
+        self.assertEqual(self.session.query(AudioAssetPO).count(), 1)
+        self.assertEqual(self.session.query(TimelineClipPO).count(), 1)
+
+        service.clear_chapter_timeline(self.session, chapter_two.id)
+        self.session.commit()
+        self.assertEqual(self.session.query(AudioAssetPO).count(), 0)
+        self.assertEqual(self.session.query(TimelineClipPO).count(), 0)
+
+    def test_sqlite_foreign_keys_are_enabled_for_lifecycle_operations(self):
+        self.assertEqual(self.session.execute(text("PRAGMA foreign_keys")).scalar_one(), 1)
+
+    def test_switching_selected_audio_version_rebuilds_the_clip_asset(self):
+        project = ProjectPO(name="Version switch timeline")
+        self.session.add(project)
+        self.session.flush()
+        chapter = ChapterPO(project_id=project.id, title="第一场")
+        self.session.add(chapter)
+        self.session.flush()
+        old_path = self._wav("old-take.wav", 0.4)
+        new_path = self._wav("new-take.wav", 0.9)
+        line = LinePO(
+            chapter_id=chapter.id,
+            line_order=1,
+            track="voice",
+            audio_path=old_path,
+            audio_versions=[{"id": "v2", "audio_path": new_path}],
+            active_audio_version_id="v2",
+        )
+        self.session.add(line)
+        self.session.commit()
+        service = TimelineService(self.session)
+        first = service.build_chapter_timeline(project.id, chapter.id)
+        first_clip = next(clip for track in first["tracks"] for clip in track["clips"])
+        self.assertEqual(first_clip["asset"]["path"], os.path.abspath(new_path))
+
+        line.active_audio_version_id = None
+        self.session.commit()
+        service.invalidate_line(self.session, line.id, "切换当前音频版本")
+        rebuilt = service.build_chapter_timeline(project.id, chapter.id, force=True)
+        rebuilt_clip = next(clip for track in rebuilt["tracks"] for clip in track["clips"])
+        self.assertEqual(rebuilt_clip["asset"]["path"], os.path.abspath(old_path))
+        self.assertEqual(rebuilt_clip["duration_ms"], 400)
 
 
 if __name__ == "__main__":

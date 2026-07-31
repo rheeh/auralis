@@ -71,7 +71,15 @@ class TimelineService:
         statuses = []
         for track in tracks:
             track_clips = clips_by_track.get(track.id, [])
-            status = self._effective_status(track, source_fingerprint, bool(track_clips), bool(lines))
+            track_lines = [line for line in lines.values() if self._track_type(line) == track.track_type]
+            clip_line_ids = {clip.line_id for clip in track_clips if clip.line_id is not None}
+            missing_track_audio = any(line.id not in clip_line_ids for line in track_lines)
+            status = self._effective_status(
+                track,
+                source_fingerprint,
+                bool(track_lines),
+                missing_track_audio,
+            )
             statuses.append(status)
             track_payloads.append({
                 "id": track.id,
@@ -122,7 +130,16 @@ class TimelineService:
             .all()
         )
         current_status = self._aggregate_status([
-            self._effective_status(track, source_fingerprint, bool(existing_clips), bool(lines))
+            self._effective_status(
+                track,
+                source_fingerprint,
+                any(self._track_type(line) == track.track_type for line in lines),
+                any(
+                    self._track_type(line) == track.track_type
+                    and line.id not in {clip.line_id for clip in existing_clips}
+                    for line in lines
+                ),
+            )
             for track in tracks
         ])
         has_manual_clips = any(clip.is_user_edited for clip in existing_clips)
@@ -144,7 +161,9 @@ class TimelineService:
                 track.revision += 1
         self.db.commit()
         try:
-            self.db.execute(delete(TimelineClipPO).where(TimelineClipPO.chapter_id == chapter.id))
+            self.db.query(TimelineClipPO).filter(TimelineClipPO.chapter_id == chapter.id).delete(
+                synchronize_session="fetch"
+            )
             cursors = 0
             track_by_type = {track.track_type: track for track in tracks}
             missing_tracks: set[str] = set()
@@ -188,10 +207,12 @@ class TimelineService:
 
     @staticmethod
     def clear_line_timeline(db: Session, line_id: int) -> None:
-        """Remove clips/assets owned by one line and mark its track stale."""
+        """Remove one line's clips and only collect assets no longer referenced."""
+        asset_ids = list(db.execute(select(TimelineClipPO.asset_id).where(TimelineClipPO.line_id == line_id)).scalars())
+        asset_ids.extend(db.execute(select(AudioAssetPO.id).where(AudioAssetPO.line_id == line_id)).scalars())
         track_ids = list(db.execute(select(TimelineClipPO.track_id).where(TimelineClipPO.line_id == line_id)).scalars())
         db.execute(delete(TimelineClipPO).where(TimelineClipPO.line_id == line_id))
-        db.execute(delete(AudioAssetPO).where(AudioAssetPO.line_id == line_id))
+        TimelineService._delete_unreferenced_assets(db, asset_ids)
         if track_ids:
             db.execute(
                 update(TimelineTrackPO)
@@ -201,15 +222,38 @@ class TimelineService:
 
     @staticmethod
     def clear_chapter_timeline(db: Session, chapter_id: int) -> None:
+        asset_ids = list(db.execute(select(TimelineClipPO.asset_id).where(TimelineClipPO.chapter_id == chapter_id)).scalars())
         db.execute(delete(TimelineClipPO).where(TimelineClipPO.chapter_id == chapter_id))
-        db.execute(delete(AudioAssetPO).where(AudioAssetPO.chapter_id == chapter_id))
+        asset_ids.extend(
+            db.execute(select(AudioAssetPO.id).where(AudioAssetPO.chapter_id == chapter_id)).scalars()
+        )
+        TimelineService._delete_unreferenced_assets(db, asset_ids)
         db.execute(delete(TimelineTrackPO).where(TimelineTrackPO.chapter_id == chapter_id))
 
     @staticmethod
     def clear_project_timeline(db: Session, project_id: int) -> None:
+        asset_ids = list(db.execute(select(TimelineClipPO.asset_id).where(TimelineClipPO.project_id == project_id)).scalars())
         db.execute(delete(TimelineClipPO).where(TimelineClipPO.project_id == project_id))
-        db.execute(delete(AudioAssetPO).where(AudioAssetPO.project_id == project_id))
+        asset_ids.extend(
+            db.execute(select(AudioAssetPO.id).where(AudioAssetPO.project_id == project_id)).scalars()
+        )
+        TimelineService._delete_unreferenced_assets(db, asset_ids)
         db.execute(delete(TimelineTrackPO).where(TimelineTrackPO.project_id == project_id))
+
+    @staticmethod
+    def _delete_unreferenced_assets(db: Session, asset_ids) -> None:
+        unique_ids = {asset_id for asset_id in asset_ids if asset_id is not None}
+        if not unique_ids:
+            return
+        referenced = set(
+            db.execute(
+                select(TimelineClipPO.asset_id)
+                .where(TimelineClipPO.asset_id.in_(unique_ids))
+            ).scalars()
+        )
+        deletable = unique_ids - referenced
+        if deletable:
+            db.execute(delete(AudioAssetPO).where(AudioAssetPO.id.in_(deletable)))
 
     @staticmethod
     def invalidate_line(db: Session, line_id: int, reason: str = "台词或音频版本已变化") -> None:
@@ -223,14 +267,19 @@ class TimelineService:
             db.commit()
 
     @staticmethod
-    def _effective_status(track: TimelineTrackPO, fingerprint: str, has_clips: bool, has_lines: bool) -> str:
+    def _effective_status(
+        track: TimelineTrackPO,
+        fingerprint: str,
+        has_track_lines: bool,
+        missing_track_audio: bool,
+    ) -> str:
         if track.status == "failed" and track.source_fingerprint == fingerprint:
             return "failed"
         if track.source_fingerprint and track.source_fingerprint != fingerprint:
             return "stale"
         if not track.source_fingerprint:
             return "not_built"
-        if not has_clips and has_lines:
+        if has_track_lines and missing_track_audio:
             return "missing_audio"
         return track.status or "not_built"
 
@@ -366,21 +415,32 @@ class TimelineService:
                 mime_type=mimetypes.guess_type(path)[0],
                 checksum=checksum,
                 revision=1,
-                metadata_json={"source": source_kind},
+                metadata_json={
+                    "source": source_kind,
+                    "source_refs": [{"chapter_id": chapter_id, "line_id": line_id, "source": source_kind}],
+                },
             )
             self.db.add(asset)
             self.db.flush()
             return asset
 
-        asset.chapter_id = chapter_id
-        asset.line_id = line_id
+        # The asset is project-scoped and may be referenced by many clips,
+        # including BGM/SFX reused across chapters. Keep the first source
+        # pointers for provenance instead of pretending the latest line owns it.
+        metadata = dict(asset.metadata_json or {})
+        source_refs = list(metadata.get("source_refs") or [])
+        source_ref = {"chapter_id": chapter_id, "line_id": line_id, "source": source_kind}
+        if source_ref not in source_refs:
+            source_refs.append(source_ref)
+        metadata["source_refs"] = source_refs
         asset.asset_type = asset_type
         asset.duration_ms = duration_ms
         asset.sample_rate = sample_rate
         asset.channels = channels
         asset.mime_type = mimetypes.guess_type(path)[0]
         asset.checksum = checksum
-        asset.metadata_json = {**(asset.metadata_json or {}), "source": source_kind}
+        metadata["source"] = source_kind
+        asset.metadata_json = metadata
         self.db.flush()
         return asset
 

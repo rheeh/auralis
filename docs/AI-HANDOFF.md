@@ -183,7 +183,7 @@ Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说�
 - `sonicvale-front/src/components/workflow/ScriptDraftConfirmCard.vue`
 - `sonicvale-front/src/components/workflow/SessionStageStepper.vue`
 
-### 3.7 Auralis 0.3：真实时间线与音频工程底座
+### 3.7 Auralis 0.3.2：真实时间线正确性与前端坐标
 
 - “多轨时间线”页面已改名为“多轨内容概览”。页面现在通过真实时间线 API 展示 `start_ms`、`duration_ms`、音频资产状态和构建状态，不再按文字长度估算片段宽度。
 - SQLite 已改为版本化迁移入口 `SonicVale/app/db/migrations.py`，当前 schema version 为 3；历史字段迁移集中管理，`main.py` 不再继续堆叠 `add_*_column()`。
@@ -192,8 +192,11 @@ Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说�
 - 新增只读接口 `GET /projects/{project_id}/chapters/{chapter_id}/timeline` 和显式构建接口 `POST /projects/{project_id}/chapters/{chapter_id}/timeline/build`。
 - 时间线支持 `not_built`、`building`、`ready`、`stale`、`missing_audio`、`failed` 状态；台词、音频版本或素材变化会通过失效钩子和来源指纹标记旧结果。
 - 删除台词、章节、项目或替换章节台词时会清理轨道、片段和音频资产；SQLite 连接已启用外键约束。手工编辑片段默认受保护，只有显式 `overwrite_manual=true` 才允许重建覆盖。
+- 空轨道只有在该轨道确实存在台词且其中有台词缺少音频时才显示 `missing_audio`；正常空轨道显示为 `ready`。
+- `AudioAsset` 是项目级共享资源，`TimelineClip` 承担引用关系；删除台词/章节/项目时只删除无任何片段引用的资产。BGM、环境音等跨章节复用由测试覆盖。
+- 多轨内容概览使用统一时间坐标画布：所有轨道共享同一标尺，片段位置由 `start_ms × scale`，宽度由 `duration_ms × scale` 计算。
 - 数据库迁移失败会阻止应用继续启动，避免半迁移状态继续对外提供 API。
-- 当前刻意未实现拖拽、音量编辑、重叠编排和混音导出；这些属于 Auralis 0.4，0.3.1 先保证真实数据可见且生命周期安全。
+- 当前刻意未实现拖拽、音量编辑、重叠编排和混音导出；这些属于 Auralis 0.4。未来渲染服务必须把时间线作为成片导出的唯一真实来源，旧的按台词顺序导出仅保留为兼容路径，不能冒充时间线渲染。
 
 ### 3.8 README 和 GitHub 同步
 
@@ -221,7 +224,7 @@ Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说�
 
 结果：
 
-- Python unittest：46 tests OK（包含真实音频时长、幂等构建、旧 SQLite 迁移、失效保护和章节清理测试）。
+- Python unittest：49 tests OK（包含真实音频时长、空轨道 ready、幂等构建、旧 SQLite 迁移、失效保护、共享资产回收、音频版本切换和章节清理测试）。
 - FastAPI route smoke check 通过。
 - TTS review feature 默认开启检查通过。
 - 多轨非朗读行跳过 TTS 检查通过。
@@ -232,6 +235,7 @@ Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说�
 - 前端时间线页面已静态校验为调用 `src/api/timeline.js`，不再调用章节台词接口或文字长度估算。
 - 前端 `vite build` 通过。
 - Vite 仍提示部分 chunk 超过 500kB，这是体积优化提示，不是失败。
+- 产品版本已统一为 `0.3.2`：前端 `package.json`、FastAPI metadata 和本次交接状态一致。
 
 开发服务通常使用：
 

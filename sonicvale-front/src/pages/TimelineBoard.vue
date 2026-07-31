@@ -37,33 +37,42 @@
     </section>
 
     <section class="timeline-surface">
-      <article v-for="track in trackDefinitions" :key="track.key" class="track-row">
-        <aside class="track-label">
-          <el-icon><component :is="track.icon" /></el-icon>
-          <strong>{{ track.label }}</strong>
-          <span>{{ trackByType[track.key]?.clips?.length || 0 }} 个片段</span>
-          <el-tag v-if="trackByType[track.key]?.status && trackByType[track.key].status !== 'ready'" size="small" effect="plain">
-            {{ statusLabel(trackByType[track.key].status) }}
-          </el-tag>
-        </aside>
-        <div class="clip-lane">
-          <div
-            v-for="clip in trackByType[track.key]?.clips || []"
-            :key="clip.id"
-            class="clip"
-            :class="{ done: clip.line?.is_done === 1 || clip.line?.status === 'done', muted: clip.is_muted }"
-            :style="{ width: clipWidth(clip) }"
-            @click="openDubbingProject"
-          >
-            <strong>{{ clip.line?.scene_title || track.label }}</strong>
-            <p>{{ clip.line?.text_content || clip.asset?.type || '音频片段' }}</p>
-            <span>
-              {{ formatDuration(clip.start_ms) }} 起 · {{ formatDuration(clip.duration_ms) }} · {{ clip.asset?.status === 'ready' ? '资产正常' : '缺少资产' }}
-            </span>
+      <div class="timeline-scroll">
+        <div class="timeline-ruler">
+          <aside class="track-label"><strong>统一时间轴</strong><span>{{ formatDuration(timeline.duration_ms) }}</span></aside>
+          <div class="timeline-canvas" :style="canvasStyle">
+            <span v-for="tick in timelineTicks" :key="tick.ms" class="time-tick" :style="tickStyle(tick)">{{ tick.label }}</span>
           </div>
-          <el-empty v-if="!(trackByType[track.key]?.clips?.length)" description="暂无真实音频片段" />
         </div>
-      </article>
+        <article v-for="track in trackDefinitions" :key="track.key" class="track-row">
+          <aside class="track-label">
+            <el-icon><component :is="track.icon" /></el-icon>
+            <strong>{{ track.label }}</strong>
+            <span>{{ trackByType[track.key]?.clips?.length || 0 }} 个片段</span>
+            <el-tag v-if="trackByType[track.key]?.status && trackByType[track.key].status !== 'ready'" size="small" effect="plain">
+              {{ statusLabel(trackByType[track.key].status) }}
+            </el-tag>
+          </aside>
+          <div class="timeline-canvas" :style="canvasStyle">
+            <span v-for="tick in timelineTicks" :key="`grid-${track.key}-${tick.ms}`" class="timeline-grid-line" :style="tickStyle(tick)" />
+            <div
+              v-for="clip in trackByType[track.key]?.clips || []"
+              :key="clip.id"
+              class="clip"
+              :class="{ done: clip.line?.is_done === 1 || clip.line?.status === 'done', muted: clip.is_muted }"
+              :style="clipStyle(clip)"
+              @click="openDubbingProject"
+            >
+              <strong>{{ clip.line?.scene_title || track.label }}</strong>
+              <p>{{ clip.line?.text_content || clip.asset?.type || '音频片段' }}</p>
+              <span>
+                {{ formatDuration(clip.start_ms) }} 起 · {{ formatDuration(clip.duration_ms) }} · {{ clip.asset?.status === 'ready' ? '资产正常' : '缺少资产' }}
+              </span>
+            </div>
+            <span v-if="!(trackByType[track.key]?.clips?.length)" class="empty-lane">暂无真实音频片段</span>
+          </div>
+        </article>
+      </div>
     </section>
   </div>
 </template>
@@ -103,6 +112,18 @@ const trackDefinitions = [
 const timelineStatus = computed(() => timeline.value.status || 'not_built')
 const trackByType = computed(() => Object.fromEntries((timeline.value.tracks || []).map((track) => [track.track_type, track])))
 const completedCount = computed(() => (timeline.value.tracks || []).flatMap((track) => track.clips || []).filter((clip) => clip.line?.is_done === 1 || clip.line?.status === 'done').length)
+const pixelsPerSecond = computed(() => ({ compact: 40, normal: 80, wide: 120 }[zoom.value] || 80))
+const timelineDurationMs = computed(() => Math.max(Number(timeline.value.duration_ms || 0), 10000))
+const timelineCanvasWidth = computed(() => `${Math.max(960, timelineDurationMs.value / 1000 * pixelsPerSecond.value + 24)}px`)
+const canvasStyle = computed(() => ({ width: timelineCanvasWidth.value, '--grid-size': `${pixelsPerSecond.value}px` }))
+const timelineTicks = computed(() => {
+  const duration = timelineDurationMs.value
+  const step = duration <= 30000 ? 5000 : duration <= 120000 ? 10000 : 30000
+  const ticks = []
+  for (let ms = 0; ms <= duration; ms += step) ticks.push({ ms, label: `${Math.round(ms / 1000)}s` })
+  if (ticks.at(-1)?.ms !== duration) ticks.push({ ms: duration, label: `${Math.round(duration / 1000)}s` })
+  return ticks
+})
 
 onMounted(async () => {
   projects.value = await fetchProjects()
@@ -196,10 +217,14 @@ function formatDuration(milliseconds = 0) {
   return `${Math.floor(totalSeconds / 60)}分${Math.floor(totalSeconds % 60)}秒`
 }
 
-function clipWidth(clip) {
-  const multiplier = { compact: 8, normal: 13, wide: 20 }[zoom.value] || 13
-  const seconds = Math.max(0.1, Number(clip.duration_ms || 0) / 1000)
-  return `${Math.min(720, Math.max(96, seconds * multiplier))}px`
+function tickStyle(tick) {
+  return { left: `${tick.ms / 1000 * pixelsPerSecond.value}px` }
+}
+
+function clipStyle(clip) {
+  const left = Math.max(0, Number(clip.start_ms || 0)) / 1000 * pixelsPerSecond.value
+  const width = Math.max(8, Number(clip.duration_ms || 0) / 1000 * pixelsPerSecond.value)
+  return { left: `${left}px`, width: `${width}px` }
 }
 
 function openDubbingProject() {
@@ -222,16 +247,24 @@ function openDubbingProject() {
 .filters .el-select { width: 220px; }
 .timeline-status-alert { margin-bottom: 14px; }
 .timeline-toolbar { justify-content: flex-start; padding: 12px; margin-bottom: 14px; border: 1px solid var(--el-border-color-light); border-radius: 8px; background: var(--el-bg-color); }
-.timeline-surface { display: grid; gap: 12px; overflow-x: auto; padding-bottom: 8px; }
-.track-row { display: grid; grid-template-columns: 160px minmax(760px, 1fr); min-height: 118px; border: 1px solid var(--el-border-color-light); border-radius: 8px; background: var(--el-bg-color); overflow: hidden; }
+.timeline-surface { overflow-x: auto; padding-bottom: 8px; border: 1px solid var(--el-border-color-light); border-radius: 8px; background: var(--el-bg-color); }
+.timeline-scroll { min-width: max-content; }
+.timeline-ruler, .track-row { display: grid; grid-template-columns: 160px auto; }
+.timeline-ruler { min-height: 42px; border-bottom: 1px solid var(--el-border-color-light); }
+.track-row { min-height: 118px; border-bottom: 1px solid var(--el-border-color-light); }
+.track-row:last-child { border-bottom: 0; }
 .track-label { display: grid; align-content: center; gap: 6px; padding: 14px; border-right: 1px solid var(--el-border-color-light); background: var(--el-fill-color-light); }
 .track-label strong, .track-label span { display: block; }
 .track-label span { color: var(--el-text-color-secondary); font-size: 12px; }
-.clip-lane { display: flex; align-items: center; gap: 10px; min-width: 0; overflow-x: auto; padding: 14px; }
-.clip { flex: 0 0 auto; display: grid; align-content: start; gap: 5px; min-height: 76px; padding: 10px; border: 1px solid color-mix(in srgb, var(--el-color-primary) 36%, var(--el-border-color)); border-radius: 8px; background: color-mix(in srgb, var(--el-color-primary-light-9) 82%, var(--el-bg-color)); cursor: pointer; }
+.timeline-canvas { position: relative; min-height: 100%; background-image: linear-gradient(to right, color-mix(in srgb, var(--el-border-color-light) 62%, transparent) 1px, transparent 1px); background-size: var(--grid-size, 80px) 100%; }
+.timeline-ruler .timeline-canvas { min-height: 42px; }
+.time-tick { position: absolute; top: 9px; z-index: 2; color: var(--el-text-color-secondary); font-size: 11px; transform: translateX(-50%); }
+.timeline-grid-line { position: absolute; top: 0; bottom: 0; border-left: 1px dashed color-mix(in srgb, var(--el-border-color) 70%, transparent); pointer-events: none; }
+.clip { position: absolute; top: 14px; display: grid; align-content: start; gap: 5px; min-height: 76px; padding: 10px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--el-color-primary) 36%, var(--el-border-color)); border-radius: 8px; background: color-mix(in srgb, var(--el-color-primary-light-9) 82%, var(--el-bg-color)); cursor: pointer; }
 .clip.done { border-color: color-mix(in srgb, var(--el-color-success) 45%, var(--el-border-color)); background: color-mix(in srgb, var(--el-color-success-light-9) 80%, var(--el-bg-color)); }
 .clip.muted { opacity: .6; }
 .clip p { max-width: 420px; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .clip span { color: var(--el-text-color-secondary); font-size: 11px; }
+.empty-lane { position: absolute; top: 50%; left: 14px; color: var(--el-text-color-secondary); font-size: 12px; transform: translateY(-50%); }
 @media (max-width: 900px) { .timeline-header { align-items: flex-start; flex-direction: column; } .filters { width: 100%; } .filters .el-select { flex: 1; width: auto; } .timeline-toolbar { flex-wrap: wrap; } }
 </style>

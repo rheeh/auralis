@@ -159,7 +159,7 @@ with TestClient(app) as client:
         if timeline_build.get("code") != 200 or timeline_data.get("track_count") != 4 or timeline_data.get("clip_count") != 1:
             raise SystemExit(f"timeline build invalid: {timeline_build}")
         timeline_read = client.get(f"/projects/{project_id}/chapters/{chapter_id}/timeline").json()
-        if timeline_read.get("code") != 200 or timeline_read.get("data", {}).get("duration_ms", 0) <= 0:
+        if timeline_read.get("code") != 200 or timeline_read.get("data", {}).get("duration_ms", 0) <= 0 or timeline_read.get("data", {}).get("status") != "ready":
             raise SystemExit(f"timeline read invalid: {timeline_read}")
     finally:
         client.delete(f"/projects/{project_id}")
