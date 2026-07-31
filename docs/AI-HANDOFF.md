@@ -206,7 +206,7 @@ Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说�
 当前 checkout 状态：
 
 - `master` 跟踪 `github/master`。
-- 最新项目提交：`42bd99f feat: establish real audio timeline foundation`。
+- 最新项目提交：`a9833af docs: record Auralis 0.3 timeline foundation`。
 - 工作区存在未跟踪目录 `personal-site/`，不属于 Auralis 交接文档任务；不要误提交。
 - `origin` Gitee 远端仍保留，但默认 push 目标已经是 GitHub。
 
