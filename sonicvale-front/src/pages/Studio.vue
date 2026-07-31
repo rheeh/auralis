@@ -2,19 +2,19 @@
   <div class="studio-page">
     <header class="studio-hero">
       <div class="hero-copy">
-        <p class="eyebrow">{{ isKnowledgeEntry ? 'KNOWLEDGE AUDIO' : 'AI 改编' }}</p>
-        <h1>{{ isKnowledgeEntry ? '把文章变成可听、可复习的知识音频' : (productionMode === 'chat' ? '和制作助手一起改编' : '结构化快速生成') }}</h1>
-        <p class="hero-description">{{ isKnowledgeEntry ? '导入文章后，逐步确认原文证据、知识大纲、双人对话台本与复习问题。' : (productionMode === 'chat' ? '逐步确认角色与剧本，随时离开并从检查点继续制作。' : '一次生成完整台本，适合熟悉现有流程的高级用户。') }}</p>
+        <p class="eyebrow">AI 改编</p>
+        <h1>{{ productionMode === 'chat' ? '和制作助手一起改编' : '结构化快速生成' }}</h1>
+        <p class="hero-description">{{ productionMode === 'chat' ? '逐步确认角色与剧本，随时离开并从检查点继续制作。' : '一次生成完整台本，适合熟悉现有流程的高级用户。' }}</p>
         <div v-if="productionMode === 'structured'" class="hero-metrics">
           <span>{{ sourceCount }} 字</span>
           <span>{{ form.scene_count }} 场</span>
           <span>{{ densityLabel(form.adaptation_density) }}</span>
         </div>
-        <el-segmented v-if="!isKnowledgeEntry" v-model="productionMode" class="mode-switch" :options="modeOptions" aria-label="制作模式" />
+        <el-segmented v-model="productionMode" class="mode-switch" :options="modeOptions" aria-label="制作模式" />
       </div>
       <div class="header-actions">
-        <el-button :icon="Refresh" @click="loadProjects">刷新</el-button>
-        <el-button v-if="!isKnowledgeEntry && productionMode === 'structured'" type="primary" :icon="VideoPlay" :loading="isRunning" @click="runAdaptation">开始改编</el-button>
+        <el-button :icon="Refresh" @click="loadProjects">刷新项目</el-button>
+        <el-button v-if="productionMode === 'structured'" type="primary" :icon="VideoPlay" :loading="isRunning" @click="runAdaptation">开始改编</el-button>
       </div>
     </header>
 
@@ -214,7 +214,7 @@ import {
   VideoPlay,
 } from '@element-plus/icons-vue'
 import { fetchProjectReadiness, fetchProjects, repairProjectReadiness } from '../api/project'
-import { commitDramaAdaptation, createDramaAdaptation, ensureInstantArticleWorkspace } from '../api/drama'
+import { commitDramaAdaptation, createDramaAdaptation } from '../api/drama'
 import ChatProductionPanel from '../components/workflow/ChatProductionPanel.vue'
 
 const router = useRouter()
@@ -228,7 +228,7 @@ const currentStage = ref('created')
 const result = ref(null)
 const errorMessage = ref('')
 const readiness = ref(null)
-const productionMode = ref(route.query.content_type === 'knowledge_article' ? 'chat' : (route.query.mode === 'structured' ? 'structured' : 'chat'))
+const productionMode = ref(route.query.mode === 'structured' ? 'structured' : 'chat')
 const activeSessionId = ref(String(route.params.sessionId || route.query.session_id || ''))
 const modeOptions = [
   { label: '对话式改编', value: 'chat' },
@@ -248,7 +248,6 @@ const form = reactive({
 })
 
 const sourceCount = computed(() => form.source_text.trim().length)
-const isKnowledgeEntry = computed(() => route.query.content_type === 'knowledge_article')
 const script = computed(() => result.value?.script || null)
 const scriptJson = computed(() => (script.value ? JSON.stringify(script.value, null, 2) : ''))
 const readinessScore = computed(() => readiness.value?.readiness_score || 0)
@@ -325,13 +324,6 @@ watch(
 )
 
 watch(
-  () => route.query.content_type,
-  (contentType) => {
-    if (contentType === 'knowledge_article') productionMode.value = 'chat'
-  }
-)
-
-watch(
   () => form.project_id,
   () => {
     loadReadiness()
@@ -340,16 +332,6 @@ watch(
 
 async function loadProjects() {
   projects.value = await fetchProjects()
-  if (isKnowledgeEntry.value && !activeSessionId.value) {
-    try {
-      const response = await ensureInstantArticleWorkspace()
-      if (response?.code !== 200) throw new Error(response?.message || '一次性制作空间准备失败')
-      form.project_id = response.data.project_id
-    } catch (error) {
-      ElMessage.error(error?.response?.data?.message || error?.message || '请先为任一项目配置可用模型')
-    }
-    return
-  }
   if (!selectProjectFromQuery(route.query.project_id) && !form.project_id && projects.value.length) {
     form.project_id = projects.value[0].id
   }

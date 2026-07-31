@@ -1,14 +1,12 @@
 # Auralis
 
-Auralis is a local-first AI production workspace for turning novels into editable audio dramas and knowledge articles into evidence-linked, reviewable audio lessons. It combines source ingestion, structured adaptation, script review, voice assignment, TTS generation, audio take management, playback, and learning review in one desktop-oriented workflow.
+Auralis is a local-first AI production workspace for turning narrative text into an editable audio-drama project. It combines manuscript adaptation, role design, script review, voice assignment, TTS generation, audio take management, and project playback in one desktop-oriented workflow.
 
 The project is built as an interview-ready product prototype: the emphasis is on a complete production loop, clear state management, recoverable AI steps, and an interface that lets users inspect and correct every important output before audio generation.
 
 ## What It Does
 
 - Converts novel-style source text into an audio-drama workflow: source analysis, character draft, script draft, independent review, user confirmation, and final project write-in.
-- Converts pasted articles or accessible public article URLs into knowledge audio: source preview, evidence-backed knowledge points, outline confirmation, learning design, script generation, three-part review, TTS, and review questions.
-- Preserves the boundary between source facts, source opinions, AI explanations, and externally verified material. Every core knowledge point keeps a source excerpt and can be traced to script lines after commit.
 - Keeps draft data separate from the formal project until the user confirms it, so incomplete AI output does not pollute production data.
 - Shows script iterations visibly: the first script draft can appear before review finishes, then the reviewer result and revised draft are surfaced as workflow progress instead of hidden latency.
 - Provides a resident production assistant for free-form requests such as revising a scene, locating a line, changing a voice, regenerating audio, or checking missing takes.
@@ -19,8 +17,6 @@ The project is built as an interview-ready product prototype: the emphasis is on
 
 ## Typical Workflow
 
-Novel audio drama:
-
 1. Paste source text into the production assistant.
 2. Confirm or revise extracted roles.
 3. Generate the first script draft.
@@ -28,15 +24,6 @@ Novel audio drama:
 5. Review the revised script and make targeted changes through the assistant when needed.
 6. Write the confirmed script into the project.
 7. Assign voices, generate audio, compare takes, and choose active versions for playback/export.
-
-Knowledge article audio:
-
-1. Choose Knowledge Article Audio and import a public article URL or paste the article text.
-2. Confirm the cleaned text; restricted WeChat pages fall back to paste mode instead of being treated as article content.
-3. Generate and confirm an evidence-linked knowledge outline.
-4. Generate a learning plan, knowledge script, review questions, and independent accuracy/learning/audio review.
-5. Revise or confirm the script, write it into the project, and reuse the existing TTS take and export workflow.
-6. Review knowledge points, replay related audio lines, and answer source-backed review questions.
 
 ## Architecture
 
@@ -46,13 +33,11 @@ Knowledge article audio:
 │   ├── main.py                         # FastAPI application entry
 │   ├── routers                         # Project, line, chat, provider, and queue APIs
 │   ├── services                        # Workflow, assistant, TTS, script, role, and line logic
-│   ├── workflows/article               # Knowledge analysis, script, evidence, and review schemas
 │   ├── core                            # Provider config, LLM/TTS engines, websocket manager
 │   └── models / entity / dto           # SQLAlchemy models and API payloads
 ├── sonicvale-front
 │   ├── src/pages                       # Desktop workspace pages
 │   ├── src/components/workflow          # Assistant, script, role, and production panels
-│   ├── src/components/article           # Article import, outline, evidence, script, and review UI
 │   └── electron                         # Electron shell integration
 ├── scripts
 │   ├── dev.sh                          # Local development startup
@@ -125,10 +110,6 @@ Common workflow flags:
 ```text
 WORKFLOW_CHAT_UI_ENABLED=true
 WORKFLOW_TTS_REVIEW_ENABLED=true
-KNOWLEDGE_ARTICLE_ENABLED=true
-KNOWLEDGE_ARTICLE_URL_ENABLED=true
-KNOWLEDGE_ARTICLE_EXTERNAL_VERIFY_ENABLED=false
-KNOWLEDGE_ARTICLE_VISION_ENABLED=false
 DRAMA_WORKFLOW_MAX_ITERATIONS=8
 DRAMA_WORKFLOW_MAX_SOURCE_CHARS=120000
 DRAMA_WORKFLOW_MAX_DRAFT_CHARS=180000

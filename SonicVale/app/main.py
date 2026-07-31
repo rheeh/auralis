@@ -22,7 +22,7 @@ from app.repositories.llm_provider_repository import LLMProviderRepository
 from app.repositories.tts_provider_repository import TTSProviderRepository
 from app.routers import project_router, chapter_router, role_router, voice_router, llm_provider_router, \
     tts_provider_router, line_router, emotion_router, strength_router, multi_emotion_voice_router, prompt_router, \
-    drama_adaptation_router, queue_router, chat_router, article_source_router, article_workflow_router
+    drama_adaptation_router, queue_router, chat_router
 from app.routers.chapter_router import get_strength_service, get_prompt_service, get_project_service
 from app.routers.emotion_router import get_emotion_service
 from app.routers.llm_provider_router import get_llm_service
@@ -155,14 +155,6 @@ def add_project_root_path_column():
 
             conn.commit()
 
-def add_project_workspace_kind_column():
-    with engine.begin() as conn:
-        result = conn.execute(text("PRAGMA table_info(projects)"))
-        columns = [row[1] for row in result.fetchall()]
-        if "workspace_kind" not in columns:
-            conn.execute(text("ALTER TABLE projects ADD COLUMN workspace_kind TEXT DEFAULT 'project' NOT NULL"))
-            logging.info("已添加 projects.workspace_kind 字段。")
-
 def add_drama_line_columns():
     columns_to_add = {
         "line_type": "TEXT DEFAULT 'dialogue' NOT NULL",
@@ -236,8 +228,6 @@ async def startup_event():
     add_is_precise_fill_column()
     # v1.0.7 添加项目的字段 project_root_path
     add_project_root_path_column()
-    # 公众号文章使用隐藏的一次性制作空间，不进入普通项目列表。
-    add_project_workspace_kind_column()
     # 广播剧工程字段：兼容旧项目，支持人物声/旁白/音效/BGM 多轨编辑
     add_drama_line_columns()
     # 广播剧 TTS 路由字段：支持免费 Edge 与可配置云端 TTS 混合生成
@@ -387,8 +377,6 @@ app.include_router(prompt_router.router)
 app.include_router(drama_adaptation_router.router)
 app.include_router(queue_router.router)
 app.include_router(chat_router.router)
-app.include_router(article_source_router.router)
-app.include_router(article_workflow_router.router)
 # =========================
 # 健康检查接口
 # =========================

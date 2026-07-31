@@ -8,13 +8,11 @@ from sqlalchemy import Sequence, delete, select
 from app.core.config import getConfigPath
 from app.entity.project_entity import ProjectEntity
 from app.models.po import (
-    ArticleSourcePO,
     AdaptationDraftRevisionPO,
     AdaptationRunPO,
     AudioTaskPO,
     ChatMessagePO,
     ChatSessionPO,
-    KnowledgeReviewAnswerPO,
     ProjectPO,
     SourceDocumentPO,
     WorkflowEventPO,
@@ -119,9 +117,7 @@ class ProjectService:
         # 工作流表没有完整的数据库级外键级联，删除项目时必须按依赖顺序清理。
         db.execute(delete(AudioTaskPO).where(AudioTaskPO.project_id == project_id))
         db.execute(delete(WorkflowEventPO).where(WorkflowEventPO.project_id == project_id))
-        db.execute(delete(ArticleSourcePO).where(ArticleSourcePO.project_id == project_id))
         if session_ids:
-            db.execute(delete(KnowledgeReviewAnswerPO).where(KnowledgeReviewAnswerPO.session_id.in_(session_ids)))
             db.execute(delete(AdaptationDraftRevisionPO).where(AdaptationDraftRevisionPO.session_id.in_(session_ids)))
             db.execute(delete(ChatMessagePO).where(ChatMessagePO.session_id.in_(session_ids)))
             db.execute(delete(ChatSessionPO).where(ChatSessionPO.id.in_(session_ids)))

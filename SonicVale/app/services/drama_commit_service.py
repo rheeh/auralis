@@ -26,9 +26,6 @@ class DramaCommitService:
         session = self.db.get(ChatSessionPO, session_id)
         if not session or session.deleted_at is not None:
             raise ValueError("改编会话不存在")
-        if session.source_type == "knowledge_article":
-            from app.services.knowledge_commit_service import KnowledgeCommitService
-            return KnowledgeCommitService(self.db).commit_session(session_id, chapter_title, replace_chapter_lines)
         run = self.db.get(AdaptationRunPO, session.adaptation_run_id) if session.adaptation_run_id else None
         if not run or not run.final_json:
             raise ValueError("剧本尚未确认，无法写入项目")

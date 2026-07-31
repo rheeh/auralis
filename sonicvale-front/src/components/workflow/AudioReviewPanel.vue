@@ -22,12 +22,7 @@
     <div v-if="summary.tasks.length" class="task-list">
       <article v-for="task in summary.tasks" :key="task.task_id" class="task-card">
         <div class="task-copy">
-          <div class="line-heading">
-            <span class="line-number">台词 {{ task.line_order ?? '—' }}</span>
-            <span v-if="task.role_name" class="voice-role" :class="roleClass(task.role_name)">
-              <b>{{ task.role_name }}</b>{{ roleVoiceLabel(task) }}
-            </span>
-          </div>
+          <span class="line-number">台词 {{ task.line_order ?? '—' }}</span>
           <strong>{{ task.text || '无台词文本' }}</strong>
           <small>第 {{ task.attempt }} 次生成 · {{ statusLabel(task.status) }}</small>
         </div>
@@ -77,12 +72,6 @@ function apiError(error, fallback) { return error?.response?.data?.message || er
 function audioUrl(lineId) { return `${API_BASE_URL}lines/${lineId}/audio` }
 function statusLabel(status) { return ({ queued: '等待中', processing: '生成中', done: '已生成', failed: '失败', skipped: '已跳过', cancelled: '已取消' })[status] || status }
 function statusType(status) { return ({ processing: 'warning', done: 'success', failed: 'danger', skipped: 'info' })[status] || 'info' }
-function roleClass(name) { return name === '知夏' ? 'female' : name === '闻舟' ? 'male' : '' }
-function roleVoiceLabel(task) {
-  if (task.role_name === '知夏') return ' · 年轻女声'
-  if (task.role_name === '闻舟') return ' · 成熟男声'
-  return task.tts_route === 'edge' ? ' · Edge 声线' : ''
-}
 function schedulePoll() {
   clearTimeout(pollTimer)
   if (summary.tasks.some((task) => ['queued', 'processing'].includes(task.status))) pollTimer = setTimeout(load, 1800)
@@ -135,6 +124,6 @@ async function retry(task) {
 
 <style scoped>
 .audio-review{display:grid;gap:16px;padding:18px;border:1px solid color-mix(in srgb,var(--el-color-success) 36%,var(--el-border-color));border-radius:12px;background:var(--el-bg-color);box-shadow:0 14px 34px rgba(17,24,39,.06)}
-.panel-head,.head-actions,.status-row,.task-status,.review-controls,.review-controls>div,.error-row,.line-heading{display:flex;align-items:center;gap:10px}.panel-head,.error-row{justify-content:space-between}.panel-head h3,.eyebrow{margin:0}.eyebrow{margin-bottom:4px;color:var(--el-color-primary);font-size:12px;text-transform:uppercase}.head-actions,.status-row,.task-status,.review-controls>div,.line-heading{flex-wrap:wrap}.progress-block{display:grid;gap:10px;padding:14px;border-radius:10px;background:var(--el-fill-color-light)}.progress-block strong{font-size:22px}.progress-block span{color:var(--el-text-color-secondary)}.task-list{display:grid;gap:10px}.task-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:14px;border:1px solid var(--el-border-color-lighter);border-radius:10px}.task-copy{display:grid;gap:6px;min-width:0}.task-copy strong{overflow-wrap:anywhere}.task-copy small,.line-number{color:var(--el-text-color-secondary);font-size:12px}.voice-role{padding:4px 9px;border-radius:999px;background:var(--el-fill-color-light);color:var(--el-text-color-secondary);font-size:12px}.voice-role.female{background:rgba(239,113,172,.1);color:#b34379}.voice-role.male{background:rgba(80,137,211,.11);color:#356fae}.review-controls,.error-row{grid-column:1/-1;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--el-border-color-lighter)}.review-controls audio{width:min(100%,420px)}.error-row{color:var(--el-color-danger)}.audio-review :deep(.el-button){min-height:44px}
+.panel-head,.head-actions,.status-row,.task-status,.review-controls,.review-controls>div,.error-row{display:flex;align-items:center;gap:10px}.panel-head,.error-row{justify-content:space-between}.panel-head h3,.eyebrow{margin:0}.eyebrow{margin-bottom:4px;color:var(--el-color-primary);font-size:12px;text-transform:uppercase}.head-actions,.status-row,.task-status,.review-controls>div{flex-wrap:wrap}.progress-block{display:grid;gap:10px;padding:14px;border-radius:10px;background:var(--el-fill-color-light)}.progress-block strong{font-size:22px}.progress-block span{color:var(--el-text-color-secondary)}.task-list{display:grid;gap:10px}.task-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:14px;border:1px solid var(--el-border-color-lighter);border-radius:10px}.task-copy{display:grid;gap:5px;min-width:0}.task-copy strong{overflow-wrap:anywhere}.task-copy small,.line-number{color:var(--el-text-color-secondary);font-size:12px}.review-controls,.error-row{grid-column:1/-1;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--el-border-color-lighter)}.review-controls audio{width:min(100%,420px)}.error-row{color:var(--el-color-danger)}.audio-review :deep(.el-button){min-height:44px}
 @media(max-width:720px){.panel-head,.review-controls,.error-row{align-items:stretch;flex-direction:column}.head-actions{width:100%}.head-actions .el-button{flex:1}.task-card{grid-template-columns:1fr}.task-status{justify-content:flex-start}}
 </style>

@@ -1,30 +1,18 @@
 # Auralis 项目交接文档
 
-> 状态日期：2026-07-29
+> 状态日期：2026-07-18
 > 工作目录：`/Users/go/Desktop/sonic-drama-studio`
 > 当前分支：`master`
 > 当前默认远端：`github` -> `git@github.com:rheeh/auralis.git`
 > 公开仓库：https://github.com/rheeh/auralis
 > 旧远端保留：`origin` -> `https://gitee.com/green1149/auralis-studio.git`
-> 交接功能基线：`2d45d41 fix: add distinct free voices to knowledge audio`（本文档更新提交可能位于其后）
+> 最新关键提交：`f73fd04 feat: finalize Auralis interview showcase`
 
 本文档给下一位 AI 助手接手执行用。它不是聊天总结，所有判断都应以当前 checkout 为准。
 
-### 交接基线快照
-
-| 项目 | 2026-07-29 状态 |
-|---|---|
-| Git | 整理前 `master` 与 `github/master` 同步；最近功能基线为 `2d45d41`，本文档提交后以实际 HEAD 为准 |
-| 工作区 | 只有未跟踪目录 `personal-site/`；不属于 Auralis，不得误提交 |
-| 产品主线 | 小说广播剧、一次性知识文章音频两条流程均有可演示闭环 |
-| 知识音频 | 固定“知夏”年轻女声与“闻舟”成熟男声，强制免费 Edge-TTS，不调用阿里云 TTS |
-| 真实数据 | `.local-data/app_test.db` 中保留 11 个会话；第三篇公众号测试会话已完成并有 18 条男女声配音 |
-| 验证入口 | `./scripts/verify.sh`；文档改动至少执行 `git diff --check` |
-| 本地服务 | 检查时后端 8200 正在运行、前端 5173 未运行；接手后仍须自行检查，不能假设进程持续存在 |
-
 ## 1. 项目背景和最终目标
 
-Auralis 是一个本地优先的 AI 音频内容制作工作台，包含两条独立流水线：小说广播剧和知识文章音频。两条流水线共享项目、会话、TTS、音频版本、试听和导出基础设施，但使用不同的 Prompt、Schema、状态和审查规则。
+Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说或叙事文本改编成可审查、可修改、可配音、可连播的音频项目。
 
 最终目标不是做一个通用 Agent 框架，也不是扩展成平台型产品，而是形成一个能给面试官展示的完整 AI 产品原型：
 
@@ -34,10 +22,8 @@ Auralis 是一个本地优先的 AI 音频内容制作工作台，包含两条�
 - 用户能通过左侧制作助手自由提出修改意见，由系统定位到角色、场景或台词再修改。
 - 用户确认后再写入正式项目，避免未确认草稿污染项目数据。
 - 每句台词可以绑定音色、生成 TTS、重生成多个 take、选择当前版本、连播和导出。
-- 用户也可以不创建普通项目，直接把一篇公众号文章或粘贴正文改编成一次性的知识音频。
-- 知识音频必须保留原文依据、AI 解释边界和复习问题；默认通过固定男女角色展开真实学习对话，而不是单人机器人念稿。
 
-产品表达上要清楚：Auralis 是“AI 音频内容制作工作台”。小说侧是 AI 广播剧制作助手，文章侧是可追溯、可复习的知识音频制作器；都不是简单朗读器，也不是只会线性跑流程的工作流 Demo。
+产品表达上要清楚：Auralis 是“AI 广播剧制作助手”，不是单纯的小说朗读器，也不是只会线性跑流程的工作流 Demo。
 
 ## 2. 当前任务和优先级
 
@@ -48,13 +34,10 @@ Auralis 是一个本地优先的 AI 音频内容制作工作台，包含两条�
 | P0 | 保持项目可启动、可验证、可演示 | 已通过 `./scripts/verify.sh` | 任意改动后至少运行相关测试；较大改动跑全量 verify |
 | P0 | 保持 README 和交接文档准确 | README 已重写，本文档已更新 | 不要再以“基于某项目二次开发”作为 README 开头 |
 | P0 | 稳定主流程：解析 -> 角色确认 -> 台本初稿 -> 审查/返修 -> 用户确认 -> 写入项目 | 已实现 | 修 bug 时不要重新引入 LangGraph |
-| P0 | 知识文章音频：导入 -> 分析 -> 大纲确认 -> 脚本/审查 -> 提交 -> TTS/复习 | 核心闭环和 3 篇公众号真实测试已完成 | 先做回归修复；外部联网查证仍关闭，不能把 AI 解释伪装成原文 |
-| P0 | 知识音频男女声与免费 TTS 约束 | 已完成并真实重生成 18/18 条 | 不得回退为同一默认声线，不得自动切换阿里云/CosyVoice |
 | P0 | 制作助手自由对话和工具调用 | 已实现 `ProductionAssistantService` | 后续只做能力补强，不要把小说解析提示词混进助手对话 |
 | P0 | 音频版本管理 | 已实现生成 take 和后期处理版本 | 修复时确保原音频不被覆盖 |
 | P1 | UI 继续收敛为工作台体验 | 已完成一轮重构 | 不要添加解释性大横幅或过多固定栏 |
 | P1 | 真实模型/TTS 适配 | 已做能力分层 | 新 provider 必须明确能力差异 |
-| P1 | 面试演示回归 | 尚需每次演示前手动走查 | 优先验证入口、恢复会话、男女声试听、音频版本和导出，不扩展无关平台能力 |
 
 当前用户偏向“面试可展示、结构清楚、不要过度扩展”。任何新任务都要服务这个目标。
 
@@ -200,89 +183,7 @@ Auralis 是一个本地优先的 AI 音频内容制作工作台，包含两条�
 - `sonicvale-front/src/components/workflow/ScriptDraftConfirmCard.vue`
 - `sonicvale-front/src/components/workflow/SessionStageStepper.vue`
 
-### 3.7 知识文章音频大版本
-
-已按 `docs/knowledge-article-major-update-plan.md` 完成 Knowledge Audio v1 核心闭环：
-
-```text
-公众号 URL 或粘贴正文
-  -> 预览、清洗和用户正文确认
-  -> 独立文章分析 Prompt
-  -> 带原文依据的知识大纲
-  -> 用户确认或 revision
-  -> 学习结构和表现形式设计
-  -> 知识音频初稿
-  -> 内容准确性、学习质量、音频质量独立审查
-  -> 用户修改或确认
-  -> 幂等写入 Chapter / Role / Line
-  -> 复用 TTS take、试听、版本和导出
-  -> 知识点回顾、相关片段和复习问题
-```
-
-关键实现：
-
-- `SonicVale/app/services/article_ingest_service.py`
-- `SonicVale/app/services/article_analysis_service.py`
-- `SonicVale/app/services/article_workflow_service.py`
-- `SonicVale/app/services/learning_design_service.py`
-- `SonicVale/app/services/knowledge_script_service.py`
-- `SonicVale/app/services/knowledge_review_service.py`
-- `SonicVale/app/services/knowledge_production_service.py`
-- `SonicVale/app/services/knowledge_commit_service.py`
-- `SonicVale/app/services/knowledge_study_service.py`
-- `SonicVale/app/workflows/article/schemas.py`
-- `sonicvale-front/src/components/article/`
-
-用户可见入口已经补齐：
-
-- 首页首屏直接展示“小说广播剧 / 知识文章音频”双入口。
-- 项目列表顶部提供两种制作入口；知识文章入口直接进入一次性制作，不再新建普通项目。
-- 首页、项目列表和已有项目卡上的知识文章入口统一路由为 `/studio?content_type=knowledge_article`。
-- 后端复用一个 `workspace_kind=one_off` 的隐藏制作空间承载模型、TTS、会话和音频数据；普通项目 API 会过滤它，因此不会污染“我的项目”。
-- 知识文章页提供“双人学习对话 / 知识情景剧 / 单人讲解”选择，默认双人学习对话。
-- 双人模式固定使用“知夏 / 闻舟”，生成器和审查器共同执行对话字数占比、双方参与次数、长独白和角色名校验。
-- 双人模式固定使用免费 Edge-TTS：知夏绑定年轻女声 `zh-CN-XiaoyiNeural`，闻舟绑定成熟男声 `zh-CN-YunyangNeural`；提交时会清除遗留的 Cloud/CosyVoice 绑定，知识音频不会调用阿里云 TTS。
-- 脚本为每句对话保存 `emotion / strength / voice_profile / production_note`；Edge-TTS 只把它们近似映射为整句 `rate / pitch / volume`，用于减少机器人念稿感，不能宣称达到专业配音演员的情绪表现。
-- 试听任务列表只展示每条台词最新任务，旧任务仍保留在历史数据中，不再造成 18 条台词显示成 36 条的误导。
-- 试听卡明确显示“知夏 · 年轻女声 / 闻舟 · 成熟男声”，脚本预览同时展示角色声线和每句情绪强度。
-- 两位角色的跨文章记忆是有界、可追溯的：最多读取隐藏空间内最近 6 篇文章的标题、摘要和知识点；当前没有用户账号、向量检索或全量长期记忆。
-- `App.vue` 在路由切换后重置主内容滚动位置，避免从长项目列表进入制作页时把关键入口卷出首屏。
-
-公众号正文清洗修复：
-
-- 提取器现在会在微信 `#js_content` 的闭合 `</div>` 处退出，不再把页面尾部 UI 拼入正文。
-- 页面抓取上限为 6 MB，保存和返回前端的 `raw_content` 是已清洗正文，不再传输数 MB 页面脚本。
-- 尾部兜底会清除“预览时标签不可点、阅读原文、微信扫一扫、关注该公众号、使用小程序、点点赞/点分享/点喜欢”等交互文案。
-
-2026-07-18 真实验证了三篇公众号文章：
-
-| 文章 | 清洗后字数 | 真实生成结果 |
-|---|---:|---|
-| 如何看待 grill-me（拷问我）这个 Skill？ | 4,646 | 6 段 / 15 条；知夏 8、闻舟 7；对话 100%；最长 146 字；内容审查要求补 2 个知识点 |
-| 红果主动踩刹车，AI短剧的账算不过来 | 1,879 | 6 段 / 20 条；双方各 10；对话 100%；最长 135 字；内容审查保留 2 个问题 |
-| 对话腾讯 WorkBuddy 首位产品经理：火爆增长背后的 AI 哲学 | 5,424 | 7 段 / 18 条；双方各 9；对话 100%；最长 124 字；独立审查通过 |
-
-三篇正文都未再包含用户列出的微信 UI 垃圾。真实生成使用隐藏制作空间中已验证可用的 `qwen-plus`；原普通项目绑定的版本化模型名返回 HTTP 403，因此没有改动普通项目配置。如果微信返回验证码或访问限制，系统仍会返回 `access_restricted` 并引导粘贴正文。
-
-第三篇文章的真实 TTS 回归：
-
-- 会话：`sess_370ebb446cdc4c60904ea1e848c63538`
-- 项目 / 章节：隐藏 one-off workspace `project_id=11` / `chapter_id=7`
-- 配音：18/18 完成，知夏 9 条、闻舟 9 条，失败 0 条
-- 路由：两个角色均为 `edge`，`default_voice_id` 为空，不会经过付费云端音色
-- 2026-07-18 诊断采样的中位基频约为：知夏 312 Hz、闻舟 129 Hz；该数字只用于确认男女声差异，不是专业声学质量评分
-- 本地试听入口：`http://127.0.0.1:5173/#/studio?content_type=knowledge_article&session_id=sess_370ebb446cdc4c60904ea1e848c63538`
-
-发布开关：
-
-- `KNOWLEDGE_ARTICLE_ENABLED=true`
-- `KNOWLEDGE_ARTICLE_URL_ENABLED=true`
-- `KNOWLEDGE_ARTICLE_EXTERNAL_VERIFY_ENABLED=false`
-- `KNOWLEDGE_ARTICLE_VISION_ENABLED=false`
-
-未完成范围必须保持明确：联网事实查证、截图/OCR、系列课程和长文分段合并尚未实现；当前“联网查证”选项保持禁用。
-
-### 3.8 README 和 GitHub 同步
+### 3.7 README 和 GitHub 同步
 
 - README 已重写为英文面试项目说明。
 - README 开头直接介绍 Auralis，不再第一句话强调“基于某项目改编”。
@@ -296,12 +197,11 @@ Auralis 是一个本地优先的 AI 音频内容制作工作台，包含两条�
 当前 checkout 状态：
 
 - `master` 跟踪 `github/master`。
-- 2026-07-29 最近功能基线为 `2d45d41 fix: add distinct free voices to knowledge audio`；本文档更新可能形成其后的 docs 提交，接手后以 `git log -1 --oneline` 的实际输出为准。
+- 最新项目提交：`f73fd04 feat: finalize Auralis interview showcase`。
 - 工作区存在未跟踪目录 `personal-site/`，不属于 Auralis 交接文档任务；不要误提交。
 - `origin` Gitee 远端仍保留，但默认 push 目标已经是 GitHub。
-- `.local-data/app_test.db` 当前保留第三篇公众号完成态会话和生成音频；它属于本机运行数据，不在 Git 中，不应被当作可移植种子数据。
 
-2026-07-29 交接前完整验证：
+最近完整验证：
 
 ```bash
 ./scripts/verify.sh
@@ -309,14 +209,13 @@ Auralis 是一个本地优先的 AI 音频内容制作工作台，包含两条�
 
 结果：
 
-- Python unittest：63 tests OK。
+- Python unittest：41 tests OK。
 - FastAPI route smoke check 通过。
 - TTS review feature 默认开启检查通过。
 - 多轨非朗读行跳过 TTS 检查通过。
 - project readiness repair smoke check 通过。
 - audio asset attach 检查通过。
 - TTS route policy 检查通过。
-- mixed-format export and processing 检查通过。
 - 前端 `vite build` 通过。
 - Vite 仍提示部分 chunk 超过 500kB，这是体积优化提示，不是失败。
 
@@ -362,18 +261,6 @@ API docs: http://127.0.0.1:8200/docs
 10. **GitHub 仓库保持 public**
     - 原因：用户在 2026-07-18 明确表示“不用，就一直保持 public”。
 
-11. **公众号知识音频是一次性制作，不进入普通项目列表**
-    - 原因：用户明确认为公众号文章改编不是需要长期管理的复杂项目。后端使用 `workspace_kind=one_off` 隐藏空间复用 provider、会话、TTS 和学习记忆，普通项目 API 过滤它。
-
-12. **知识文章双人音频固定使用免费 Edge-TTS**
-    - 原因：用户明确要求不调用收费的阿里云 TTS。知夏固定 `zh-CN-XiaoyiNeural`，闻舟固定 `zh-CN-YunyangNeural`；提交时清除旧 `default_voice_id`，显式 `edge` 路由不能被 CosyVoice 标签覆盖。
-
-13. **知识文章长期搭档固定为知夏 / 闻舟，但记忆必须有界且可追溯**
-    - 原因：需要让角色记得之前学过的文章，同时避免虚构记忆。当前只读取同一隐藏空间最近 6 篇的标题、摘要和知识点，不承诺用户级永久记忆。
-
-14. **试听进度按“每条台词的最新任务”统计**
-    - 原因：重新生成会保留历史任务和 take，但用户当前试听不应把旧任务重复计入完成数。历史保留与当前任务展示是两个概念。
-
 ## 6. 用户偏好、要求和约束条件
 
 - 用户希望 AI 直接在真实项目里执行，不要只给建议。
@@ -384,10 +271,6 @@ API docs: http://127.0.0.1:8200/docs
 - UI 要工作台化、克制、紧凑，少解释性固定栏，少浪费空间。
 - 左侧制作助手必须真的能承接自由输入，而不是只有形式上的输入框。
 - 不同角色应使用不同音色。
-- 知识文章双人音频只能使用免费的 Edge-TTS，不要调用或自动切换阿里云/CosyVoice。
-- 知识文章默认由年轻女声知夏和成熟男声闻舟真实对话，不能回退成单人旁白或一人主讲、另一人只捧哏。
-- 公众号文章是一条一次性制作流，不要要求用户先创建普通项目。
-- 微信页面中的“预览时标签不可点、阅读原文、微信扫一扫、关注该公众号、使用小程序”等 UI 文案必须清洗，不能进入正文或 TTS。
 - 广播剧旁白要克制，优先把视觉和心理描写转成可听内容。
 - 不得朗读括号里的音效、情绪、停顿或制作提示。
 - 不要把制作助手和小说解析共用同一套 system prompt。
@@ -402,7 +285,6 @@ API docs: http://127.0.0.1:8200/docs
 
 - `README.md`：当前项目定位、启动、验证和架构说明。
 - `docs/AI-HANDOFF.md`：当前交接文档。
-- `docs/knowledge-article-major-update-plan.md`：知识文章大版本原始范围和用户流，若与当前代码冲突，以当前代码和本文档为准。
 - `docs/project-map.md`：历史项目结构地图，可能部分过期，读后要用当前文件验证。
 - `docs/project-workspace-single-page.md`：单页工作台早期方案。
 - `docs/frontend-interaction-redesign.md`：交互重构说明。
@@ -419,13 +301,6 @@ API docs: http://127.0.0.1:8200/docs
 - `SonicVale/app/services/production_assistant_service.py`
 - `SonicVale/app/services/script_review_service.py`
 - `SonicVale/app/services/workflow_llm_service.py`
-- `SonicVale/app/services/article_ingest_service.py`
-- `SonicVale/app/services/article_analysis_service.py`
-- `SonicVale/app/services/knowledge_script_service.py`
-- `SonicVale/app/services/knowledge_review_service.py`
-- `SonicVale/app/services/knowledge_commit_service.py`
-- `SonicVale/app/services/knowledge_voice_design.py`
-- `SonicVale/app/services/audio_task_service.py`
 - `SonicVale/app/core/llm_engine.py`
 - `SonicVale/app/core/tts_engine.py`
 - `SonicVale/app/core/tts_guidance.py`
@@ -433,21 +308,13 @@ API docs: http://127.0.0.1:8200/docs
 
 ### 前端入口
 
-- `sonicvale-front/src/pages/Home.vue`
-- `sonicvale-front/src/pages/ProjectList.vue`
-- `sonicvale-front/src/pages/Studio.vue`
 - `sonicvale-front/src/pages/ProjectWorkspace.vue`
-- `sonicvale-front/src/components/article/ContentTypeSelector.vue`
 - `sonicvale-front/src/components/workflow/ChatComposer.vue`
 - `sonicvale-front/src/components/workflow/ChatMessageList.vue`
 - `sonicvale-front/src/components/workflow/ChatProductionPanel.vue`
 - `sonicvale-front/src/components/workflow/ProductionScriptPanel.vue`
 - `sonicvale-front/src/components/workflow/RoleDraftConfirmCard.vue`
 - `sonicvale-front/src/components/workflow/ScriptDraftConfirmCard.vue`
-- `sonicvale-front/src/components/workflow/AudioReviewPanel.vue`
-- `sonicvale-front/src/components/article/ArticleSourceInput.vue`
-- `sonicvale-front/src/components/article/ArticleScriptPanel.vue`
-- `sonicvale-front/src/components/article/KnowledgeReviewCards.vue`
 - `sonicvale-front/src/pages/ConfigCenter.vue`
 - `sonicvale-front/src/pages/QueueBoard.vue`
 
@@ -461,20 +328,12 @@ API docs: http://127.0.0.1:8200/docs
 - `SonicVale/tests/test_tts_engine_capabilities.py`
 - `SonicVale/tests/test_audio_variants.py`
 - `SonicVale/tests/test_audio_drama_prompts.py`
-- `SonicVale/tests/test_article_ingest.py`
-- `SonicVale/tests/test_article_workflow.py`
-- `SonicVale/tests/test_knowledge_production.py`
-- `SonicVale/tests/test_knowledge_commit.py`
 
 ### 重要链接
 
 - 当前 GitHub 仓库：https://github.com/rheeh/auralis
 - 旧 Gitee 远端：https://gitee.com/green1149/auralis-studio
 - 原 SonicVale 项目：https://github.com/xcLee001/SonicVale
-- 公众号测试 1：https://mp.weixin.qq.com/s/jw7pqTwco_lLGnN_KmExig
-- 公众号测试 2：https://mp.weixin.qq.com/s/d1PCSl4EqV1GrwTiRLtqHQ
-- 公众号测试 3：https://mp.weixin.qq.com/s/BIlAyVEOIkX5hWAD6qDa6w
-- 第三篇本地完成态试听：`http://127.0.0.1:5173/#/studio?content_type=knowledge_article&session_id=sess_370ebb446cdc4c60904ea1e848c63538`
 
 ### 本地运行数据
 
@@ -483,7 +342,6 @@ API docs: http://127.0.0.1:8200/docs
 - `SonicVale/.venv/`：Python 虚拟环境，已忽略，不得提交。
 - `sonicvale-front/node_modules/`、`sonicvale-front/dist/`：前端依赖和构建产物，已忽略，不得提交。
 - Provider 本地备份通常在用户本机目录下，README 已提示不要把 API Key 写入仓库。
-- 第三篇真实公众号的会话、隐藏 workspace、18 条台词和音频均只存在当前机器的 `.local-data/`；clone 仓库不会自动拥有这些数据。
 
 ## 8. 未解决的问题和风险
 
@@ -500,7 +358,7 @@ API docs: http://127.0.0.1:8200/docs
    - 已做 schema 校验和 fallback，但模型可能给出保守或过度审查结论；需要真实项目样本继续调 prompt。
 
 5. **Edge-TTS 参数效果有限**
-   - 男女声差异已经真实确认，但情绪仍只是 `rate / pitch / volume` 近似；不能包装成真人表演级效果。
+   - 用户曾反馈 Edge 下改声音指导差异不明显，这是模型能力限制，不应包装成 bug 修复完成。
 
 6. **Vite chunk 体积提示仍存在**
    - 当前不影响构建，但面试演示若关注性能，可做 code splitting。
@@ -513,18 +371,6 @@ API docs: http://127.0.0.1:8200/docs
 
 9. **AGPL 署名需要保留**
    - README 末尾已保留 SonicVale 许可与署名。不要为了“看起来完全原创”删除合规信息。
-
-10. **真实公众号页面可能触发微信访问限制**
-    - URL 导入会尝试提取 `#js_content`，但验证码、登录、风控或页面结构变化仍可能导致 `access_restricted`；必须保留粘贴正文兜底，不能把限制页当正文。
-
-11. **外部事实查证、截图/OCR、系列课程仍未实现**
-    - `KNOWLEDGE_ARTICLE_EXTERNAL_VERIFY_ENABLED=false` 和 `KNOWLEDGE_ARTICLE_VISION_ENABLED=false`。不要在 UI 或文档中暗示已经支持联网查证或截图识别。
-
-12. **隐藏 workspace 的真实模型配置不保证长期可用**
-    - 三篇测试使用过已验证的 `qwen-plus`。原普通项目的版本化模型名曾返回 HTTP 403；接手时如需真实生成，必须先测试当前 provider/model，不能只看静态配置。
-
-13. **本地完成态试听链接依赖 `.local-data`**
-    - 会话 `sess_370...` 不是仓库数据。清空 `.local-data`、切换 `AURALIS_CONFIG_DIR` 或在新机器 clone 后链接会失效；失效时用三篇测试 URL 重新走流程，不要在 Git 中提交数据库或音频来“修复”。
 
 ## 9. 下一步具体行动计划
 
@@ -539,28 +385,21 @@ API docs: http://127.0.0.1:8200/docs
    - UI 改动至少运行前端 build。
    - 较大改动运行 `./scripts/verify.sh`。
 
-3. **先做一次面试演示回归**
-   - 运行 `./scripts/dev.sh`，打开首页确认“小说广播剧 / 知识文章音频”双入口均在首屏可见。
-   - 打开第三篇本地完成态会话，确认进度为 18/18、卡片交替显示知夏女声和闻舟男声、只展示 18 个最新任务。
-   - 分别试听至少一条知夏和一条闻舟，确认不是同一个默认女声。
-   - 如果本地会话不存在，使用三篇公众号 URL 之一重新导入；遇到微信限制时改用粘贴正文。
-
-4. **如果用户继续调工作台 UI**
+3. **如果用户继续调工作台 UI**
    - 只围绕 `ProjectWorkspace.vue` 和 `components/workflow/*` 做小步修改。
    - 改完用真实浏览器检查，不要只凭代码判断。
 
-5. **如果用户继续调改编质量**
+4. **如果用户继续调改编质量**
    - 先检查 `script_draft_service.py`、`script_review_service.py`、`workflow_llm_service.py`。
    - 保持“初稿可见 -> 审查中 -> 返修结果可见”的进度表达。
    - 不要把审查器改成直接写稿的组件。
 
-6. **如果用户继续调 TTS 效果**
+5. **如果用户继续调 TTS 效果**
    - 先确认当前 provider 是 Edge 还是 cloud。
-   - 知识文章双人音频已明确限制为免费 Edge-TTS，不要自动切换或推荐阿里云 TTS。
    - Edge 问题优先解释能力边界，再优化 rate/pitch/volume 映射。
-   - Cloud provider 只适用于小说等用户明确允许的场景；知识文章路径即使配置了 cloud 也必须保持 Edge。
+   - Cloud provider 才考虑自然语言声音指导和结构化 instruction。
 
-7. **如果用户要求再次发布**
+6. **如果用户要求再次发布**
    - 默认推 GitHub：
 
      ```bash
@@ -569,7 +408,7 @@ API docs: http://127.0.0.1:8200/docs
 
    - 不要推旧 Gitee，除非用户明确要求。
 
-8. **如果有较大修改**
+7. **如果有较大修改**
    - 提交前检查敏感文件和未跟踪目录。
    - 提交后推送 GitHub。
    - 最终回复给出提交哈希、验证结果、关键文件和风险。
@@ -595,13 +434,13 @@ github git@github.com:rheeh/auralis.git
 origin https://gitee.com/green1149/auralis-studio.git
 ```
 
-注意：最近功能基线是 `2d45d41`，本文档更新提交可能位于其后；始终以当前 checkout 为准。可能存在未跟踪 `personal-site/`，不要提交它。
+注意：可能存在未跟踪 `personal-site/`，不要提交它。
 
 继续工作前阅读：
 
 ```bash
 sed -n '1,220p' README.md
-cat docs/AI-HANDOFF.md
+sed -n '1,260p' docs/AI-HANDOFF.md
 ```
 
 不要重复做这些事：
@@ -609,10 +448,6 @@ cat docs/AI-HANDOFF.md
 - 不要重新引入 LangGraph。
 - 不要重新把 README 改成“基于 SonicVale 二次开发”的开头。
 - 不要继续把 GitHub 仓库改 private。
-- 不要把知识文章制作重新塞进普通项目流程。
-- 不要把知夏和闻舟回退成同一个默认声线，也不要让知识音频调用阿里云/CosyVoice。
-- 不要重新展示所有历史音频任务；当前试听进度只统计每条台词的最新任务，历史 take 由版本系统保留。
-- 不要把三篇公众号真实测试误写成自动化测试；它们是 2026-07-18 的人工真实链路验证。
 - 不要恢复已删除的旧 `image/` 截图，除非用户明确要求。
 - 不要把制作助手和小说解析 prompt 合并。
 - 不要把括号音效、停顿、情绪写回 TTS 朗读文本。

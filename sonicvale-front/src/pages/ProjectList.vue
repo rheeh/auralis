@@ -1,22 +1,13 @@
 <template>
   <div class="project-canvas-page">
     <section class="quick-board">
-      <button class="quick-tile primary-tile novel-tile" type="button" @click="openCreateDialog('novel')">
+      <button class="quick-tile primary-tile" type="button" @click="openCreateDialog('studio')">
         <span class="tile-icon">
           <el-icon><EditPen /></el-icon>
         </span>
-        <span class="tile-copy"><strong>小说广播剧</strong><small>粘贴小说，确认人物与台本，再进入逐句配音。</small></span>
-        <span class="tile-arrow" aria-hidden="true">→</span>
+        <span class="tile-copy"><strong>新建项目</strong><small>创建后直接进入工作台，粘贴小说并生成台本。</small></span>
       </button>
-      <button class="quick-tile primary-tile knowledge-tile" type="button" @click="startKnowledgeAudio">
-        <span class="tile-icon knowledge-icon">
-          <el-icon><Headset /></el-icon>
-        </span>
-        <span class="tile-copy"><strong>知识文章音频</strong><small>导入公众号或正文，生成可追溯、可复习的知识音频。</small></span>
-        <span class="new-badge">NEW</span>
-        <span class="tile-arrow" aria-hidden="true">→</span>
-      </button>
-      <button class="quick-tile config-tile" type="button" @click="$router.push('/config')">
+      <button class="quick-tile" type="button" @click="$router.push('/config')">
         <span class="tile-icon">
           <el-icon><Setting /></el-icon>
         </span>
@@ -109,55 +100,35 @@
             </div>
           </section>
 
-          <section class="project-production-actions" aria-label="开始新的内容制作">
-            <button type="button" @click.stop="startInProject(item, 'novel')">
-              <span aria-hidden="true">剧</span>
-              <strong>小说改编</strong>
-            </button>
-            <button type="button" class="knowledge-action" @click.stop="startInProject(item, 'knowledge_article')">
-              <span aria-hidden="true">知</span>
-              <strong>知识音频</strong>
-            </button>
-          </section>
-
           <footer class="project-footer">
             <span>
               <el-icon><Clock /></el-icon>
               {{ new Date(item.createdAt).toLocaleDateString() }}
             </span>
             <div class="card-actions">
-              <el-button type="primary" size="small" :icon="EditPen" @click.stop="openProject(item)">{{ activeSessionFor(item.id) ? '继续制作' : '查看项目' }}</el-button>
+              <el-button type="primary" size="small" :icon="EditPen" @click.stop="openWorkspace(item)">{{ activeSessionFor(item.id) ? '继续制作' : '进入工作台' }}</el-button>
             </div>
           </footer>
         </article>
       </div>
 
       <el-empty v-else description="还没有项目，从一段正文开始吧">
-        <el-button type="primary" :icon="Plus" @click="openCreateDialog('novel')">开始第一个项目</el-button>
+        <el-button type="primary" :icon="Plus" @click="openCreateDialog('studio')">新建项目</el-button>
       </el-empty>
     </section>
 
     <el-dialog
-      :title="selectedContentType === 'knowledge_article' ? '新建知识音频项目' : '新建广播剧项目'"
+      title="新建项目"
       v-model="dialogVisible"
       width="720px"
       class="canvas-dialog"
       destroy-on-close
     >
-      <ContentTypeSelector
-        v-model="selectedContentType"
-        class="dialog-type-selector"
-        :knowledge-article-enabled="capabilities.knowledge_article_enabled"
-      />
-      <section v-if="selectedContentType === 'knowledge_article'" class="dialog-intro knowledge-one-off">
-        <div><p class="eyebrow">ONE-OFF KNOWLEDGE AUDIO</p><h3>直接导入文章，不创建项目</h3><p>系统会使用知夏和闻舟两位固定学习搭档，把文章改成真实问答，并保留原文证据与复习问题。</p></div>
-        <el-tag type="success" effect="plain">一次性制作</el-tag>
-      </section>
-      <el-form v-else :model="form" ref="formRef" label-position="top" @submit.prevent>
+      <el-form :model="form" ref="formRef" label-position="top" @submit.prevent>
         <section class="dialog-intro">
           <div>
-            <p class="eyebrow">{{ selectedContentType === 'knowledge_article' ? 'Knowledge Audio' : 'Audio Drama' }}</p>
-            <h3>{{ selectedContentType === 'knowledge_article' ? '从一篇文章开始学习' : '从一段故事开始创作' }}</h3>
+            <p class="eyebrow">快速开始</p>
+            <h3>只要一个想法就能开始</h3>
           </div>
           <el-tag effect="plain">配置稍后也能补</el-tag>
         </section>
@@ -165,7 +136,7 @@
         <el-form-item label="项目名称">
           <el-input
             v-model="form.name"
-            :placeholder="selectedContentType === 'knowledge_article' ? '可留空，将自动生成知识音频项目名称' : '可留空，将自动生成广播剧项目名称'"
+            placeholder="可留空，例如会自动生成：未命名广播剧 07-02 18:30"
             clearable
           />
         </el-form-item>
@@ -176,7 +147,7 @@
             type="textarea"
             :rows="3"
             resize="none"
-            :placeholder="selectedContentType === 'knowledge_article' ? '可选：文章主题、目标听众或学习目标' : '可选：风格、主角关系、想做成几集等'"
+            placeholder="可选：项目名、风格、主角关系、想做成几集等"
           />
         </el-form-item>
 
@@ -236,7 +207,7 @@
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="isCreating" @click="submitAndOpen">
-          {{ selectedContentType === 'knowledge_article' ? '直接导入文章' : '创建并改编小说' }}
+          创建并进入工作台
         </el-button>
       </template>
     </el-dialog>
@@ -244,28 +215,25 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElLoading, ElMessage } from 'element-plus'
-import { Clock, Cpu, Delete, Document, EditPen, Folder, Headset, Mic, Plus, Refresh, Setting } from '@element-plus/icons-vue'
+import { Clock, Cpu, Delete, Document, EditPen, Folder, Mic, Plus, Refresh, Setting } from '@element-plus/icons-vue'
 import { createProject, deleteProject, fetchProjectReadiness, fetchProjects } from '../api/project'
 import { fetchLLMProviders, fetchTTSProviders } from '../api/provider'
 import { fetchPromptList } from '../api/prompt'
-import { fetchChatSessions, fetchWorkflowCapabilities } from '../api/drama'
-import ContentTypeSelector from '../components/article/ContentTypeSelector.vue'
+import { fetchChatSessions } from '../api/drama'
 
 const router = useRouter()
-const route = useRoute()
 const prompts = ref([])
 const projects = ref([])
 const dialogVisible = ref(false)
 const isCreating = ref(false)
 const advancedOpen = ref([])
-const selectedContentType = ref('novel')
+const createDestination = ref('studio')
 const formRef = ref(null)
 const readinessMap = ref({})
 const chatSessions = ref([])
-const capabilities = reactive({ knowledge_article_enabled: true })
 
 const form = ref(createEmptyForm())
 const llmProviders = ref([])
@@ -275,34 +243,30 @@ const ttsProviders = ref([])
 const activeLLMProviders = computed(() => llmProviders.value.filter((item) => item.status !== 0))
 const activeTTSProviders = computed(() => ttsProviders.value.filter((item) => item.status !== 0))
 
-onMounted(async () => {
-  await loadAll()
-  const requestedType = String(route.query.create || '')
-  if (['novel', 'knowledge_article', 'choose'].includes(requestedType)) {
-    openCreateDialog(requestedType === 'choose' ? 'novel' : requestedType)
-  }
-})
+onMounted(loadAll)
 
 async function loadAll() {
-  const [projectList, llmList, ttsList, promptList, sessionResponse, capabilityResponse] = await Promise.all([
+  const [projectList, llmList, ttsList, promptList, sessionResponse] = await Promise.all([
     fetchProjects(),
     fetchLLMProviders(),
     fetchTTSProviders(),
     fetchPromptList(),
     fetchChatSessions({ limit: 200 }).catch(() => null),
-    fetchWorkflowCapabilities().catch(() => null),
   ])
   projects.value = projectList
   llmProviders.value = Array.isArray(llmList) ? llmList : []
   ttsProviders.value = Array.isArray(ttsList) ? ttsList : []
   prompts.value = Array.isArray(promptList) ? promptList : []
   chatSessions.value = sessionResponse?.code === 200 && Array.isArray(sessionResponse.data) ? sessionResponse.data : []
-  if (capabilityResponse?.code === 200) Object.assign(capabilities, capabilityResponse.data || {})
   await loadProjectReadiness()
 }
 
 function activeSessionFor(projectId) {
   return chatSessions.value.find((item) => item.project_id === projectId && !['completed', 'cancelled'].includes(item.status))
+}
+
+function openWorkspace(project) {
+  router.push(`/projects/${project.id}/workspace`)
 }
 
 async function loadProjectReadiness() {
@@ -330,16 +294,12 @@ function createEmptyForm() {
   }
 }
 
-function openCreateDialog(contentType = 'novel') {
-  selectedContentType.value = contentType === 'knowledge_article' ? 'knowledge_article' : 'novel'
+function openCreateDialog(destination = 'studio') {
+  createDestination.value = destination
   advancedOpen.value = []
   form.value = createEmptyForm()
   applySmartDefaults()
   dialogVisible.value = true
-}
-
-function startKnowledgeAudio() {
-  router.push('/studio?content_type=knowledge_article')
 }
 
 function applySmartDefaults() {
@@ -474,23 +434,7 @@ function openCanvasNode(project, node) {
 }
 
 function openProject(project) {
-  const session = activeSessionFor(project.id)
-  if (session?.source_type === 'knowledge_article') {
-    router.push(`/studio?project_id=${project.id}&content_type=knowledge_article&session_id=${session.session_id}`)
-    return
-  }
   router.push(`/projects/${project.id}/workspace`)
-}
-
-function startInProject(project, contentType) {
-  router.push(creationRoute(project.id, contentType))
-}
-
-function creationRoute(projectId, contentType) {
-  if (contentType === 'knowledge_article') {
-    return '/studio?content_type=knowledge_article'
-  }
-  return `/projects/${projectId}/workspace`
 }
 
 async function handleDelete(id) {
@@ -510,16 +454,15 @@ async function handleDelete(id) {
   }
 }
 
-async function submitAndOpen() {
-  if (selectedContentType.value === 'knowledge_article') {
-    dialogVisible.value = false
-    startKnowledgeAudio()
-    return
-  }
-  await createProjectFromCanvas(selectedContentType.value)
+async function submitAndStay() {
+  await createProjectFromCanvas(null)
 }
 
-async function createProjectFromCanvas(contentType) {
+async function submitAndOpen() {
+  await createProjectFromCanvas(createDestination.value)
+}
+
+async function createProjectFromCanvas(destination) {
   if (isCreating.value) return
   isCreating.value = true
   try {
@@ -532,7 +475,7 @@ async function createProjectFromCanvas(contentType) {
     dialogVisible.value = false
     await loadAll()
 
-    if (contentType) router.push(creationRoute(created.id, contentType))
+    if (destination) router.push(`/projects/${created.id}/workspace`)
   } catch (error) {
     ElMessage.error(`创建失败：${error?.message || '网络异常'}`)
   } finally {
@@ -556,8 +499,7 @@ function buildProjectPayload() {
 function generateProjectName() {
   const date = new Date()
   const pad = (value) => String(value).padStart(2, '0')
-  const prefix = selectedContentType.value === 'knowledge_article' ? '未命名知识音频' : '未命名广播剧'
-  return `${prefix} ${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+  return `未命名广播剧 ${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
 const native = window.native
@@ -910,19 +852,8 @@ async function pickRootDir() {
   gap: 8px;
 }
 
-:global(.canvas-dialog) {
-  display: flex;
-  flex-direction: column;
-  width: min(720px, calc(100vw - 24px)) !important;
-  max-height: 92vh;
-  margin-top: 4vh;
-}
-
-:global(.canvas-dialog .el-dialog__body) {
-  min-height: 0;
+.canvas-dialog :deep(.el-dialog__body) {
   padding-top: 10px;
-  overflow-x: hidden;
-  overflow-y: auto;
 }
 
 .dialog-intro {
@@ -938,10 +869,6 @@ async function pickRootDir() {
   margin-top: 4px;
   border-top: 1px solid var(--el-border-color-lighter);
   border-bottom: 1px solid var(--el-border-color-lighter);
-}
-
-.advanced-collapse :deep(.el-collapse-item__header) {
-  box-sizing: border-box;
 }
 
 .advanced-grid {
@@ -963,19 +890,13 @@ async function pickRootDir() {
 .canvas-hero .hero-copy { max-width:560px;color:#718095; }
 .canvas-hero .eyebrow { color:#3598bf;font-weight:700;letter-spacing:.12em; }
 .canvas-hero .el-button { height:48px;padding-inline:22px;border-radius:14px; }
-.quick-board { grid-template-columns:repeat(3,minmax(0,1fr));gap:14px; }
-.quick-tile { position:relative;display:flex;align-items:center;gap:14px;min-height:92px;padding:16px 18px;border-color:rgba(135,169,197,.15);border-radius:16px;background:rgba(255,255,255,.7);box-shadow:0 10px 28px rgba(63,91,116,.05);backdrop-filter:blur(16px); }
+.quick-board { grid-template-columns:repeat(2,minmax(0,1fr));gap:14px; }
+.quick-tile { display:flex;align-items:center;gap:14px;min-height:72px;padding:14px 18px;border-color:rgba(135,169,197,.15);border-radius:16px;background:rgba(255,255,255,.7);box-shadow:0 10px 28px rgba(63,91,116,.05);backdrop-filter:blur(16px); }
 .primary-tile { background:linear-gradient(135deg,rgba(232,248,255,.88),rgba(255,255,255,.78),rgba(255,244,236,.62)); }
-.knowledge-tile { border-color:rgba(116,113,211,.2);background:linear-gradient(135deg,rgba(238,241,255,.94),rgba(255,255,255,.82),rgba(230,250,247,.72)); }
-.config-tile { background:rgba(255,255,255,.6); }
 .tile-icon { width:42px;height:42px;flex:0 0 42px;margin:0;border-radius:13px;background:linear-gradient(145deg,#e0f3ff,#eef1ff); }
-.knowledge-icon { color:#645fc7;background:linear-gradient(145deg,#e8e8ff,#e2f8f5); }
 .tile-copy { min-width:0; }
 .tile-copy strong { margin-bottom:3px; }
-.tile-copy small { display:-webkit-box;overflow:hidden;line-height:1.45;-webkit-box-orient:vertical;-webkit-line-clamp:2; }
-.tile-arrow { margin-left:auto;color:var(--el-text-color-secondary);font-size:18px;transition:transform .18s ease; }
-.quick-tile:hover .tile-arrow { transform:translateX(3px); }
-.new-badge { position:absolute;right:12px;top:10px;padding:2px 6px;border-radius:999px;color:#5650b7;background:rgba(106,99,204,.1);font-size:9px;font-weight:800;letter-spacing:.08em; }
+.tile-copy small { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .section-heading { padding:4px 2px; }
 .section-heading h2 { color:#22334a;font-size:24px; }
 .project-grid { grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px; }
@@ -984,14 +905,6 @@ async function pickRootDir() {
 .workflow-canvas { border-color:rgba(125,164,195,.13);border-radius:14px;background:linear-gradient(145deg,rgba(239,249,255,.72),rgba(255,255,255,.7)); }
 .workflow-node { border-color:rgba(130,163,190,.14);border-radius:11px;background:rgba(255,255,255,.74); }
 .project-footer { border-top-color:rgba(128,159,185,.13); }
-.project-production-actions { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px; }
-.project-production-actions button { display:flex;align-items:center;gap:8px;min-height:38px;padding:7px 10px;border:1px solid rgba(128,164,193,.16);border-radius:10px;color:var(--el-text-color-primary);background:rgba(247,251,255,.8);cursor:pointer;transition:border-color .18s ease,transform .18s ease,background .18s ease; }
-.project-production-actions button:hover,.project-production-actions button:focus-visible { transform:translateY(-1px);border-color:var(--el-color-primary);outline:none; }
-.project-production-actions button > span { display:grid;width:24px;height:24px;place-items:center;border-radius:7px;color:#247ea4;background:#dff3fb;font-size:11px;font-weight:800; }
-.project-production-actions .knowledge-action { background:linear-gradient(135deg,rgba(241,241,255,.92),rgba(238,251,248,.84)); }
-.project-production-actions .knowledge-action > span { color:#5e58bd;background:#e7e6ff; }
-.project-production-actions strong { font-size:12px; }
-.dialog-type-selector { margin-bottom:14px;box-shadow:none; }
 
 @media (max-width: 920px) {
   .canvas-hero,
