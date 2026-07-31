@@ -13,7 +13,7 @@ from app.core.prompts import get_prompt_str
 from app.core.tts_runtime import tts_worker
 from app.core.ws_manager import manager
 from app.db.database import Base, engine, SessionLocal, get_db
-from app.db.migrations import migrate_workflow_schema
+from app.db.migrations import apply_schema_migrations
 from app.entity.emotion_entity import EmotionEntity
 from app.entity.strength_entity import StrengthEntity
 from app.core.tts_guidance import EMOTION_NAMES, STRENGTH_NAMES
@@ -23,6 +23,7 @@ from app.repositories.tts_provider_repository import TTSProviderRepository
 from app.routers import project_router, chapter_router, role_router, voice_router, llm_provider_router, \
     tts_provider_router, line_router, emotion_router, strength_router, multi_emotion_voice_router, prompt_router, \
     drama_adaptation_router, queue_router, chat_router
+from app.routers import timeline_router
 from app.routers.chapter_router import get_strength_service, get_prompt_service, get_project_service
 from app.routers.emotion_router import get_emotion_service
 from app.routers.llm_provider_router import get_llm_service
@@ -87,125 +88,6 @@ app.add_middleware(
 WORKERS = 1
 QUEUE_CAPACITY = 0
 
-from sqlalchemy import text
-
-def add_prompt_id_column():
-    with engine.connect() as conn:
-        # 检查 project 表是否已有 prompt_id
-        result = conn.execute(text("PRAGMA table_info(projects)"))
-        columns = [row[1] for row in result.fetchall()]
-        if "prompt_id" not in columns:
-            conn.execute(text("ALTER TABLE projects ADD COLUMN prompt_id INTEGER"))
-            conn.commit()
-
-# 添加line表中is_done字段
-def add_is_done_column():
-    with engine.connect() as conn:
-        result = conn.execute(text("PRAGMA table_info(lines)"))
-        columns = [row[1] for row in result.fetchall()]
-        if "is_done" not in columns:
-            # ✅ 添加列并设置默认值 0
-            conn.execute(text("ALTER TABLE lines ADD COLUMN is_done INTEGER DEFAULT 0"))
-            conn.commit()
-
-# 添加LLM自定义参数字段
-def add_custom_params_column():
-    with engine.begin() as conn:  # ✅ 用 begin() 自动提交事务
-        result = conn.execute(text("PRAGMA table_info(llm_provider)"))
-        columns = [row[1] for row in result.fetchall()]
-        if "custom_params" not in columns:
-            # ✅ 添加列
-            conn.execute(text("ALTER TABLE llm_provider ADD COLUMN custom_params TEXT"))
-
-            # ✅ 可选：为历史数据填入默认 JSON（推荐）
-            import json
-            default_json = json.dumps({
-                "response_format": {"type": "json_object"},
-                "temperature": 0.7,
-                "top_p": 0.9
-            }, ensure_ascii=False)
-            conn.execute(
-                text("UPDATE llm_provider SET custom_params = :val"),
-                {"val": default_json}
-            )
-
-            logging.info("已添加 custom_params 列并写入默认值。")
-        else:
-            logging.info("custom_params 列已存在，跳过。")
-
-# 添加精准填充字段】
-def add_is_precise_fill_column():
-    with engine.begin() as conn:  # ✅ 用 begin() 自动提交事务
-        result = conn.execute(text("PRAGMA table_info(projects)"))
-        columns = [row[1] for row in result.fetchall()]
-        if "is_precise_fill" not in columns:
-            # ✅ 添加列
-            conn.execute(text("ALTER TABLE projects ADD COLUMN is_precise_fill INTEGER DEFAULT 0"))
-
-            conn.commit()
-
-# 添加项目保存路径字段（project_path）
-def add_project_root_path_column():
-    with engine.begin() as conn:  # ✅ 用 begin() 自动提交事务
-        result = conn.execute(text("PRAGMA table_info(projects)"))
-        columns = [row[1] for row in result.fetchall()]
-        if "project_root_path" not in columns:
-            # ✅ 添加列
-            conn.execute(text("ALTER TABLE projects ADD COLUMN project_root_path TEXT"))
-
-            conn.commit()
-
-def add_drama_line_columns():
-    columns_to_add = {
-        "line_type": "TEXT DEFAULT 'dialogue' NOT NULL",
-        "track": "TEXT DEFAULT 'voice' NOT NULL",
-        "should_speak": "INTEGER DEFAULT 1 NOT NULL",
-        "scene_title": "TEXT",
-        "sound_prompt": "TEXT",
-        "voice_profile": "TEXT",
-        "production_note": "TEXT",
-        "audio_events": "TEXT",
-        "audio_versions": "TEXT",
-        "active_audio_version_id": "TEXT",
-        "audio_variants": "TEXT",
-        "active_audio_variant_id": "TEXT",
-    }
-    with engine.begin() as conn:
-        result = conn.execute(text("PRAGMA table_info(lines)"))
-        columns = [row[1] for row in result.fetchall()]
-        for column_name, column_def in columns_to_add.items():
-            if column_name not in columns:
-                conn.execute(text(f"ALTER TABLE lines ADD COLUMN {column_name} {column_def}"))
-                logging.info("已添加 lines.%s 字段。", column_name)
-
-def add_role_tts_columns():
-    columns_to_add = {
-        "role_importance": "TEXT DEFAULT 'supporting' NOT NULL",
-        "tts_route": "TEXT DEFAULT 'auto' NOT NULL",
-        "edge_voice": "TEXT",
-    }
-    with engine.begin() as conn:
-        result = conn.execute(text("PRAGMA table_info(roles)"))
-        columns = [row[1] for row in result.fetchall()]
-        for column_name, column_def in columns_to_add.items():
-            if column_name not in columns:
-                conn.execute(text(f"ALTER TABLE roles ADD COLUMN {column_name} {column_def}"))
-                logging.info("已添加 roles.%s 字段。", column_name)
-
-def add_tts_provider_runtime_columns():
-    columns_to_add = {
-        "provider_type": "TEXT DEFAULT 'cloud' NOT NULL",
-        "model": "TEXT",
-        "custom_params": "TEXT",
-    }
-    with engine.begin() as conn:
-        result = conn.execute(text("PRAGMA table_info(tts_provider)"))
-        columns = [row[1] for row in result.fetchall()]
-        for column_name, column_def in columns_to_add.items():
-            if column_name not in columns:
-                conn.execute(text(f"ALTER TABLE tts_provider ADD COLUMN {column_name} {column_def}"))
-                logging.info("已添加 tts_provider.%s 字段。", column_name)
-
 def get_tts_service(db: Session = Depends(get_db)) -> TTSProviderService:
     return TTSProviderService(TTSProviderRepository(db))
 
@@ -214,25 +96,9 @@ async def startup_event():
     # 1) 建表
     try:
         Base.metadata.create_all(bind=engine)
-        migrate_workflow_schema(engine)
+        apply_schema_migrations(engine)
     except Exception as e:
         logging.exception("❌ 数据库建表失败: %s", e)
-
-    # 更改数据库表字段
-    add_prompt_id_column()
-    # v1.0.6添加字段 is_done
-    add_is_done_column()
-    # v1.0.7 添加字段 custom_params
-    add_custom_params_column()
-    # v1.0.7 添加项目的字段 is_precise_fill
-    add_is_precise_fill_column()
-    # v1.0.7 添加项目的字段 project_root_path
-    add_project_root_path_column()
-    # 广播剧工程字段：兼容旧项目，支持人物声/旁白/音效/BGM 多轨编辑
-    add_drama_line_columns()
-    # 广播剧 TTS 路由字段：支持免费 Edge 与可配置云端 TTS 混合生成
-    add_role_tts_columns()
-    add_tts_provider_runtime_columns()
 
     # 2) 初始化共享运行时
     try:
@@ -377,6 +243,7 @@ app.include_router(prompt_router.router)
 app.include_router(drama_adaptation_router.router)
 app.include_router(queue_router.router)
 app.include_router(chat_router.router)
+app.include_router(timeline_router.router)
 # =========================
 # 健康检查接口
 # =========================

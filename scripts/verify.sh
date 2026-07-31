@@ -62,6 +62,8 @@ required = {
     "/lines/{line_id}/audio-versions/{version_id}/activate",
     "/projects/{project_id}/readiness",
     "/projects/{project_id}/readiness/repair",
+    "/projects/{project_id}/chapters/{chapter_id}/timeline",
+    "/projects/{project_id}/chapters/{chapter_id}/timeline/build",
 }
 missing = required - paths
 if missing:
@@ -152,6 +154,13 @@ with TestClient(app) as client:
         audio_res = client.get(f"/lines/{line_id}/audio")
         if audio_res.status_code != 200 or len(audio_res.content) < 100:
             raise SystemExit(f"line audio endpoint invalid: status={audio_res.status_code} size={len(audio_res.content)}")
+        timeline_build = client.post(f"/projects/{project_id}/chapters/{chapter_id}/timeline/build").json()
+        timeline_data = timeline_build.get("data", {})
+        if timeline_build.get("code") != 200 or timeline_data.get("track_count") != 4 or timeline_data.get("clip_count") != 1:
+            raise SystemExit(f"timeline build invalid: {timeline_build}")
+        timeline_read = client.get(f"/projects/{project_id}/chapters/{chapter_id}/timeline").json()
+        if timeline_read.get("code") != 200 or timeline_read.get("data", {}).get("duration_ms", 0) <= 0:
+            raise SystemExit(f"timeline read invalid: {timeline_read}")
     finally:
         client.delete(f"/projects/{project_id}")
 print("Multi-track TTS skip ok")

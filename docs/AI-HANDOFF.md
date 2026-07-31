@@ -183,7 +183,16 @@ Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说�
 - `sonicvale-front/src/components/workflow/ScriptDraftConfirmCard.vue`
 - `sonicvale-front/src/components/workflow/SessionStageStepper.vue`
 
-### 3.7 README 和 GitHub 同步
+### 3.7 Auralis 0.3：真实时间线与音频工程底座
+
+- “多轨时间线”页面已改名为“多轨内容概览”，明确当前页面仍是按文字长度估算的检查视图，不冒充真实可编辑时间线。
+- SQLite 已改为版本化迁移入口 `SonicVale/app/db/migrations.py`，当前 schema version 为 2；历史字段迁移集中管理，`main.py` 不再继续堆叠 `add_*_column()`。
+- 新增 `AudioAssetPO`、`TimelineTrackPO`、`TimelineClipPO`，保留现有 `lines.audio_path`、`audio_versions` 和 `audio_variants` 作为兼容来源。
+- `TimelineService` 会探测真实音频时长，按人物声、旁白、音效、BGM 四条固定轨道生成章节内容概览。
+- 新增只读接口 `GET /projects/{project_id}/chapters/{chapter_id}/timeline` 和显式构建接口 `POST /projects/{project_id}/chapters/{chapter_id}/timeline/build`。
+- 当前刻意未实现拖拽、音量编辑和混音导出；下一步应先做接口/数据验证，再进入最小可编辑交互。
+
+### 3.8 README 和 GitHub 同步
 
 - README 已重写为英文面试项目说明。
 - README 开头直接介绍 Auralis，不再第一句话强调“基于某项目改编”。
@@ -197,7 +206,7 @@ Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说�
 当前 checkout 状态：
 
 - `master` 跟踪 `github/master`。
-- 最新项目提交：`548ccf5 docs: refresh handoff after novel-only split`。
+- 最新项目提交：以后续 Git 历史中的最新提交为准；本次 0.3 底座改动尚未提交时不要手写 commit hash。
 - 工作区存在未跟踪目录 `personal-site/`，不属于 Auralis 交接文档任务；不要误提交。
 - `origin` Gitee 远端仍保留，但默认 push 目标已经是 GitHub。
 
@@ -209,13 +218,14 @@ Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说�
 
 结果：
 
-- Python unittest：41 tests OK。
+- Python unittest：44 tests OK（包含真实音频时长时间线构建、幂等性和旧 SQLite 数据迁移测试）。
 - FastAPI route smoke check 通过。
 - TTS review feature 默认开启检查通过。
 - 多轨非朗读行跳过 TTS 检查通过。
 - project readiness repair smoke check 通过。
 - audio asset attach 检查通过。
 - TTS route policy 检查通过。
+- SQLite schema migration 和时间线 API 路由检查通过。
 - 前端 `vite build` 通过。
 - Vite 仍提示部分 chunk 超过 500kB，这是体积优化提示，不是失败。
 

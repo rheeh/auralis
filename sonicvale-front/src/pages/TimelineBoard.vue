@@ -2,8 +2,9 @@
   <div class="timeline-page">
     <header class="timeline-header">
       <div>
-        <p class="eyebrow">时间线</p>
-        <h1>多轨时间线</h1>
+        <p class="eyebrow">内容概览</p>
+        <h1>多轨内容概览</h1>
+        <p class="overview-note">当前用于检查台词、轨道和配音完成度；真实音频时间线正在建设中。</p>
       </div>
       <div class="filters">
         <el-select v-model="projectId" filterable placeholder="项目" @change="loadChapters">
@@ -20,6 +21,7 @@
       <el-tag effect="plain">{{ lines.length }} 条片段</el-tag>
       <el-tag type="success" effect="plain">{{ completedCount }} 条已生成</el-tag>
       <el-tag type="info" effect="plain">约 {{ totalSeconds }} 秒</el-tag>
+      <el-tag type="warning" effect="plain">片段宽度为文本估算</el-tag>
       <el-button type="primary" @click="openDubbingProject">打开配音工程</el-button>
     </section>
 
@@ -192,6 +194,12 @@ function openDubbingProject() {
   margin: 0;
   font-size: 24px;
   letter-spacing: 0;
+}
+
+.overview-note {
+  margin: 6px 0 0;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
 }
 
 .eyebrow {

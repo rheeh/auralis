@@ -1,5 +1,5 @@
 
-from sqlalchemy import Boolean, Column, Integer, String, Text, Enum, ForeignKey, DateTime, JSON, Index, UniqueConstraint
+from sqlalchemy import Boolean, Column, Float, Integer, String, Text, Enum, ForeignKey, DateTime, JSON, Index, UniqueConstraint
 from datetime import datetime, timezone
 
 from app.db.database import Base
@@ -324,6 +324,83 @@ class AudioTaskPO(Base):
     __table_args__ = (
         Index("idx_audio_task_session_status", "session_id", "status"),
         Index("idx_audio_task_chapter_status", "chapter_id", "status"),
+    )
+
+
+class AudioAssetPO(Base):
+    """统一登记可进入广播剧工程的音频文件。"""
+
+    __tablename__ = "audio_assets"
+
+    id = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    project_id = Column(Integer, nullable=False, index=True)
+    chapter_id = Column(Integer, nullable=True, index=True)
+    line_id = Column(Integer, ForeignKey("lines.id"), nullable=True, index=True)
+    asset_type = Column(String(32), nullable=False, index=True)
+    path = Column(String(1000), nullable=False)
+    duration_ms = Column(Integer, nullable=False, default=0)
+    sample_rate = Column(Integer, nullable=True)
+    channels = Column(Integer, nullable=True)
+    mime_type = Column(String(100), nullable=True)
+    checksum = Column(String(64), nullable=True, index=True)
+    source_asset_id = Column(Integer, ForeignKey("audio_assets.id"), nullable=True)
+    revision = Column(Integer, nullable=False, default=1)
+    metadata_json = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("project_id", "path", name="uq_audio_asset_project_path"),
+        Index("idx_audio_asset_project_type", "project_id", "asset_type"),
+    )
+
+
+class TimelineTrackPO(Base):
+    """章节下固定的四类广播剧轨道。"""
+
+    __tablename__ = "timeline_tracks"
+
+    id = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    project_id = Column(Integer, nullable=False, index=True)
+    chapter_id = Column(Integer, nullable=False, index=True)
+    track_type = Column(String(32), nullable=False)
+    name = Column(String(100), nullable=False)
+    order_index = Column(Integer, nullable=False, default=0)
+    revision = Column(Integer, nullable=False, default=1)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("chapter_id", "track_type", name="uq_timeline_track_chapter_type"),
+        Index("idx_timeline_track_project_chapter", "project_id", "chapter_id"),
+    )
+
+
+class TimelineClipPO(Base):
+    """时间线中的实际音频片段；第一版只由服务自动生成，暂不允许 UI 拖动。"""
+
+    __tablename__ = "timeline_clips"
+
+    id = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    project_id = Column(Integer, nullable=False, index=True)
+    chapter_id = Column(Integer, nullable=False, index=True)
+    track_id = Column(Integer, ForeignKey("timeline_tracks.id"), nullable=False, index=True)
+    line_id = Column(Integer, ForeignKey("lines.id"), nullable=True, index=True)
+    asset_id = Column(Integer, ForeignKey("audio_assets.id"), nullable=False, index=True)
+    track_type = Column(String(32), nullable=False, index=True)
+    start_ms = Column(Integer, nullable=False, default=0)
+    duration_ms = Column(Integer, nullable=False, default=0)
+    volume_db = Column(Float, nullable=False, default=0.0)
+    fade_in_ms = Column(Integer, nullable=False, default=0)
+    fade_out_ms = Column(Integer, nullable=False, default=0)
+    is_muted = Column(Boolean, nullable=False, default=False)
+    revision = Column(Integer, nullable=False, default=1)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+
+    __table_args__ = (
+        Index("idx_timeline_clip_chapter_start", "chapter_id", "start_ms"),
+        Index("idx_timeline_clip_track_start", "track_id", "start_ms"),
     )
 
 # -------------------------

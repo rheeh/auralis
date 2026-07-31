@@ -16,6 +16,7 @@ Auralis 是一个本地优先的 AI 广播剧制作系统，基于开源项目 S
 - 多轨制作：台词支持 `voice`、`narration`、`sfx`、`bgm` 四类轨道；音效/BGM 不进入 TTS。
 - 音色管理：维护 TTS Provider 下的音色、参考音频、多情绪音色、导入导出和音频处理。
 - 音频生成与处理：后台 TTS 队列生成语音，支持音频附加、裁剪、变速、变音量、字幕矫正。
+- 音频工程底座：`AudioAsset` 统一登记原始 take、后期版本和素材文件；`TimelineTrack`/`TimelineClip` 按真实音频时长生成章节四轨内容概览。
 - 导出系统：按章节导出音频、字幕、表格和制作清单；Demo 脚本可生成完整本地样例工程。
 - 任务队列：展示 TTS 队列状态和广播剧改编运行记录，可将待制作脚本写回项目。
 
@@ -245,6 +246,8 @@ Auralis 是一个本地优先的 AI 广播剧制作系统，基于开源项目 S
 - `SonicVale/app/services/line_service.py`
 - `SonicVale/app/core/tts_runtime.py`
 - `SonicVale/app/core/audio_engin.py`
+- `SonicVale/app/services/timeline_service.py`
+- `SonicVale/app/routers/timeline_router.py`
 
 职责：
 
@@ -328,7 +331,7 @@ flowchart TD
 - `/voices` -> `VoiceManager.vue`：音色库。
 - `/roles` -> `RolesBoard.vue`：角色声线绑定。
 - `/media` -> `MediaBoard.vue`：素材库。
-- `/timeline` -> `TimelineBoard.vue`：多轨时间线。
+- `/timeline` -> `TimelineBoard.vue`：多轨内容概览（当前页面仍是检查视图，不代表可编辑真实时间线）。
 - `/queue` -> `QueueBoard.vue`：任务队列和改编运行历史。
 - `/prompts` -> `PromptManager.vue`：提示词管理。
 
@@ -339,7 +342,7 @@ flowchart TD
 - 工作台 `/studio` 完成改编后可跳到配音工程 `/projects/:id/dubbing`，也可跳到角色页 `/roles` 或素材页 `/media`。
 - 配音工程 `/projects/:id/dubbing` 可跳到配置 `/config`、音色库 `/voices`、素材库 `/media`。
 - 角色页 `/roles` 可跳回当前项目配音工程 `/projects/:id/dubbing`。
-- 素材库 `/media` 和时间线 `/timeline` 可按当前项目/章节跳回配音工程。
+- 素材库 `/media` 和多轨内容概览 `/timeline` 可按当前项目/章节跳回配音工程。
 - 队列页 `/queue` 可将改编运行记录写入项目，并跳到对应配音工程。
 
 ## 状态管理
@@ -480,7 +483,7 @@ AI 重新接手项目时建议先读这 5 个文件：
 ### 进行中或已有雏形
 
 - 前端工作台和配音工程的制作流程整合已经存在，但主要状态仍在页面组件内维护。
-- 多轨时间线、素材库和项目准备状态已有页面和接口，仍偏检查/辅助制作形态。
+- 多轨内容概览已有页面；真实时间线底座已具备四轨、资产登记和音频时长计算，拖拽编辑尚未开始。
 - Queue 页面已能读取 TTS 队列和改编运行历史，但更完整的任务管理、失败重试和跨页面队列恢复还可继续加强。
 - Provider 配置已有快照机制，但 UI 侧的恢复/版本管理能力还不是独立完整模块。
 - 本地导出链路已经存在，Demo 能生成结果文件；正式导出的清单、素材完整性和多轨混音能力仍可继续产品化。
@@ -491,7 +494,7 @@ AI 重新接手项目时建议先读这 5 个文件：
 - 将前端 API 错误处理、加载状态、重试和消息提示统一封装。
 - 为 `docs/` 补齐 `architecture.md`、`system-design.md` 或更细的后端/前端模块文档。
 - 增加端到端测试或关键页面的交互回归测试。
-- 增加数据库迁移管理工具，替代 `main.py` 中手写字段迁移。
+- 在现有 SQLite 版本迁移基础上继续增加可回滚前的校验和数据修复记录；不要再把字段迁移写回 `main.py`。
 - 完善素材轨制作能力，例如 SFX/BGM 素材生成、检索、替换、混音和版权来源记录。
 - 完善导出系统的多轨混音、导出预检、失败原因解释和导出历史。
 - 加强 Provider API Key 的本地加密或安全存储策略。
