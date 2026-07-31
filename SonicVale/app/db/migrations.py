@@ -16,7 +16,7 @@ from sqlalchemy import Engine, inspect, text
 
 
 SCHEMA_MIGRATIONS_TABLE = "schema_migrations"
-CURRENT_SCHEMA_VERSION = 2
+CURRENT_SCHEMA_VERSION = 3
 
 
 def _table_exists(engine: Engine, table_name: str) -> bool:
@@ -117,9 +117,24 @@ def _migration_002_timeline_foundation(engine: Engine) -> None:
         model.__table__.create(bind=engine, checkfirst=True)
 
 
+def _migration_003_timeline_lifecycle(engine: Engine) -> None:
+    """Track timeline freshness and protect future manual edits."""
+
+    _add_columns(engine, "timeline_tracks", {
+        "status": "TEXT DEFAULT 'not_built' NOT NULL",
+        "build_mode": "TEXT DEFAULT 'auto' NOT NULL",
+        "source_fingerprint": "TEXT",
+        "last_error": "TEXT",
+    })
+    _add_columns(engine, "timeline_clips", {
+        "is_user_edited": "INTEGER DEFAULT 0 NOT NULL",
+    })
+
+
 MIGRATIONS = {
     1: _migration_001_legacy_columns,
     2: _migration_002_timeline_foundation,
+    3: _migration_003_timeline_lifecycle,
 }
 
 

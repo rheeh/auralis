@@ -12,6 +12,7 @@ from collections import defaultdict
 from typing import Any
 
 import soundfile as sf
+from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from app.models.po import (
@@ -50,6 +51,12 @@ class TimelineService:
             .order_by(TimelineClipPO.start_ms.asc(), TimelineClipPO.id.asc())
             .all()
         )
+        lines = {
+            line.id: line
+            for line in self.db.query(LinePO)
+            .filter(LinePO.chapter_id == chapter.id)
+            .all()
+        }
         assets = {
             asset.id: asset
             for asset in self.db.query(AudioAssetPO)
@@ -59,79 +66,202 @@ class TimelineService:
         clips_by_track: dict[int, list[TimelineClipPO]] = defaultdict(list)
         for clip in clips:
             clips_by_track[clip.track_id].append(clip)
+        source_fingerprint = self._source_fingerprint(lines.values())
+        track_payloads = []
+        statuses = []
+        for track in tracks:
+            track_clips = clips_by_track.get(track.id, [])
+            status = self._effective_status(track, source_fingerprint, bool(track_clips), bool(lines))
+            statuses.append(status)
+            track_payloads.append({
+                "id": track.id,
+                "track_type": track.track_type,
+                "name": track.name,
+                "order_index": track.order_index,
+                "revision": track.revision,
+                "status": status,
+                "build_mode": track.build_mode,
+                "last_error": track.last_error,
+                "clips": [
+                    self._clip_payload(clip, assets.get(clip.asset_id), lines.get(clip.line_id))
+                    for clip in track_clips
+                ],
+            })
 
         return {
             "project_id": project_id,
             "chapter_id": chapter_id,
             "chapter_title": chapter.title,
+            "status": self._aggregate_status(statuses),
             "track_count": len(tracks),
             "clip_count": len(clips),
-            "duration_ms": max(
-                (clip.start_ms + clip.duration_ms for clip in clips),
-                default=0,
-            ),
-            "tracks": [
-                {
-                    "id": track.id,
-                    "track_type": track.track_type,
-                    "name": track.name,
-                    "order_index": track.order_index,
-                    "revision": track.revision,
-                    "clips": [self._clip_payload(clip, assets.get(clip.asset_id)) for clip in clips_by_track.get(track.id, [])],
-                }
-                for track in tracks
-            ],
+            "duration_ms": max((clip.start_ms + clip.duration_ms for clip in clips), default=0),
+            "tracks": track_payloads,
         }
 
-    def build_chapter_timeline(self, project_id: int, chapter_id: int, *, force: bool = False) -> dict[str, Any]:
+    def build_chapter_timeline(
+        self,
+        project_id: int,
+        chapter_id: int,
+        *,
+        force: bool = False,
+        overwrite_manual: bool = False,
+    ) -> dict[str, Any]:
         chapter = self._get_chapter(project_id, chapter_id)
         tracks = self._ensure_tracks(project_id, chapter.id)
-        existing_clip_count = (
-            self.db.query(TimelineClipPO)
-            .filter(TimelineClipPO.chapter_id == chapter.id)
-            .count()
-        )
-        if existing_clip_count and not force:
-            return self.get_chapter_timeline(project_id, chapter_id)
-
-        if force:
-            self.db.query(TimelineClipPO).filter(TimelineClipPO.chapter_id == chapter.id).delete(
-                synchronize_session=False
-            )
-
         lines = (
             self.db.query(LinePO)
             .filter(LinePO.chapter_id == chapter.id)
             .order_by(LinePO.line_order.asc(), LinePO.id.asc())
             .all()
         )
-        timeline_cursor = 0
-        track_by_type = {track.track_type: track for track in tracks}
-        for line in lines:
-            track_type = self._track_type(line)
-            asset = self._register_line_assets(project_id, chapter.id, line, track_type)
-            if asset is None or asset.duration_ms <= 0:
-                continue
-            track = track_by_type[track_type]
-            self.db.add(TimelineClipPO(
-                project_id=project_id,
-                chapter_id=chapter.id,
-                track_id=track.id,
-                line_id=line.id,
-                asset_id=asset.id,
-                track_type=track_type,
-                start_ms=timeline_cursor,
-                duration_ms=asset.duration_ms,
-                volume_db=0.0,
-                fade_in_ms=0,
-                fade_out_ms=0,
-                is_muted=False,
-                revision=track.revision,
-            ))
-            timeline_cursor += asset.duration_ms
+        source_fingerprint = self._source_fingerprint(lines)
+        existing_clips = (
+            self.db.query(TimelineClipPO)
+            .filter(TimelineClipPO.chapter_id == chapter.id)
+            .all()
+        )
+        current_status = self._aggregate_status([
+            self._effective_status(track, source_fingerprint, bool(existing_clips), bool(lines))
+            for track in tracks
+        ])
+        has_manual_clips = any(clip.is_user_edited for clip in existing_clips)
+        if existing_clips and current_status == "ready" and not force:
+            return self.get_chapter_timeline(project_id, chapter_id)
+        if has_manual_clips and not overwrite_manual:
+            for track in tracks:
+                track.status = "stale"
+                track.last_error = "存在用户编辑片段，自动构建已保护现有调整"
+            self.db.commit()
+            return self.get_chapter_timeline(project_id, chapter_id)
 
+        # Commit the building marker first so a later failure is visible.
+        for track in tracks:
+            track.status = "building"
+            track.build_mode = "auto"
+            track.last_error = None
+            if existing_clips:
+                track.revision += 1
         self.db.commit()
+        try:
+            self.db.execute(delete(TimelineClipPO).where(TimelineClipPO.chapter_id == chapter.id))
+            cursors = 0
+            track_by_type = {track.track_type: track for track in tracks}
+            missing_tracks: set[str] = set()
+            for line in lines:
+                track_type = self._track_type(line)
+                asset = self._register_line_assets(project_id, chapter.id, line, track_type)
+                if asset is None or asset.duration_ms <= 0:
+                    missing_tracks.add(track_type)
+                    continue
+                track = track_by_type[track_type]
+                self.db.add(TimelineClipPO(
+                    project_id=project_id,
+                    chapter_id=chapter.id,
+                    track_id=track.id,
+                    line_id=line.id,
+                    asset_id=asset.id,
+                    track_type=track_type,
+                    start_ms=cursors,
+                    duration_ms=asset.duration_ms,
+                    volume_db=0.0,
+                    fade_in_ms=0,
+                    fade_out_ms=0,
+                    is_muted=False,
+                    is_user_edited=False,
+                    revision=track.revision,
+                ))
+                cursors += asset.duration_ms
+            for track in tracks:
+                track.source_fingerprint = source_fingerprint
+                track.status = "missing_audio" if track.track_type in missing_tracks else "ready"
+                track.last_error = None
+            self.db.commit()
+        except Exception as exc:
+            self.db.rollback()
+            for track in self.db.query(TimelineTrackPO).filter(TimelineTrackPO.chapter_id == chapter.id).all():
+                track.status = "failed"
+                track.last_error = str(exc)[:1000]
+            self.db.commit()
+            raise
         return self.get_chapter_timeline(project_id, chapter_id)
+
+    @staticmethod
+    def clear_line_timeline(db: Session, line_id: int) -> None:
+        """Remove clips/assets owned by one line and mark its track stale."""
+        track_ids = list(db.execute(select(TimelineClipPO.track_id).where(TimelineClipPO.line_id == line_id)).scalars())
+        db.execute(delete(TimelineClipPO).where(TimelineClipPO.line_id == line_id))
+        db.execute(delete(AudioAssetPO).where(AudioAssetPO.line_id == line_id))
+        if track_ids:
+            db.execute(
+                update(TimelineTrackPO)
+                .where(TimelineTrackPO.id.in_(track_ids))
+                .values(status="stale", last_error="台词或音频资产已变化")
+            )
+
+    @staticmethod
+    def clear_chapter_timeline(db: Session, chapter_id: int) -> None:
+        db.execute(delete(TimelineClipPO).where(TimelineClipPO.chapter_id == chapter_id))
+        db.execute(delete(AudioAssetPO).where(AudioAssetPO.chapter_id == chapter_id))
+        db.execute(delete(TimelineTrackPO).where(TimelineTrackPO.chapter_id == chapter_id))
+
+    @staticmethod
+    def clear_project_timeline(db: Session, project_id: int) -> None:
+        db.execute(delete(TimelineClipPO).where(TimelineClipPO.project_id == project_id))
+        db.execute(delete(AudioAssetPO).where(AudioAssetPO.project_id == project_id))
+        db.execute(delete(TimelineTrackPO).where(TimelineTrackPO.project_id == project_id))
+
+    @staticmethod
+    def invalidate_line(db: Session, line_id: int, reason: str = "台词或音频版本已变化") -> None:
+        track_ids = list(db.execute(select(TimelineClipPO.track_id).where(TimelineClipPO.line_id == line_id)).scalars())
+        if track_ids:
+            db.execute(
+                update(TimelineTrackPO)
+                .where(TimelineTrackPO.id.in_(track_ids))
+                .values(status="stale", last_error=reason)
+            )
+            db.commit()
+
+    @staticmethod
+    def _effective_status(track: TimelineTrackPO, fingerprint: str, has_clips: bool, has_lines: bool) -> str:
+        if track.status == "failed" and track.source_fingerprint == fingerprint:
+            return "failed"
+        if track.source_fingerprint and track.source_fingerprint != fingerprint:
+            return "stale"
+        if not track.source_fingerprint:
+            return "not_built"
+        if not has_clips and has_lines:
+            return "missing_audio"
+        return track.status or "not_built"
+
+    @staticmethod
+    def _aggregate_status(statuses: list[str]) -> str:
+        for status in ("failed", "stale", "missing_audio", "not_built", "building"):
+            if status in statuses:
+                return status
+        return "ready" if statuses else "not_built"
+
+    @classmethod
+    def _source_fingerprint(cls, lines) -> str:
+        source = []
+        for line in sorted(lines, key=lambda item: (item.line_order or 0, item.id or 0)):
+            path = cls._normalise_path(cls._selected_audio_path(line))
+            stat = None
+            try:
+                file_stat = os.stat(path)
+                stat = [file_stat.st_size, file_stat.st_mtime_ns]
+            except OSError:
+                stat = [None, None]
+            source.append({
+                "id": line.id,
+                "order": line.line_order,
+                "track": cls._track_type(line),
+                "path": path,
+                "stat": stat,
+                "active_version": line.active_audio_version_id,
+                "active_variant": line.active_audio_variant_id,
+            })
+        return hashlib.sha256(json.dumps(source, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
 
     def _get_chapter(self, project_id: int, chapter_id: int) -> ChapterPO:
         chapter = (
@@ -318,7 +448,7 @@ class TimelineService:
                 return 0, None, None
 
     @staticmethod
-    def _clip_payload(clip: TimelineClipPO, asset: AudioAssetPO | None) -> dict[str, Any]:
+    def _clip_payload(clip: TimelineClipPO, asset: AudioAssetPO | None, line: LinePO | None) -> dict[str, Any]:
         return {
             "id": clip.id,
             "line_id": clip.line_id,
@@ -330,7 +460,16 @@ class TimelineService:
             "fade_in_ms": clip.fade_in_ms,
             "fade_out_ms": clip.fade_out_ms,
             "is_muted": bool(clip.is_muted),
+            "is_user_edited": bool(clip.is_user_edited),
             "revision": clip.revision,
+            "line": {
+                "id": line.id,
+                "text_content": line.text_content,
+                "scene_title": line.scene_title,
+                "status": line.status,
+                "is_done": line.is_done,
+                "line_order": line.line_order,
+            } if line else None,
             "asset": {
                 "id": asset.id,
                 "type": asset.asset_type,
@@ -338,5 +477,6 @@ class TimelineService:
                 "duration_ms": asset.duration_ms,
                 "mime_type": asset.mime_type,
                 "revision": asset.revision,
+                "status": "ready" if os.path.isfile(asset.path) else "missing",
             } if asset else None,
         }

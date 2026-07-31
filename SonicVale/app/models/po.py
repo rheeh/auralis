@@ -367,6 +367,10 @@ class TimelineTrackPO(Base):
     name = Column(String(100), nullable=False)
     order_index = Column(Integer, nullable=False, default=0)
     revision = Column(Integer, nullable=False, default=1)
+    status = Column(String(32), nullable=False, default="not_built")
+    build_mode = Column(String(16), nullable=False, default="auto")
+    source_fingerprint = Column(String(64), nullable=True)
+    last_error = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
@@ -394,6 +398,7 @@ class TimelineClipPO(Base):
     fade_in_ms = Column(Integer, nullable=False, default=0)
     fade_out_ms = Column(Integer, nullable=False, default=0)
     is_muted = Column(Boolean, nullable=False, default=False)
+    is_user_edited = Column(Boolean, nullable=False, default=False)
     revision = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)

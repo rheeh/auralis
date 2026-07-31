@@ -19,6 +19,7 @@ from app.models.po import (
 )
 
 from app.repositories.project_repository import ProjectRepository
+from app.services.timeline_service import TimelineService
 
 
 class ProjectService:
@@ -123,6 +124,7 @@ class ProjectService:
             db.execute(delete(ChatSessionPO).where(ChatSessionPO.id.in_(session_ids)))
         if run_ids:
             db.execute(delete(AdaptationDraftRevisionPO).where(AdaptationDraftRevisionPO.run_id.in_(run_ids)))
+        TimelineService.clear_project_timeline(db, project_id)
         db.execute(delete(SourceDocumentPO).where(SourceDocumentPO.project_id == project_id))
         db.execute(delete(AdaptationRunPO).where(AdaptationRunPO.project_id == project_id))
         db.commit()

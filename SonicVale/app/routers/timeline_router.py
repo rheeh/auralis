@@ -32,11 +32,20 @@ def build_chapter_timeline(
     project_id: int,
     chapter_id: int,
     force: bool = Query(False, description="是否丢弃当前自动生成片段并重新按音频时长构建"),
+    overwrite_manual: bool = Query(False, description="是否允许自动构建覆盖未来用户编辑过的片段"),
     service: TimelineService = Depends(get_timeline_service),
 ):
     """登记当前音频资产并按真实文件时长生成四轨片段。"""
 
     try:
-        return Res(data=service.build_chapter_timeline(project_id, chapter_id, force=force), message="构建成功")
+        return Res(
+            data=service.build_chapter_timeline(
+                project_id,
+                chapter_id,
+                force=force,
+                overwrite_manual=overwrite_manual,
+            ),
+            message="构建成功",
+        )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

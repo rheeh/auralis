@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.db.database import Base
 from app.db.migrations import apply_schema_migrations
-from app.models.po import AudioAssetPO, ChapterPO, LinePO, ProjectPO
+from app.models.po import AudioAssetPO, ChapterPO, LinePO, ProjectPO, TimelineClipPO, TimelineTrackPO
 from app.services.timeline_service import TimelineService
 
 
@@ -85,11 +85,54 @@ class TimelineServiceTest(unittest.TestCase):
 
         with engine.connect() as conn:
             self.assertEqual(conn.execute(text("SELECT name FROM projects WHERE id = 7")).scalar_one(), "旧项目")
-            self.assertEqual(conn.execute(text("SELECT MAX(version) FROM schema_migrations")).scalar_one(), 2)
+            self.assertEqual(conn.execute(text("SELECT MAX(version) FROM schema_migrations")).scalar_one(), 3)
             columns = {row[1] for row in conn.execute(text("PRAGMA table_info(projects)"))}
             self.assertIn("project_root_path", columns)
             self.assertEqual(conn.execute(text("SELECT COUNT(*) FROM audio_assets")).scalar_one(), 0)
         engine.dispose()
+
+    def test_invalidation_marks_stale_and_manual_clips_are_protected(self):
+        project = ProjectPO(name="Lifecycle timeline")
+        self.session.add(project)
+        self.session.flush()
+        chapter = ChapterPO(project_id=project.id, title="第一场")
+        self.session.add(chapter)
+        self.session.flush()
+        path = self._wav("lifecycle.wav", 1.0)
+        line = LinePO(chapter_id=chapter.id, line_order=1, track="voice", audio_path=path)
+        self.session.add(line)
+        self.session.commit()
+        service = TimelineService(self.session)
+        service.build_chapter_timeline(project.id, chapter.id)
+
+        service.invalidate_line(self.session, line.id)
+        self.assertEqual(service.get_chapter_timeline(project.id, chapter.id)["status"], "stale")
+
+        clip = self.session.query(TimelineClipPO).one()
+        clip.is_user_edited = True
+        self.session.commit()
+        protected = service.build_chapter_timeline(project.id, chapter.id, force=True)
+        self.assertEqual(protected["status"], "stale")
+        self.assertEqual(self.session.query(TimelineClipPO).count(), 1)
+
+    def test_clear_chapter_removes_tracks_clips_and_assets(self):
+        project = ProjectPO(name="Cleanup timeline")
+        self.session.add(project)
+        self.session.flush()
+        chapter = ChapterPO(project_id=project.id, title="第一场")
+        self.session.add(chapter)
+        self.session.flush()
+        path = self._wav("cleanup.wav", 1.0)
+        self.session.add(LinePO(chapter_id=chapter.id, line_order=1, track="voice", audio_path=path))
+        self.session.commit()
+        service = TimelineService(self.session)
+        service.build_chapter_timeline(project.id, chapter.id)
+        self.assertEqual(self.session.query(TimelineTrackPO).count(), 4)
+        service.clear_chapter_timeline(self.session, chapter.id)
+        self.session.commit()
+        self.assertEqual(self.session.query(TimelineTrackPO).count(), 0)
+        self.assertEqual(self.session.query(TimelineClipPO).count(), 0)
+        self.assertEqual(self.session.query(AudioAssetPO).count(), 0)
 
 
 if __name__ == "__main__":

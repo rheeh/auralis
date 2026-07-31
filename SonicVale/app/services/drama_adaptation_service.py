@@ -20,6 +20,7 @@ from app.repositories.llm_provider_repository import LLMProviderRepository
 from app.repositories.project_repository import ProjectRepository
 from app.repositories.role_repository import RoleRepository
 from app.repositories.strength_repository import StrengthRepository
+from app.services.timeline_service import TimelineService
 
 
 class DramaAdaptationService:
@@ -139,6 +140,7 @@ class DramaAdaptationService:
             )
 
         if replace_chapter_lines:
+            TimelineService.clear_chapter_timeline(self.db, chapter.id)
             self.line_repository.delete_all_by_chapter_id(chapter.id)
 
         audio_path = os.path.join(project.project_root_path or getConfigPath(), str(run.project_id), str(chapter.id), "audio")

@@ -32,6 +32,7 @@ from app.repositories.role_repository import RoleRepository
 from app.repositories.tts_provider_repository import TTSProviderRepository
 from app.repositories.llm_provider_repository import LLMProviderRepository
 from app.core.llm_engine import LLMEngine
+from app.services.timeline_service import TimelineService
 
 import os
 
@@ -52,6 +53,11 @@ class LineService:
         self.llm_provider_repository = llm_provider_repository
         self.role_repository = role_repository
         self.repository = repository
+
+    def _invalidate_timeline(self, line_id: int, reason: str = "台词或音频版本已变化") -> None:
+        db = getattr(self.repository, "db", None)
+        if db is not None:
+            TimelineService.invalidate_line(db, line_id, reason)
 
     def create_line(self,  entity: LineEntity):
         """创建新台词
@@ -98,6 +104,9 @@ class LineService:
         if po and po.audio_path:
             with contextlib.suppress(FileNotFoundError):
                 os.remove(po.audio_path)
+        db = getattr(self.repository, "db", None)
+        if db is not None:
+            TimelineService.clear_line_timeline(db, line_id)
         res = self.repository.delete(line_id)
         return res
     # 删除章节下所有台词
@@ -109,6 +118,9 @@ class LineService:
             if line and line.audio_path:
                 with contextlib.suppress(FileNotFoundError):
                     os.remove(line.audio_path)
+        db = getattr(self.repository, "db", None)
+        if db is not None:
+            TimelineService.clear_chapter_timeline(db, chapter_id)
         return self.repository.delete_all_by_chapter_id(chapter_id)
 
     # 单个台词新增
@@ -147,6 +159,7 @@ class LineService:
         res = self.repository.update(line_id, data)
         if res is None:
             return False
+        self._invalidate_timeline(line_id)
         return True
     # 生成音频（服务器和本地两种方式）
 
@@ -407,6 +420,7 @@ class LineService:
             "audio_events": getattr(po, "audio_events", None) or [],
             "audio_variants": getattr(po, "audio_variants", None) or [],
         })
+        self._invalidate_timeline(po.id, "音频素材已替换")
         return target_path
 
     def _is_placeholder_material(self, line) -> bool:
@@ -824,6 +838,7 @@ class LineService:
             "audio_versions": versions,
             "active_audio_version_id": version_id,
         })
+        self._invalidate_timeline(line_id, "新的 TTS 版本已生成")
         return version
 
     def get_generated_audio_version(self, line_id: int, version_id: str) -> dict:
@@ -846,6 +861,7 @@ class LineService:
             raise FileNotFoundError("生成音频版本文件不存在")
         line.active_audio_variant_id = None
         self.repository.update(line_id, {"active_audio_version_id": version_id})
+        self._invalidate_timeline(line_id, "当前 TTS 版本已切换")
         return version
 
     def create_audio_variant(self, line_id: int, dto: LineAudioVariantDTO) -> dict:
@@ -912,6 +928,7 @@ class LineService:
             "audio_variants": variants,
             "active_audio_variant_id": variant_id,
         })
+        self._invalidate_timeline(line_id, "新的后期处理版本已生成")
         return variant
 
     def resolve_audio_path(self, line, original: bool = False) -> str:
@@ -944,6 +961,7 @@ class LineService:
         if not os.path.isfile(audio_path):
             raise FileNotFoundError("音频版本文件不存在")
         self.repository.update(line_id, {"active_audio_variant_id": variant_id})
+        self._invalidate_timeline(line_id, "当前后期处理版本已切换")
         return variant
 
     def get_audio_variant(self, line_id: int, variant_id: str) -> dict:
@@ -972,6 +990,7 @@ class LineService:
             # SQLAlchemy attribute directly before the repository commits the row.
             line.active_audio_variant_id = None
         self.repository.update(line_id, updates)
+        self._invalidate_timeline(line_id, "后期处理版本已删除")
         return True
 
     # 导出音频,合并音频，并且导出字幕

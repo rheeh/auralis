@@ -28,6 +28,7 @@ from app.repositories.project_repository import ProjectRepository
 from app.repositories.role_repository import RoleRepository
 from app.core.llm_engine import LLMEngine
 from app.repositories.voice_repository import VoiceRepository
+from app.services.timeline_service import TimelineService
 
 
 class ChapterService:
@@ -99,28 +100,21 @@ class ChapterService:
     def delete_chapter(self, chapter_id: int) -> bool:
         """删除章节
         """
-        db = SessionLocal()
-        try :
-            chapter = self.repository.get_by_id(chapter_id)
+        chapter = self.repository.get_by_id(chapter_id)
+        if not chapter:
+            return False
 
-        #     移除资源内容
-            # 删除该路径所有内容
-            project_repository = ProjectRepository(db)
-            project = project_repository.get_by_id(chapter.project_id)
-            chapter_path = os.path.join(project.project_root_path, str(chapter.project_id), str(chapter_id))
+        # 先删时间线、资产和台词，再删章节，避免留下孤儿记录。
+        db = self.repository.db
+        project = ProjectRepository(db).get_by_id(chapter.project_id)
+        if project:
+            chapter_path = os.path.join(project.project_root_path, str(project.id), str(chapter_id))
             if os.path.exists(chapter_path):
-                shutil.rmtree(chapter_path)  # 删除整个文件夹及其所有内容
+                shutil.rmtree(chapter_path)
                 logging.info("已删除目录及内容: %s", chapter_path)
-            else:
-                logging.info("目录不存在: %s", chapter_path)
-            #     先删除资源，再删除记录
-            res = self.repository.delete(chapter_id)
-            # 删除章节下所有台词
-            line_repository = LineRepository(db)
-            line_res = line_repository.delete_all_by_chapter_id(chapter_id)
-        finally:
-            db.close()
-        return res
+        TimelineService.clear_chapter_timeline(db, chapter_id)
+        LineRepository(db).delete_all_by_chapter_id(chapter_id)
+        return self.repository.delete(chapter_id)
 
     # 先获取章节内容
     def split_text(self, chapter_id: int, max_length: int = 1500) -> List[str]:
@@ -331,4 +325,3 @@ class ChapterService:
             unused_voice_names.remove(voice_name)
             assignments.append({"role_name": role_name, "voice_name": voice_name})
         return assignments
-

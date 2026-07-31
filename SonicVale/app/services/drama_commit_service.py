@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.core.config import getConfigPath
 from app.models.po import AdaptationDraftRevisionPO, AdaptationRunPO, ChapterPO, ChatSessionPO, EmotionPO, LinePO, ProjectPO, RolePO, StrengthPO
 from app.workflows.drama.schemas import DramaScript
+from app.services.timeline_service import TimelineService
 
 
 class DramaCommitService:
@@ -73,6 +74,7 @@ class DramaCommitService:
             chapter.title = target_title
             chapter.text_content = self._script_to_text(script)
             if replace_chapter_lines:
+                TimelineService.clear_chapter_timeline(self.db, chapter.id)
                 self.db.execute(delete(LinePO).where(LinePO.chapter_id == chapter.id))
 
             roles = {

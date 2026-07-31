@@ -99,6 +99,7 @@ async def startup_event():
         apply_schema_migrations(engine)
     except Exception as e:
         logging.exception("❌ 数据库建表失败: %s", e)
+        raise RuntimeError("Auralis 数据库迁移失败，已阻止应用继续启动") from e
 
     # 2) 初始化共享运行时
     try:
