@@ -77,13 +77,16 @@
               class="clip"
               :class="{ done: clip.line?.is_done === 1 || clip.line?.status === 'done', muted: clip.is_muted }"
               :style="clipStyle(clip)"
-              @click="openClipEditor(clip)"
+              @pointerdown="startClipInteraction($event, clip, 'move')"
+              @click="handleClipClick(clip)"
             >
+              <span class="clip-handle clip-handle-left" @pointerdown.stop="startClipInteraction($event, clip, 'resize-left')" />
               <strong>{{ clip.line?.scene_title || track.label }}</strong>
               <p>{{ clip.line?.text_content || clip.asset?.type || '音频片段' }}</p>
               <span>
                 {{ formatDuration(clip.start_ms) }} 起 · {{ formatDuration(clip.duration_ms) }} · {{ formatVolume(clip.volume_db) }}
               </span>
+              <span class="clip-handle clip-handle-right" @pointerdown.stop="startClipInteraction($event, clip, 'resize-right')" />
             </div>
             <span v-if="!(trackByType[track.key]?.clips?.length)" class="empty-lane">暂无真实音频片段</span>
           </div>
@@ -152,6 +155,8 @@ const renderAudioUrl = ref('')
 const clipEditorVisible = ref(false)
 const clipForm = ref(null)
 const savingClip = ref(false)
+const clipInteraction = ref(null)
+const suppressClipClick = ref(false)
 
 const zoomOptions = [
   { label: '紧凑', value: 'compact' },
@@ -260,6 +265,97 @@ function openClipEditor(clip) {
     is_muted: Boolean(clip.is_muted),
   }
   clipEditorVisible.value = true
+}
+
+function handleClipClick(clip) {
+  if (suppressClipClick.value) {
+    suppressClipClick.value = false
+    return
+  }
+  openClipEditor(clip)
+}
+
+function startClipInteraction(event, clip, mode) {
+  if (event.button !== 0 || savingClip.value || building.value || rendering.value) return
+  const target = event.currentTarget
+  target.setPointerCapture?.(event.pointerId)
+  clipInteraction.value = {
+    clip,
+    mode,
+    pointerId: event.pointerId,
+    originX: event.clientX,
+    originStartMs: Number(clip.start_ms || 0),
+    originDurationMs: Number(clip.duration_ms || 1),
+    moved: false,
+  }
+  target.addEventListener('pointermove', updateClipInteraction)
+  target.addEventListener('pointerup', finishClipInteraction, { once: true })
+  target.addEventListener('pointercancel', cancelClipInteraction, { once: true })
+}
+
+function updateClipInteraction(event) {
+  const interaction = clipInteraction.value
+  if (!interaction || event.pointerId !== interaction.pointerId) return
+  const deltaMs = snapTimelineMs((event.clientX - interaction.originX) / pixelsPerSecond.value * 1000)
+  if (Math.abs(deltaMs) >= 50) interaction.moved = true
+
+  if (interaction.mode === 'move') {
+    interaction.clip.start_ms = Math.max(0, interaction.originStartMs + deltaMs)
+    return
+  }
+  if (interaction.mode === 'resize-right') {
+    const maxDuration = Number(interaction.clip.asset?.duration_ms || interaction.originDurationMs)
+    interaction.clip.duration_ms = clamp(interaction.originDurationMs + deltaMs, 100, maxDuration)
+    return
+  }
+  const endMs = interaction.originStartMs + interaction.originDurationMs
+  const nextStartMs = clamp(interaction.originStartMs + deltaMs, 0, endMs - 100)
+  interaction.clip.start_ms = nextStartMs
+  interaction.clip.duration_ms = endMs - nextStartMs
+}
+
+async function finishClipInteraction(event) {
+  const interaction = clipInteraction.value
+  event.currentTarget?.removeEventListener('pointermove', updateClipInteraction)
+  event.currentTarget?.removeEventListener('pointercancel', cancelClipInteraction)
+  clipInteraction.value = null
+  if (!interaction) return
+  if (!interaction.moved) return
+  suppressClipClick.value = true
+  await persistClipInteraction(interaction.clip)
+}
+
+function cancelClipInteraction(event) {
+  event.currentTarget?.removeEventListener('pointermove', updateClipInteraction)
+  clipInteraction.value = null
+}
+
+async function persistClipInteraction(clip) {
+  savingClip.value = true
+  try {
+    const response = await updateTimelineClip(projectId.value, chapterId.value, clip.id, {
+      start_ms: Math.round(Number(clip.start_ms || 0)),
+      duration_ms: Math.round(Number(clip.duration_ms || 1)),
+    })
+    if (response.code !== 200) throw new Error(response.message || '保存失败')
+    timeline.value = response.data
+    renderResult.value = null
+    renderAudioUrl.value = ''
+    ElMessage.success('片段位置已保存')
+  } catch (error) {
+    await loadTimeline()
+    ElMessage.error(apiError(error, '保存片段位置失败'))
+  } finally {
+    savingClip.value = false
+  }
+}
+
+function snapTimelineMs(value) {
+  return Math.round(value / 100) * 100
+}
+
+function clamp(value, minimum, maximum) {
+  return Math.min(Math.max(value, minimum), maximum)
 }
 
 async function saveClip() {
@@ -418,6 +514,10 @@ function openDubbingProject() {
 .time-tick { position: absolute; top: 9px; z-index: 2; color: var(--el-text-color-secondary); font-size: 11px; transform: translateX(-50%); }
 .timeline-grid-line { position: absolute; top: 0; bottom: 0; border-left: 1px dashed color-mix(in srgb, var(--el-border-color) 70%, transparent); pointer-events: none; }
 .clip { position: absolute; top: 14px; display: grid; align-content: start; gap: 5px; min-height: 76px; padding: 10px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--el-color-primary) 36%, var(--el-border-color)); border-radius: 8px; background: color-mix(in srgb, var(--el-color-primary-light-9) 82%, var(--el-bg-color)); cursor: pointer; }
+.clip:active { cursor: grabbing; }
+.clip-handle { position: absolute; top: 0; bottom: 0; z-index: 3; width: 8px; cursor: ew-resize; }
+.clip-handle-left { left: 0; }
+.clip-handle-right { right: 0; }
 .clip.done { border-color: color-mix(in srgb, var(--el-color-success) 45%, var(--el-border-color)); background: color-mix(in srgb, var(--el-color-success-light-9) 80%, var(--el-bg-color)); }
 .clip.muted { opacity: .6; }
 .clip p { max-width: 420px; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
