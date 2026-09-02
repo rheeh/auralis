@@ -4,6 +4,12 @@ Auralis is a local-first AI production workspace for turning narrative text into
 
 The project is built as an interview-ready product prototype: the emphasis is on a complete production loop, clear state management, recoverable AI steps, and an interface that lets users inspect and correct every important output before audio generation.
 
+## Live Demo
+
+[▶ Click to experience the Auralis static demo](https://rheeh.github.io/auralis/)
+
+The demo uses the real Vue pages and production components from this repository. A sample novel, parsed characters, reviewed script, voice bindings, and generated audio are preloaded, so the complete workflow can be explored without configuring a backend, model provider, or API key.
+
 ## What It Does
 
 - Converts novel-style source text into an audio-drama workflow: source analysis, character draft, script draft, independent review, user confirmation, and final project write-in.
@@ -97,6 +103,13 @@ Run verification:
 
 ```bash
 ./scripts/verify.sh
+```
+
+Build the same static demo used by GitHub Pages:
+
+```bash
+cd sonicvale-front
+npm run build:demo
 ```
 
 Generate a local sample project without external AI/TTS providers:

@@ -8,14 +8,14 @@
         </RouterLink>
         <nav aria-label="首页导航">
           <a class="active" href="#hero">首页</a>
-          <RouterLink to="/projects">创作</RouterLink>
+          <RouterLink :to="startRoute">创作</RouterLink>
           <RouterLink to="/projects">项目</RouterLink>
           <RouterLink to="/voices">音色库</RouterLink>
           <RouterLink to="/config">模型设置</RouterLink>
         </nav>
         <div class="nav-actions">
           <RouterLink class="ghost-link" to="/config">设置</RouterLink>
-          <RouterLink class="nav-primary" to="/projects">开始创作</RouterLink>
+          <RouterLink class="nav-primary" :to="startRoute" @click="prepareDemo">开始创作</RouterLink>
         </div>
       </header>
 
@@ -25,9 +25,9 @@
           <h1 class="enter-title">Auralis</h1>
           <p class="cn-title enter-subtitle">AI 广 播 剧</p>
           <div class="hero-actions enter-actions">
-            <RouterLink class="start-button" to="/projects"><span>✦</span>开始创作</RouterLink>
+            <RouterLink class="start-button" :to="startRoute" @click="prepareDemo"><span>✦</span>{{ isStaticDemo ? '进入静态体验' : '开始创作' }}</RouterLink>
             <button class="demo-button" type="button" :aria-pressed="demoPlaying" @click="toggleDemo">
-              <span class="button-icon">{{ demoPlaying ? 'Ⅱ' : '▶' }}</span>{{ demoPlaying ? '暂停 Demo' : '体验 Demo' }}
+              <span class="button-icon">{{ isStaticDemo ? '→' : demoPlaying ? 'Ⅱ' : '▶' }}</span>{{ isStaticDemo ? '查看预置项目' : demoPlaying ? '暂停 Demo' : '体验 Demo' }}
             </button>
           </div>
         </div>
@@ -80,9 +80,13 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { fetchProjects } from '../api/project'
+import { IS_STATIC_DEMO } from '../api/config'
+import { resetDemo } from '../demo/mockApi'
 import singerImage from '../assets/visuals/auralis-anime-singer.png'
 
 const router = useRouter()
+const isStaticDemo = IS_STATIC_DEMO
+const startRoute = isStaticDemo ? '/projects/1/workspace' : '/projects'
 const waveCanvas = ref(null)
 const projects = ref([])
 const demoPlaying = ref(false)
@@ -189,7 +193,11 @@ function drawWave(now) {
 }
 
 function handleVisibility() { if (document.hidden) cancelAnimationFrame(frameId); else startWave() }
-function toggleDemo() { demoPlaying.value=!demoPlaying.value }
+function prepareDemo() { if (isStaticDemo) resetDemo() }
+function toggleDemo() {
+  if (isStaticDemo) { resetDemo(); router.push(startRoute); return }
+  demoPlaying.value=!demoPlaying.value
+}
 function handlePointer(event) {
   if (window.matchMedia('(max-width: 760px), (pointer: coarse)').matches) return
   pointer.value={x:(event.clientX/window.innerWidth-.5)*2,y:(event.clientY/window.innerHeight-.5)*2}

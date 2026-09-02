@@ -1,5 +1,5 @@
 import request from './config'
-import { API_BASE_URL } from './config'
+import { API_BASE_URL, IS_STATIC_DEMO } from './config'
 
 export function deleteLinesByChapter(chapterId) {
   return request.delete(`/lines/lines/${chapterId}`)
@@ -52,6 +52,7 @@ export function attachAudioAsset(lineId, sourcePath) {
 }
 
 export function getLineAudioUrl(lineId, version = 0, original = false) {
+  if (IS_STATIC_DEMO) return `./demo-audio/line-${lineId}.mp3`
   const params = new URLSearchParams()
   if (version) params.set('v', version)
   if (original) params.set('original', 'true')

@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:demo": "vite build --mode demo",
     "preview": "vite preview",
     "electron": "electron .",
     "start": "concurrently \"npm run dev\" \"npm run electron\"",
