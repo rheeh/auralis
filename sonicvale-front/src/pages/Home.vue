@@ -25,10 +25,13 @@
           <h1 class="enter-title">Auralis</h1>
           <p class="cn-title enter-subtitle">AI 广 播 剧</p>
           <div class="hero-actions enter-actions">
-            <RouterLink class="start-button" :to="startRoute" @click="prepareDemo"><span>✦</span>{{ isStaticDemo ? '进入静态体验' : '开始创作' }}</RouterLink>
-            <button class="demo-button" type="button" :aria-pressed="demoPlaying" @click="toggleDemo">
-              <span class="button-icon">{{ isStaticDemo ? '→' : demoPlaying ? 'Ⅱ' : '▶' }}</span>{{ isStaticDemo ? '查看预置项目' : demoPlaying ? '暂停 Demo' : '体验 Demo' }}
-            </button>
+            <RouterLink v-if="isStaticDemo" class="start-button" :to="startRoute" @click="prepareDemo"><span>✦</span>开始体验</RouterLink>
+            <template v-else>
+              <RouterLink class="start-button" :to="startRoute"><span>✦</span>开始创作</RouterLink>
+              <button class="demo-button" type="button" :aria-pressed="demoPlaying" @click="toggleDemo">
+                <span class="button-icon">{{ demoPlaying ? 'Ⅱ' : '▶' }}</span>{{ demoPlaying ? '暂停 Demo' : '体验 Demo' }}
+              </button>
+            </template>
           </div>
         </div>
 
@@ -57,12 +60,6 @@
           </div>
         </div>
 
-        <div v-if="latestProject" class="continue-card enter-actions" @click="openLatest">
-          <div class="project-art"><span>{{ latestProject.name.slice(0,1) }}</span></div>
-          <div><small>继续上次创作</small><strong>{{ latestProject.name }}</strong><span>{{ formatDate(latestProject.updated_at || latestProject.created_at) }}</span></div>
-          <button type="button" aria-label="打开最近项目">›</button>
-        </div>
-
         <a class="explore-link" href="#features">探索声音的无限可能<span>↓</span></a>
       </div>
     </section>
@@ -78,20 +75,15 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { fetchProjects } from '../api/project'
 import { IS_STATIC_DEMO } from '../api/config'
 import { resetDemo } from '../demo/mockApi'
 import singerImage from '../assets/visuals/auralis-anime-singer.png'
 
-const router = useRouter()
 const isStaticDemo = IS_STATIC_DEMO
 const startRoute = isStaticDemo ? '/projects/1/workspace' : '/projects'
 const waveCanvas = ref(null)
-const projects = ref([])
 const demoPlaying = ref(false)
 const pointer = ref({ x:0, y:0 })
-const latestProject = computed(() => projects.value[0] || null)
 const features = [
   { icon:'≋', title:'AI 台本改编', caption:'声音优先，克制旁白', to:'/projects' },
   { icon:'♬', title:'多角色声线', caption:'人物卡绑定独立音色', to:'/voices' },
@@ -115,7 +107,6 @@ let energy = 0
 let lastTime = 0
 
 onMounted(async () => {
-  try { projects.value = await fetchProjects() } catch { projects.value = [] }
   await nextTick()
   resizeObserver = new ResizeObserver(resizeCanvas)
   if (waveCanvas.value) resizeObserver.observe(waveCanvas.value)
@@ -194,17 +185,12 @@ function drawWave(now) {
 
 function handleVisibility() { if (document.hidden) cancelAnimationFrame(frameId); else startWave() }
 function prepareDemo() { if (isStaticDemo) resetDemo() }
-function toggleDemo() {
-  if (isStaticDemo) { resetDemo(); router.push(startRoute); return }
-  demoPlaying.value=!demoPlaying.value
-}
+function toggleDemo() { demoPlaying.value=!demoPlaying.value }
 function handlePointer(event) {
   if (window.matchMedia('(max-width: 760px), (pointer: coarse)').matches) return
   pointer.value={x:(event.clientX/window.innerWidth-.5)*2,y:(event.clientY/window.innerHeight-.5)*2}
 }
 function resetPointer(){pointer.value={x:0,y:0}}
-function openLatest(){if(latestProject.value)router.push(`/projects/${latestProject.value.id}/workspace`)}
-function formatDate(value){if(!value)return '最近编辑';const date=new Date(value);return Number.isNaN(date.getTime())?'最近编辑':date.toLocaleDateString('zh-CN',{month:'short',day:'numeric'})}
 </script>
 
 <style scoped>
@@ -213,11 +199,11 @@ function formatDate(value){if(!value)return '最近编辑';const date=new Date(v
 .hero-content{position:relative;z-index:3;min-height:calc(100vh - 258px)}.hero-copy{position:relative;z-index:9;width:min(520px,40vw);padding:12vh 0 120px 7vw}.product-kicker{margin:0 0 18px;color:#75869a;font-size:11px;letter-spacing:.28em}.hero-copy h1{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(86px,10vw,168px);font-weight:400;line-height:.78;letter-spacing:-.06em}.cn-title{margin:30px 0 0;font-size:27px;letter-spacing:.48em}.hero-description{max-width:460px;margin:24px 0 0;color:#5a6c7e;font-size:14px;line-height:1.8}.hero-actions{display:flex;gap:20px;margin-top:35px}.start-button,.demo-button{display:flex;align-items:center;justify-content:center;gap:13px;height:60px;padding:0 34px;border:0;border-radius:30px;box-sizing:border-box;text-decoration:none;font-size:15px;transition:transform .18s ease,box-shadow .18s ease}.start-button{color:#fff;background:linear-gradient(135deg,#486584,#071f3c);box-shadow:0 16px 30px rgba(24,50,79,.22)}.start-button:hover{transform:translateY(-2px);box-shadow:0 17px 36px rgba(30,67,106,.32),0 0 24px rgba(150,195,230,.28)}.start-button:active,.demo-button:active{transform:scale(.97)}.demo-button{cursor:pointer;color:#26384a;background:rgba(255,255,255,.68);box-shadow:0 10px 28px rgba(65,82,100,.1),inset 0 0 0 1px rgba(255,255,255,.92)}.demo-button:hover{transform:translateY(-2px)}.button-icon{display:grid;place-items:center;width:25px;height:25px;border-radius:50%;font-size:10px;background:rgba(255,255,255,.8)}
 .visual-stage{position:absolute;z-index:4;inset:0;pointer-events:none;transition:transform .8s cubic-bezier(.2,.8,.2,1)}.ring-system{position:absolute;right:7vw;top:48%;width:min(56vw,700px);aspect-ratio:1;translate:0 -50%;transition:transform .9s cubic-bezier(.2,.8,.2,1)}.ring-system svg{width:100%;height:100%;overflow:visible}.ring circle{fill:none;stroke:url(#ringGold);transform-origin:310px 310px;filter:url(#ringGlow)}.ring-one circle:first-child{stroke-width:4;opacity:.92;animation:ring-cw 17s linear infinite,ring-breathe 8s ease-in-out infinite}.ring-two circle:first-child{stroke-width:1.3;stroke-dasharray:8 13;opacity:.65;animation:ring-ccw 22s linear infinite}.ring-three circle{stroke-width:.8;stroke-dasharray:2 11;opacity:.48;animation:ring-cw 24s linear infinite}.ring-four circle{stroke-width:.6;stroke-dasharray:1 17;opacity:.4;animation:ring-ccw 19s linear infinite}.flow-dots{stroke-width:3!important;stroke-linecap:round;stroke-dasharray:1 34!important;animation:ring-cw 11s linear infinite!important}.flow-dots.sparse{opacity:.55;animation:ring-ccw 15s linear infinite!important}.demo-playing .ring-system{filter:brightness(1.14) drop-shadow(0 0 15px rgba(255,240,205,.5))}
 .wave-canvas{position:absolute;z-index:2;left:0;top:42%;width:100%;height:28%;opacity:.86;filter:drop-shadow(0 0 5px rgba(255,249,230,.7))}.particle-field{position:absolute;z-index:5;right:5vw;top:10%;width:min(60vw,740px);height:78%;transition:transform 1s cubic-bezier(.2,.8,.2,1)}.particle-field i{position:absolute;border-radius:50%;background:#fff;opacity:.35;box-shadow:0 0 8px rgba(255,247,215,.8);animation:particle-float var(--duration) ease-in-out var(--delay) infinite,particle-blink 5s ease-in-out var(--delay) infinite}.listener-silhouette{position:absolute;z-index:7;right:calc(7vw + min(56vw,700px)/2 - 90px);top:36%;width:180px;height:360px;fill:#1f3147;filter:drop-shadow(0 20px 12px rgba(22,38,55,.18));transition:transform 1s cubic-bezier(.2,.8,.2,1);overflow:visible}.person-body{transform-origin:90px 210px;animation:body-groove 2.9s ease-in-out infinite}.person-head{transform-origin:90px 83px;animation:head-groove 2.9s ease-in-out -.16s infinite}.hair{opacity:.98;transform-origin:91px 40px;animation:hair-sway 2.9s ease-in-out -.28s infinite}.headphones{fill:none;stroke:#1f3147;stroke-width:7;stroke-linecap:round}.arm{transform-origin:90px 105px}.arm-left{animation:arm-left 2.9s ease-in-out infinite}.arm-right{animation:arm-right 2.9s ease-in-out infinite}.leg-left{transform-origin:82px 215px;animation:leg-shift 2.9s ease-in-out infinite}.leg-right{transform-origin:102px 215px;animation:leg-shift 2.9s ease-in-out -1.45s infinite}.coat-tail{transform-origin:90px 190px;animation:coat-sway 2.9s ease-in-out -.2s infinite}.demo-playing .person-body,.demo-playing .person-head,.demo-playing .hair,.demo-playing .arm,.demo-playing .leg-left,.demo-playing .leg-right,.demo-playing .coat-tail{animation-duration:2.55s}
-.continue-card{position:absolute;z-index:11;right:3.5vw;bottom:24px;display:grid;grid-template-columns:58px minmax(150px,1fr) 34px;gap:12px;align-items:center;width:min(330px,28vw);padding:12px 14px;border-radius:20px;cursor:pointer;background:rgba(255,255,255,.68);box-shadow:0 16px 38px rgba(51,75,99,.14);backdrop-filter:blur(18px)}.project-art{display:grid;place-items:center;width:58px;height:58px;border-radius:14px;color:#fff;background:linear-gradient(145deg,#759ebc,#173856)}.continue-card small,.continue-card strong,.continue-card span{display:block}.continue-card small,.continue-card span{color:#6e7d8d;font-size:10px}.continue-card strong{margin:4px 0;font-size:13px}.continue-card button{width:34px;height:34px;border:0;border-radius:50%;cursor:pointer;color:#fff;background:#153656;font-size:22px}.explore-link{position:absolute;z-index:10;left:7vw;bottom:28px;display:flex;gap:34px;color:#485e75;text-decoration:none;font-size:12px;letter-spacing:.12em}.explore-link span{font-size:18px}
+.explore-link{position:absolute;z-index:10;left:7vw;bottom:28px;display:flex;gap:34px;color:#485e75;text-decoration:none;font-size:12px;letter-spacing:.12em}.explore-link span{font-size:18px}
 .feature-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:26px;padding:34px 7vw;background:rgba(255,255,255,.82)}.feature-strip a{display:flex;align-items:center;gap:24px;min-height:96px;padding:0 28px;border:1px solid rgba(35,63,90,.09);border-radius:22px;color:#213850;text-decoration:none;background:rgba(255,255,255,.54);box-shadow:0 12px 32px rgba(48,69,90,.05);transition:transform .2s ease,box-shadow .2s ease}.feature-strip a:hover{transform:translateY(-3px);box-shadow:0 16px 36px rgba(48,69,90,.1)}.feature-icon{font-size:33px}.feature-strip strong,.feature-strip small{display:block}.feature-strip small{margin-top:8px;color:#738294;font-size:12px}
 .enter-nav{animation:enter-fade .65s ease both}.enter-title{animation:enter-rise .72s .12s ease both}.enter-subtitle{animation:enter-rise .72s .28s ease both}.enter-actions{animation:enter-rise .68s .42s ease both}.enter-rings{animation:enter-rings 1.05s .08s ease both}.enter-person{animation:enter-person .72s .48s ease both}
 @keyframes ring-cw{to{transform:rotate(360deg)}}@keyframes ring-ccw{to{transform:rotate(-360deg)}}@keyframes ring-breathe{50%{opacity:.68;stroke-width:5.5}}@keyframes particle-float{50%{translate:4px -12px}}@keyframes particle-blink{50%{opacity:.1}}@keyframes body-groove{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-4px) rotate(1deg)}}@keyframes head-groove{0%,100%{transform:rotate(-1deg)}50%{transform:rotate(1.4deg)}}@keyframes hair-sway{0%,100%{transform:skewX(-1deg)}50%{transform:skewX(2deg)}}@keyframes arm-left{0%,100%{transform:rotate(1deg)}50%{transform:rotate(-3deg)}}@keyframes arm-right{0%,100%{transform:rotate(-1deg)}50%{transform:rotate(3deg)}}@keyframes leg-shift{0%,100%{transform:translateX(0)}50%{transform:translateX(2px)}}@keyframes coat-sway{0%,100%{transform:skewX(-1deg)}50%{transform:skewX(1.5deg)}}@keyframes enter-fade{from{opacity:0}to{opacity:1}}@keyframes enter-rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}@keyframes enter-rings{from{opacity:0;filter:blur(14px)}to{opacity:1;filter:blur(0)}}@keyframes enter-person{from{opacity:0;translate:0 12px}to{opacity:1;translate:0 0}}
-@media(max-width:1100px){.landing-nav{grid-template-columns:180px 1fr 180px;padding:0 28px}.landing-nav nav{gap:22px}.hero-copy{width:45vw;padding-left:5vw}.continue-card{display:none}.feature-strip{gap:12px;padding-inline:3vw}.feature-strip a{padding:0 15px}.ring-system{right:-2vw}.listener-silhouette{right:calc(-2vw + min(56vw,700px)/2 - 90px)}}
+@media(max-width:1100px){.landing-nav{grid-template-columns:180px 1fr 180px;padding:0 28px}.landing-nav nav{gap:22px}.hero-copy{width:45vw;padding-left:5vw}.feature-strip{gap:12px;padding-inline:3vw}.feature-strip a{padding:0 15px}.ring-system{right:-2vw}.listener-silhouette{right:calc(-2vw + min(56vw,700px)/2 - 90px)}}
 @media(max-width:760px){.landing-page{padding:0}.hero-shell{min-height:800px;border-radius:0}.landing-nav{display:flex;justify-content:space-between;padding:0 20px}.landing-nav nav,.ghost-link{display:none}.landing-brand{font-size:21px}.hero-content{min-height:720px}.hero-copy{width:auto;padding:75px 24px 380px}.hero-copy h1{font-size:82px}.cn-title{font-size:20px}.hero-actions{gap:10px}.start-button,.demo-button{height:52px;padding:0 22px}.ring-system{right:50%;top:66%;width:480px;translate:50% -50%}.listener-silhouette{right:calc(50% - 70px);top:53%;width:140px;height:280px}.particle-field{right:0;top:37%;width:100%;height:52%}.wave-canvas{top:56%;height:22%}.explore-link{display:none}.feature-strip{grid-template-columns:1fr;padding:18px}.feature-strip a{min-height:78px}.nav-primary{min-width:94px}.hero-description{font-size:13px}}
 @media(prefers-reduced-motion:reduce){.landing-page *{animation:none!important;scroll-behavior:auto!important}.ring-system,.particle-field,.listener-silhouette{transition:none!important}}
 .demo-playing .ring-system{filter:brightness(1.14) drop-shadow(0 0 15px rgba(255,240,205,.5))!important}
