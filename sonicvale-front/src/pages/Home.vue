@@ -80,7 +80,7 @@ import { resetDemo } from '../demo/mockApi'
 import singerImage from '../assets/visuals/auralis-anime-singer.png'
 
 const isStaticDemo = IS_STATIC_DEMO
-const startRoute = isStaticDemo ? '/projects/1/workspace' : '/projects'
+const startRoute = isStaticDemo ? '/projects/7/workspace' : '/projects'
 const waveCanvas = ref(null)
 const demoPlaying = ref(false)
 const pointer = ref({ x:0, y:0 })

@@ -52,7 +52,10 @@ export function attachAudioAsset(lineId, sourcePath) {
 }
 
 export function getLineAudioUrl(lineId, version = 0, original = false) {
-  if (IS_STATIC_DEMO) return `./demo-audio/line-${lineId}.mp3`
+  if (IS_STATIC_DEMO) {
+    const hasProcessedDemoVersion = [111, 113].includes(Number(lineId))
+    return `./demo-audio/line-${lineId}${original && hasProcessedDemoVersion ? '-original' : ''}.mp3`
+  }
   const params = new URLSearchParams()
   if (version) params.set('v', version)
   if (original) params.set('original', 'true')
@@ -81,6 +84,7 @@ export function activateAudioVariant(lineId, variantId) {
 }
 
 export function getAudioVariantUrl(lineId, variantId, version = 0) {
+  if (IS_STATIC_DEMO) return `./demo-audio/line-${lineId}-variant-${variantId}.mp3`
   const query = version ? `?v=${encodeURIComponent(version)}` : ''
   return `${API_BASE_URL}lines/${lineId}/audio-variants/${variantId}/audio${query}`
 }

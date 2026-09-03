@@ -14,7 +14,7 @@
                 <el-option v-for="project in projects" :key="project.id" :label="project.name" :value="project.id" />
               </el-select>
             </el-form-item>
-            <el-form-item label="本章标题"><el-input v-model="draft.title" placeholder="例如：第一章 · 雨夜来信" /></el-form-item>
+            <el-form-item label="本章标题"><el-input v-model="draft.title" placeholder="例如：第一章 · 关键转折" /></el-form-item>
             <el-form-item label="改编要求"><el-input v-model="draft.instruction" type="textarea" :rows="3" resize="none" placeholder="例如：悬疑短剧，用雨声和敲门推进；对白短促，旁白不超过15%" /></el-form-item>
           </el-form>
         </section>

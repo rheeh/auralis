@@ -182,7 +182,7 @@ const actionBusy = computed(() => submitting.value || transitioning.value || ass
 const assistantPlaceholder = computed(() => ({
   awaiting_role_confirmation:'可以询问人物设定，或直接告诉助手如何修改角色……',
   awaiting_script_confirmation:'可以修改场景、对白、旁白或音效，也可以询问当前台本……',
-  completed:'例如：查看缺失音频、修改第12句、给林默换音色并重新生成……',
+  completed:'例如：查看缺失音频、修改第12句、给对应角色换音色并重新生成……',
   failed:'可以询问失败原因，或让助手检查当前项目状态……',
 }[snapshot.value?.current_stage] || '可以随时询问当前进度或告诉制作助手下一步要做什么……'))
 const roleEditsReady = computed(() => roleEdits.value.filter(role=>role.selected!==false).length>0 && roleEdits.value.filter(role=>role.selected!==false).every(role=>role.default_voice_id))

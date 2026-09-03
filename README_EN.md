@@ -10,7 +10,7 @@ The project emphasizes a complete production loop, clear state management, and r
 
 [▶ Start the Auralis static demo](https://rheeh.github.io/auralis/)
 
-The demo uses the real Vue pages and production components from this repository. A sample novel, parsed characters, reviewed script, voice bindings, and generated audio are preloaded, so the complete workflow can be explored without configuring a backend, model provider, or API key.
+The demo uses the real Vue pages and production components from this repository, with the actual `test4` project, *Undercurrents Before Morning Reading*, as its content. The source text, parsed characters, audio-drama script, voice bindings, and existing generated audio are preloaded, so the complete workflow can be explored without configuring a backend, model provider, or API key.
 
 ## Core Capabilities
 
