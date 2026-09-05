@@ -56,11 +56,9 @@
           </section>
 
           <section v-else class="prompt-view">
-            <header class="section-heading"><div><p class="night-kicker">PROMPT LAB</p><h2>让改编有据可查。</h2></div><span class="quiet-badge">3 种策略</span></header>
-            <p class="section-note">在相同模型和原创小说样本上比较提示词。先检查事实与结构，再判断对白、声音叙事和悬念。</p>
-            <article v-for="(strategy, index) in strategies" :key="strategy.title" class="strategy-card"><span class="strategy-letter">{{ 'ABC'[index] }}</span><div><h3>{{ strategy.title }}</h3><p>{{ strategy.description }}</p></div></article>
+            <header class="section-heading"><div><p class="night-kicker">PRODUCTION GUIDE</p><h2>把你的故事，变成下一场戏。</h2></div></header>
+            <p class="section-note">从小说原文开始，确认人物与台本，再为每句对白选择声音、编排音效并导出成片。</p>
             <div class="prompt-recipe"><h3>这段悬疑的导演约束</h3><ol><li>先列事实和每个人物已知的信息，禁止提前解释谜底。</li><li>把“看见蓝点”变成有动机的短对白，把重复叙述交给声音。</li><li>表演、音效、纯台词分开；音效写明进入时机与音量。</li><li>独立审查泄底、说话人、道具与声音时序，再修订。</li></ol></div>
-            <div class="eval-summary"><h3>实测记录</h3><p>{{ evaluation?.summary || '评测结果尚未加载；这里展示的是当前采用策略，不代表跨题材的普遍排名。' }}</p><a v-if="evaluation?.report" :href="assetUrl(evaluation.report)" target="_blank" rel="noopener">查看完整评测记录 <el-icon><TopRight /></el-icon></a><small>本样片是导演审定稿；评测原始输出单独保留，避免将人工精修归因于模型。</small></div>
             <label class="workbench-model">本次改编模型<select v-model="creationModel" aria-label="真实改编模型"><option value="qwen3.8-27b">qwen3.8-27b</option><option value="kimi-k3">kimi-k3</option></select></label><button class="night-primary workbench-cta" :disabled="creatingProject" @click="startRealProject">{{ creatingProject ? '创建项目…' : '用这段小说开始一次真实改编' }} <el-icon><TopRight /></el-icon></button><p v-if="isStaticDemo" class="section-note">真实改编需要本地工作台及你自己的模型配置。当前页面的试听、混音与导出无需 API Key。</p>
           </section>
         </main>
@@ -106,17 +104,12 @@ const key = 'auralis-night-delivery-v1'
 const clone = value => JSON.parse(JSON.stringify(value))
 const lines = ref(clone(fixture.lines)), cues = ref(clone(fixture.cues))
 const takes = reactive(Object.fromEntries(fixture.lines.map(line => [line.id, 'directed'])))
-const manifest = ref(null), freeCandidates = ref(null), evaluation = ref(null), activeTab = ref('script'), inspectorTab = ref('sound')
+const manifest = ref(null), freeCandidates = ref(null), activeTab = ref('script'), inspectorTab = ref('sound')
 const selectedLineId = ref('04'), newPlacement = ref('before'), newGain = ref(-16), search = ref('')
 const loadingAudio = ref(false), playing = ref(false), playhead = ref(0), muteEffects = ref(false), exporting = ref(false), creatingProject = ref(false)
 const error = ref(''), notice = ref(''), mode = ref('mix')
 let frame = 0, noticeTimer, previewDuration = 0, operation = 0
-const tabs = [{ id: 'script', number: '01', label: '台本与表演' }, { id: 'voices', number: '02', label: '角色试音' }, { id: 'prompts', number: '03', label: '提示词实验' }]
-const strategies = [
-  { title: '现行声音优先', description: '用对白与音效替代可听见的叙述，控制旁白。作为现有生产提示词基线。' },
-  { title: '事实锁定 + 导演分轨', description: '增加人物认知、事实、潜台词与导演分轨约束，检查是否减少信息遗漏。' },
-  { title: '导演分轨 + 微型示例', description: '在 B 的基础上增加改编示例，检查示范能否改善可听性与事实保留。' },
-]
+const tabs = [{ id: 'script', number: '01', label: '台本与表演' }, { id: 'voices', number: '02', label: '角色试音' }, { id: 'production', number: '03', label: '开始制作' }]
 const effects = [
   { id: 'rain', label: '雨敲窗', file: 'sfx/rain.mp3', kind: '环境 · 循环', seconds: 12 },
   { id: 'doorbell', label: '公寓门铃', file: 'sfx/doorbell.mp3', kind: '动作', seconds: 2 },
@@ -152,7 +145,6 @@ onMounted(async () => {
     }
   } catch { /* A damaged or unavailable browser store must not prevent the demo. */ }
   try { const response = await fetch(assetUrl('manifest.json')); if (!response.ok) throw new Error(); manifest.value = await response.json(); if (!ready.value) throw new Error(); for (const id of Object.keys(takes)) if (!manifest.value.lines[id]?.[takes[id]]) takes[id] = 'directed' } catch { error.value = '样片音频尚未就绪。你仍可编辑台本与音效安排。' }
-  try { const response = await fetch(assetUrl('evaluation.json')); if (response.ok) evaluation.value = await response.json() } catch { /* Optional, factual experiment summary only. */ }
   try { const response = await fetch(assetUrl('free-candidates.json')); if (response.ok) freeCandidates.value = await response.json() } catch { /* New auditions are independent of the preserved production takes. */ }
 })
 watch([lines, cues, takes], () => {
