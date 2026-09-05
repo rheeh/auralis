@@ -6,13 +6,13 @@
     </details>
 
     <header class="production-head">
-      <div><p class="eyebrow">逐句制作时间线</p><h2>台本、音色与音频</h2></div>
+      <div><p class="eyebrow">逐句制作</p><h2>{{ scriptOnly ? '审阅与编辑台本' : '选择声音与逐句试听' }}</h2></div>
       <div class="head-actions">
-        <el-button @click="$router.push({ path: '/timeline', query: { project_id: projectId, chapter_id: chapterId } })">成片与时间线</el-button>
+        <el-button @click="$emit('open-timeline',selectedLineId)">声音编排</el-button>
         <el-button :icon="Headset" @click="soundLibraryOpen = true">快捷加音效</el-button>
         <el-button :icon="Refresh" :loading="loading" @click="loadAll">刷新</el-button>
         <el-button :icon="MagicStick" :loading="autoBinding" @click="autoBind">AI 自动配音色</el-button>
-        <el-button type="primary" :icon="Headset" :disabled="!voiceReady" :loading="generating" @click="generateAudio">
+        <el-button type="primary" :icon="Headset" :disabled="!voiceReady || !canGenerateAll" :loading="generating" @click="generateAudio">
           {{ bulkGenerateLabel }}
         </el-button>
       </div>
@@ -33,6 +33,7 @@
             <div v-else class="material-icon"><el-icon><Headset /></el-icon></div>
             <div class="line-main">
               <div class="line-meta"><strong>{{ isSpeakable(line) ? roleName(line.role_id) : trackLabel(line) }}</strong><el-tag size="small" effect="plain">{{ trackLabel(line) }}</el-tag><span v-if="activeVariant(line)" class="active-version">当前采用 {{ activeVariant(line).label }}</span><span v-if="isSpeakable(line)" class="line-expand-state">{{ expandedLineIds.has(line.id)?'收起':'展开' }}</span></div>
+              <el-button text size="small" @click.stop="$emit('open-timeline',line.id)">定位到音轨</el-button>
               <el-button text size="small" :icon="Headset" @click.stop="soundAnchorId = line.id; soundLibraryOpen = true">在这句附近加音效</el-button>
               <p>{{ line.text_content }}</p>
               <div v-if="isSpeakable(line)" class="line-annotations">
@@ -59,10 +60,11 @@
                 <span v-else-if="generatedAudioVersions(line).length" class="audio-version-badge">版本 1/1</span>
                 <span class="time">{{ playingLineId===line.id ? formatTime(duration) : audioVersionLabel(line) }}</span>
               </div>
+              <div v-if="isSpeakable(line)" class="effective-voice"><strong>实际配音：{{ configurationFor(line)?.model || configurationFor(line)?.provider_name || '未配置' }}</strong><span>{{ configurationFor(line)?.voice_name || '未绑定音色' }} · {{ instructionLabel(configurationFor(line)?.instruction_mode) }}</span><small v-if="configurationFor(line)?.enabled===false">此声音已停用，新生成前请在人物卡更换音色。</small><el-tag v-if="configurationFor(line)?.needs_generation" type="warning" size="small">需要重新配音</el-tag></div>
               <div v-if="isSpeakable(line)" class="line-tools">
                 <span class="guidance-label">声音指导</span>
                 <el-input v-model="promptMap[line.id]" size="small" placeholder="单句声音提示词：如更克制、语速稍慢、压低声音……" clearable />
-                <el-button size="small" :type="hasAudio(line)?'default':'primary'" :loading="regeneratingId===line.id" @click="regenerate(line)">{{ hasAudio(line) ? '按当前指导重新生成本句' : '生成本句音频' }}</el-button>
+                <el-button size="small" :type="hasAudio(line)?'default':'primary'" :disabled="!configurationFor(line)?.enabled" :loading="regeneratingId===line.id" @click="regenerate(line)">{{ hasAudio(line) ? '按当前指导重新生成本句' : '生成本句音频' }}</el-button>
               </div>
               <small v-if="isSpeakable(line)" class="tts-guidance-hint" :class="{edge:isEdgeLine(line)}">{{ guidanceHint(line) }}</small>
               <div v-if="isSpeakable(line)&&expandedLineIds.has(line.id)" class="line-editor" @click.stop>
@@ -120,6 +122,7 @@ import { ElMessage } from 'element-plus'
 import { ArrowLeftBold, ArrowRightBold, Headset, MagicStick, Refresh, VideoPause, VideoPlay } from '@element-plus/icons-vue'
 import { addSmartRoleAndVoice } from '../../api/chapter'
 import { fetchSessionAudioTasks, generateSessionAudio, regenerateLineAudio } from '../../api/drama'
+import { fetchChapterProductionConfiguration } from '../../api/drama'
 import { activateAudioVariant, activateGeneratedAudioVersion, createAudioVariant, deleteAudioVariant, getAudioVariantUrl, getLinesByChapter, getLineAudioUrl, updateLine } from '../../api/line'
 import { getRolesByProject } from '../../api/role'
 import { fetchVoicesByTTS } from '../../api/voice'
@@ -129,7 +132,12 @@ import { getRoleAvatarUrl } from '../../api/drama'
 import WaveCellPro from '../WaveCellPro.vue'
 import SoundLibraryPanel from '../SoundLibraryPanel.vue'
 
-const props=defineProps({sessionId:{type:String,required:true},projectId:{type:Number,required:true},chapterId:{type:Number,required:true},ttsProviderId:Number,sourceText:String,voiceRevision:{type:Number,default:0}})
+const props=defineProps({sessionId:{type:String,required:true},projectId:{type:Number,required:true},chapterId:{type:Number,required:true},ttsProviderId:Number,sourceText:String,voiceRevision:{type:Number,default:0},selectedLineId:[Number,String],scriptOnly:Boolean})
+const emit=defineEmits(['open-timeline'])
+const productionConfiguration=ref([])
+const canGenerateAll=computed(()=>productionConfiguration.value.length>0 && productionConfiguration.value.every(item=>item.enabled))
+function configurationFor(line){return productionConfiguration.value.find(item=>item.line_id===line.id)}
+function instructionLabel(mode){return {native:'支持表演指令',structured:'支持结构化指令',mapped:'仅映射语速等参数',none:'不支持表演指令'}[mode]||'能力未确认'}
 const roles=ref([]),voices=ref([]),providers=ref([]),lines=ref([])
 const soundLibraryOpen = ref(false), soundAnchorId = ref(null)
 async function onSoundInserted() { audioVersion.value = Date.now(); await loadAll() }
@@ -166,8 +174,9 @@ const voiceStatusText=computed(()=>!speakableRoles.value.length?'当前台本还
 const scenes=computed(()=>{const groups=new Map();for(const line of lines.value){const title=line.scene_title||'未命名场景';if(!groups.has(title))groups.set(title,[]);groups.get(title).push(line)}return[...groups.entries()].map(([title,sceneLines])=>({title,lines:sceneLines}))})
 
 onMounted(()=>{bindPlayer();loadAll()});watch(()=>[props.sessionId,props.chapterId],loadAll);onBeforeUnmount(()=>{clearTimeout(pollTimer);player.pause();unbindPlayer()})
+watch(()=>props.selectedLineId,(id)=>{if(id)focusLine(id)})
 watch(()=>props.voiceRevision,(value,previous)=>{if(value>previous)voiceChanged.value=true})
-async function loadAll(){if(!props.chapterId)return;loading.value=true;try{providers.value=(await fetchTTSProviders())?.filter(item=>item.status!==0)||[];const [roleResponse,lineResponse,voiceLists,taskResponse,emotionList,strengthList]=await Promise.all([getRolesByProject(props.projectId),getLinesByChapter(props.chapterId),Promise.all(providers.value.map(item=>fetchVoicesByTTS(item.id))),fetchSessionAudioTasks(props.sessionId),fetchAllEmotions(),fetchAllStrengths()]);roles.value=roleResponse?.code===200?roleResponse.data||[]:[];lines.value=lineResponse?.code===200?lineResponse.data||[]:[];voices.value=voiceLists.flat();emotions.value=emotionList||[];strengths.value=strengthList||[];Object.keys(roleVoiceMap).forEach(key=>delete roleVoiceMap[key]);roles.value.forEach(role=>{if(role.default_voice_id)roleVoiceMap[role.id]=role.default_voice_id});lines.value.forEach(line=>{promptMap[line.id]=line.production_note||'';editMap[line.id]={text_content:line.text_content||'',emotion_id:line.emotion_id||null,strength_id:line.strength_id||null,production_note:line.production_note||''}});if(taskResponse?.code===200)Object.assign(audioSummary,taskResponse.data);schedulePoll()}catch(error){ElMessage.error(error?.response?.data?.message||error?.message||'读取制作数据失败')}finally{loading.value=false}}
+async function loadAll(){if(!props.chapterId)return;loading.value=true;try{providers.value=(await fetchTTSProviders())?.filter(item=>item.status!==0)||[];const [roleResponse,lineResponse,voiceLists,taskResponse,emotionList,strengthList]=await Promise.all([getRolesByProject(props.projectId),getLinesByChapter(props.chapterId),Promise.all(providers.value.map(item=>fetchVoicesByTTS(item.id))),fetchSessionAudioTasks(props.sessionId),fetchAllEmotions(),fetchAllStrengths()]);roles.value=roleResponse?.code===200?roleResponse.data||[]:[];lines.value=lineResponse?.code===200?lineResponse.data||[]:[];voices.value=voiceLists.flat();emotions.value=emotionList||[];strengths.value=strengthList||[];Object.keys(roleVoiceMap).forEach(key=>delete roleVoiceMap[key]);roles.value.forEach(role=>{if(role.default_voice_id)roleVoiceMap[role.id]=role.default_voice_id});lines.value.forEach(line=>{promptMap[line.id]=line.production_note||'';editMap[line.id]={text_content:line.text_content||'',emotion_id:line.emotion_id||null,strength_id:line.strength_id||null,production_note:line.production_note||''}});if(taskResponse?.code===200)Object.assign(audioSummary,taskResponse.data);const config=await fetchChapterProductionConfiguration(props.projectId,props.chapterId);productionConfiguration.value=config?.data?.lines||[];if(props.selectedLineId)await focusLine(props.selectedLineId);schedulePoll()}catch(error){ElMessage.error(error?.response?.data?.message||error?.message||'读取制作数据失败')}finally{loading.value=false}}
 function isSpeakable(line){return line.should_speak!==0&&!['sfx','bgm'].includes(line.track)&&!['sfx','bgm'].includes(line.line_type)}
 function trackLabel(line){return{voice:'人物',narration:'旁白',sfx:'音效',bgm:'BGM'}[line.track||line.line_type]||'台词'}
 function roleName(id){return roles.value.find(role=>role.id===id)?.name||'未知角色'}
@@ -183,10 +192,10 @@ function emotionName(id){return emotions.value.find(item=>item.id===id)?.name||'
 function generatedAudioVersions(line){const versions=line.audio_versions||[];return versions.length?versions:hasAudio(line)?[{id:'__legacy__',label:'版本 1'}]:[]}
 function activeGeneratedVersionId(line){const versions=generatedAudioVersions(line);return versions.some(item=>item.id===line.active_audio_version_id)?line.active_audio_version_id:versions.at(-1)?.id}
 function activeVariant(line){return(line.audio_variants||[]).find(item=>item.id===line.active_audio_variant_id)||null}function audioVersionLabel(line){return !hasAudio(line)?'待生成':activeVariant(line)?'处理版':'原音'}
-async function selectGeneratedVersion(line,versionId){if(!versionId||versionId==='__legacy__'||versionId===activeGeneratedVersionId(line))return;versionSwitchingId.value=line.id;try{const response=await activateGeneratedAudioVersion(line.id,versionId);if(response?.code!==200)throw new Error(response?.message||'切换失败');if(playingLineId.value===line.id){player.pause();player.removeAttribute('src');player.load();playingLineId.value=null;currentTime.value=0;duration.value=0}line.active_audio_version_id=versionId;line.active_audio_variant_id=null;audioVersion.value=Date.now();ElMessage.success(`已切换到${generatedAudioVersions(line).find(item=>item.id===versionId)?.label||'所选版本'}`)}catch(error){ElMessage.error(error?.response?.data?.message||error?.message||'切换音频版本失败')}finally{versionSwitchingId.value=null}}
+async function selectGeneratedVersion(line,versionId){if(!versionId||versionId==='__legacy__'||versionId===activeGeneratedVersionId(line))return;versionSwitchingId.value=line.id;try{const response=await activateGeneratedAudioVersion(line.id,versionId);if(response?.code!==200)throw new Error(response?.message||'切换失败');if(playingLineId.value===line.id){player.pause();player.removeAttribute('src');player.load();playingLineId.value=null;currentTime.value=0;duration.value=0}line.active_audio_version_id=versionId;line.active_audio_variant_id=null;audioVersion.value=Date.now();await loadAll();ElMessage.success(`已切换音频版本，需刷新声音编排并重新混音`)}catch(error){ElMessage.error(error?.response?.data?.message||error?.message||'切换音频版本失败')}finally{versionSwitchingId.value=null}}
 function toggleLineEditor(line,event){if(!isSpeakable(line))return;if(event.target.closest('button,input,textarea,select,a,audio,.el-input,.el-select,.line-tools,[role="slider"]'))return;expandedLineIds.has(line.id)?expandedLineIds.delete(line.id):expandedLineIds.add(line.id)}
 async function autoBind(){autoBinding.value=true;try{const response=await addSmartRoleAndVoice(props.projectId,props.chapterId);if(response?.code!==200)throw new Error(response?.message||'自动分配失败');voiceChanged.value=true;await loadAll();ElMessage.success('已从全部模型来源为人物分配不同音色')}catch(error){ElMessage.error(error?.response?.data?.message||error?.message||'自动分配失败')}finally{autoBinding.value=false}}
-async function generateAudio(){if(!voiceReady.value)return ElMessage.warning('请先为每个人物绑定不同音色');generating.value=true;try{const response=await generateSessionAudio(props.sessionId,voiceChanged.value);if(response?.code!==200)throw new Error(response?.message||'创建任务失败');voiceChanged.value=false;await loadAll();ElMessage.success(response.data?.created?`已加入 ${response.data.created} 条任务`:'没有新的待生成台词')}catch(error){ElMessage.error(error?.response?.data?.message||error?.message||'生成失败')}finally{generating.value=false}}
+async function generateAudio(){if(!voiceReady.value||!canGenerateAll.value)return ElMessage.warning('请先为每个人物绑定已启用的独立音色');generating.value=true;try{const response=await generateSessionAudio(props.sessionId,voiceChanged.value);if(response?.code!==200)throw new Error(response?.message||'创建任务失败');voiceChanged.value=false;await loadAll();ElMessage.success(response.data?.created?`已加入 ${response.data.created} 条任务`:'没有新的待生成台词')}catch(error){ElMessage.error(error?.response?.data?.message||error?.message||'生成失败')}finally{generating.value=false}}
 async function regenerate(line){regeneratingId.value=line.id;try{const response=await regenerateLineAudio(props.sessionId,line.id,promptMap[line.id]||'');if(response?.code!==200)throw new Error(response?.message||'重新生成失败');audioVersion.value=Date.now();await loadAll();ElMessage.success('已按单句提示词加入生成队列')}catch(error){ElMessage.error(error?.response?.data?.message||error?.message||'重新生成失败')}finally{regeneratingId.value=null}}
 async function saveLine(line){const edit=editMap[line.id];if(!edit?.text_content?.trim())return ElMessage.warning('朗读文本不能为空');if(/[()（）\[\]【】]/.test(edit.text_content))return ElMessage.warning('朗读文本不能包含括号提示，请把提示写到后期说明');savingId.value=line.id;try{const changed=edit.text_content.trim()!==line.text_content;const guidanceChanged=edit.emotion_id!==line.emotion_id||edit.strength_id!==line.strength_id||(edit.production_note?.trim()||'')!==(line.production_note||'');const response=await updateLine(line.id,{chapter_id:props.chapterId,text_content:edit.text_content.trim(),emotion_id:edit.emotion_id,strength_id:edit.strength_id,production_note:edit.production_note?.trim()||null,...(changed?{status:'pending',is_done:0}:{})});if(response?.code!==200)throw new Error(response?.message||'保存失败');await loadAll();ElMessage.success(changed?'台词已保存，请重新生成本句音频':guidanceChanged?'情绪、强度或声音指导已保存；重新生成后才会反映到音频中':'台词信息已保存')}catch(error){ElMessage.error(error?.response?.data?.message||error?.message||'保存失败')}finally{savingId.value=null}}
 async function processLine(line,payload){try{const response=await createAudioVariant(line.id,payload);if(response?.code!==200)throw new Error(response?.message||'音频版本创建失败');audioVersion.value=Date.now();await loadAll();ElMessage.success('已从原音频保存一个独立处理版本')}catch(error){ElMessage.error(error?.response?.data?.message||error?.message||'音频版本创建失败')}}
@@ -216,4 +225,6 @@ function schedulePoll(){clearTimeout(pollTimer);if((audioSummary.tasks||[]).some
 .line-annotations{display:flex;align-items:center;gap:6px;min-width:0;margin:4px 0 7px}.line-annotations>span{min-width:0;overflow:hidden;color:var(--el-text-color-secondary);font-size:11px;text-overflow:ellipsis;white-space:nowrap}.line-annotations>span.missing{color:var(--el-color-warning)}.active-version{padding:2px 7px;border-radius:99px;color:var(--el-color-success)!important;background:var(--el-color-success-light-9)}.guidance-label{flex:0 0 auto;color:var(--el-text-color-secondary);font-size:11px}.source-audio-label{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:0 10px 8px}.source-audio-label small{color:var(--el-text-color-secondary);font-size:10px}.variant-list{padding-bottom:10px}.variant-item{grid-template-columns:minmax(150px,1fr) minmax(230px,320px) auto auto}.variant-item.active{margin:0 -5px;padding:7px 5px;border-radius:7px;background:var(--el-color-success-light-9)}
 .tts-guidance-hint{display:block;margin:5px 0 0;color:var(--el-text-color-secondary);font-size:10px;line-height:1.5}.tts-guidance-hint.edge{color:var(--el-color-warning)}
 @media(max-width:760px){.line-annotations{flex-wrap:wrap}.line-annotations>span{flex-basis:100%}.line-tools{align-items:stretch;flex-direction:column}.source-audio-label{align-items:flex-start;flex-direction:column}.variant-item{grid-template-columns:1fr auto}.variant-item audio{grid-column:1/-1}}
+
+.effective-voice{display:flex;flex-wrap:wrap;gap:6px 12px;margin:8px 0;font-size:11px}.effective-voice span,.effective-voice small{color:var(--el-text-color-secondary)}
 </style>

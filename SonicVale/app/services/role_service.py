@@ -1,8 +1,9 @@
 from __future__ import annotations
-from sqlalchemy import Sequence
+from sqlalchemy import Sequence, select
 
 from app.entity.role_entity import RoleEntity
-from app.models.po import RolePO
+from app.models.po import RolePO, LinePO
+from app.services.timeline_service import TimelineService
 from app.repositories.role_repository import RoleRepository
 
 
@@ -71,7 +72,16 @@ class RoleService:
         # 防止改变project_id
         if po.project_id != project_id:
             return False
+        voice_changed = "default_voice_id" in data and data["default_voice_id"] != po.default_voice_id
         self.repository.update(role_id, data)
+        if voice_changed:
+            lines = list(self.repository.db.execute(select(LinePO).where(LinePO.role_id == role_id)).scalars())
+            for line in lines:
+                if line.should_speak != 0 and line.track not in {"sfx", "bgm"}:
+                    line.status, line.is_done = "pending", 0
+            self.repository.db.commit()
+            for line in lines:
+                TimelineService.invalidate_line(self.repository.db, line.id, "角色音色已变化，需要重新配音")
         return True
 
     def delete_role(self, role_id: int) -> bool:

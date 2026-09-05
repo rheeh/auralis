@@ -1,7 +1,17 @@
 <template>
   <div class="project-workspace">
-    <section class="workspace-grid">
-      <aside class="conversation-panel">
+    <header class="workspace-header">
+      <div><p class="workspace-eyebrow">章节工作台</p><h1>{{ project?.name || '广播剧制作' }}</h1></div>
+      <div class="workspace-actions">
+        <el-select :model-value="snapshot?.chapter_id || null" placeholder="选择章节" aria-label="当前章节" :disabled="loadingWorkspace" @change="changeChapter"><el-option v-for="chapter in chapters" :key="chapter.id" :label="chapter.title" :value="chapter.id" /></el-select>
+        <el-button @click="startNew">新建章节</el-button>
+        <el-button :aria-expanded="assistantOpen" @click="assistantOpen=!assistantOpen">{{ assistantOpen?'收起制作助手':'打开制作助手' }}</el-button>
+      </div>
+    </header>
+    <ProductionSteps :model-value="selectedView" :steps="workspaceSteps" @update:model-value="selectView" />
+    <el-alert v-if="workspaceError" :title="workspaceError" type="error" :closable="false" />
+    <section v-loading="loadingWorkspace" class="workspace-grid" :class="{'assistant-hidden':!assistantOpen}">
+      <aside v-show="assistantOpen" class="conversation-panel">
         <div class="conversation-scroll">
           <section v-if="snapshot" class="assistant-mission">
             <div>
@@ -18,14 +28,7 @@
           <ChatMessageList v-else :messages="messages" />
         </div>
 
-        <div v-if="!snapshot" class="source-composer">
-          <el-input v-model="draft.title" placeholder="章节或本次改编标题（可选）" />
-          <el-input v-model="draft.source_text" type="textarea" :rows="10" resize="none" placeholder="把小说原文粘贴到这里……" />
-          <el-input v-model="draft.instruction" type="textarea" :rows="3" resize="none" placeholder="补充要求：风格、时长、节奏、旁白比例等（可选）" />
-          <div class="composer-footer"><span>{{ sourceChars }} 字</span><el-button type="primary" :loading="submitting" :disabled="!sourceChars" @click="createSession">发送</el-button></div>
-        </div>
-
-        <div v-else class="session-composer">
+        <div v-if="snapshot" class="session-composer">
           <div class="assistant-actions">
             <template v-if="snapshot.current_stage==='awaiting_role_confirmation'">
               <el-button type="primary" :loading="actionBusy" :disabled="!roleEditsReady" @click="confirmRoles(roleEdits)">确认人物并生成台本</el-button>
@@ -40,7 +43,7 @@
               <el-button type="primary" :loading="actionBusy" @click="commitScript">建立逐句制作</el-button>
             </template>
             <template v-else-if="snapshot.current_stage==='completed'">
-              <el-button size="small" @click="resultView='characters'">查看人物卡</el-button>
+              <el-button size="small" @click="selectView('script');resultView='characters'">查看人物卡</el-button>
               <el-button size="small" :disabled="assistantBusy" @click="sendSuggestedRevision('播放本章所有已生成的音频。')">一键播放</el-button>
               <el-button type="primary" size="small" :loading="assistantBusy" @click="sendSuggestedRevision('生成本章所有缺失的试听音频。')">生成缺失试听</el-button>
             </template>
@@ -62,15 +65,27 @@
         </div>
       </aside>
 
-      <main class="result-panel">
-        <div v-if="canViewCharacters" class="result-head">
+      <section class="result-panel">
+        <div v-if="selectedView==='script' && canViewCharacters" class="result-head">
           <div class="view-switch">
             <el-button size="small" :type="resultView==='output'?'primary':'default'" @click="resultView='output'">当前制作</el-button>
-            <el-button size="small" :type="resultView==='characters'?'primary':'default'" @click="resultView='characters'">人物卡</el-button>
+            <el-button size="small" :type="resultView==='characters'?'primary':'default'" @click="selectView('script');resultView='characters'">人物卡</el-button>
           </div>
         </div>
 
-        <CharacterCardsArchive v-if="resultView==='characters'" :roles="roleDrafts" :session-id="snapshot?.session_id" :project-id="projectId" @voice-changed="voiceRevision++" />
+        <section v-if="selectedView==='source'" class="workspace-source">
+          <h2>小说原文</h2><p class="source-hint">从原文建立人物和台本，确认后进入配音与声音编排。</p>
+          <template v-if="snapshot"><h3>{{ snapshot.title }}</h3><pre>{{ snapshot.source_text || '这个章节没有保存原文，可直接继续编辑台本。' }}</pre><p v-if="snapshot.instruction">改编要求：{{ snapshot.instruction }}</p><el-button type="primary" @click="selectView('script')">查看人物与台本</el-button></template>
+        <div v-else class="source-composer">
+          <el-input v-model="draft.title" placeholder="章节或本次改编标题（可选）" />
+          <el-input v-model="draft.source_text" type="textarea" :rows="10" resize="none" placeholder="把小说原文粘贴到这里……" />
+          <el-input v-model="draft.instruction" type="textarea" :rows="3" resize="none" placeholder="补充要求：风格、时长、节奏、旁白比例等（可选）" />
+          <div class="composer-footer"><span>{{ sourceChars }} 字</span><el-button type="primary" :loading="submitting" :disabled="!sourceChars" @click="createSession">解析原文，进入人物与台本</el-button></div>
+        </div>
+
+        </section>
+        <ChapterTimeline v-else-if="['timeline','export'].includes(selectedView) && snapshot?.chapter_id" :key="`timeline-${snapshot.chapter_id}-${selectedView}`" :project-id="projectId" :chapter-id="snapshot.chapter_id" :selected-line-id="selectedLineId" :export-only="selectedView==='export'" @focus-line="focusProductionLine" />
+        <CharacterCardsArchive v-else-if="resultView==='characters' && selectedView==='script'" :roles="roleDrafts" :session-id="snapshot?.session_id" :project-id="projectId" @voice-changed="voiceRevision++" />
 
         <div v-else-if="!snapshot" class="result-empty">
           <el-icon><Document /></el-icon>
@@ -117,24 +132,29 @@
         <ProductionScriptPanel
           ref="productionRef"
           v-else-if="snapshot.current_stage === 'completed' && snapshot.chapter_id"
+          :key="`production-${snapshot.chapter_id}-${selectedView}`"
           :session-id="snapshot.session_id"
           :project-id="projectId"
           :chapter-id="snapshot.chapter_id"
+          :selected-line-id="selectedLineId"
+          :script-only="selectedView==='script'"
+          @open-timeline="openTimeline"
           :tts-provider-id="project?.tts_provider_id"
           :source-text="snapshot.source_text"
           :voice-revision="voiceRevision"
         />
-      </main>
+      </section>
     </section>
   </div>
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Document, Refresh } from '@element-plus/icons-vue'
 import {
+  openChapterWorkspace,
   commitChatSession,
   confirmChatDraft,
   createChatSession,
@@ -145,6 +165,10 @@ import {
   sendChatMessage,
 } from '../api/drama'
 import { getProjectDetail } from '../api/project'
+import { getChaptersByProject } from '../api/chapter'
+import ProductionSteps from '../components/production/ProductionSteps.vue'
+import ChapterTimeline from '../components/production/ChapterTimeline.vue'
+import { defaultWorkspaceView, resolveWorkspaceView, workspaceLocation } from '../workspace/navigation'
 import ChatMessageList from '../components/workflow/ChatMessageList.vue'
 import CharacterCardsArchive from '../components/workflow/CharacterCardsArchive.vue'
 import ProductionScriptPanel from '../components/workflow/ProductionScriptPanel.vue'
@@ -152,8 +176,21 @@ import RoleDraftConfirmCard from '../components/workflow/RoleDraftConfirmCard.vu
 import ScriptDraftConfirmCard from '../components/workflow/ScriptDraftConfirmCard.vue'
 import WorkflowErrorCard from '../components/workflow/WorkflowErrorCard.vue'
 
-const route = useRoute()
+const route = useRoute(), router = useRouter()
 const projectId = Number(route.params.id)
+const chapters=ref([]),assistantOpen=ref(false),loadingWorkspace=ref(false),workspaceError=ref('')
+const selectedLineId=computed(()=>Number(route.query.line_id)||null)
+const selectedView=computed(()=>resolveWorkspaceView(route.query.view,snapshot.value?.current_stage,snapshot.value?.chapter_id))
+const workspaceSteps=computed(()=>[
+  {id:'source',label:'原文'}, {id:'script',label:'人物与台本',disabled:!snapshot.value},
+  ...[{id:'voices',label:'配音'},{id:'timeline',label:'声音编排'},{id:'export',label:'导出'}].map(item=>({...item,disabled:snapshot.value?.current_stage!=='completed'||!snapshot.value?.chapter_id})),
+])
+let workspaceEpoch=0
+function selectView(view){resultView.value='output';router.replace({...workspaceLocation(projectId,snapshot.value?.chapter_id,view,selectedLineId.value),query:{...route.query,...workspaceLocation(projectId,snapshot.value?.chapter_id,view,selectedLineId.value).query}})}
+function changeChapter(chapterId){router.push(workspaceLocation(projectId,chapterId,selectedView.value))}
+function openTimeline(lineId){router.push(workspaceLocation(projectId,snapshot.value?.chapter_id,'timeline',lineId))}
+async function focusProductionLine(lineId){await router.push(workspaceLocation(projectId,snapshot.value?.chapter_id,'voices',lineId));await nextTick();if(lineId)await productionRef.value?.focusLine?.(lineId)}
+watch(()=>route.query.chapter_id,(next,previous)=>{if(next!==previous && Number(next)!==snapshot.value?.chapter_id)loadWorkspace()})
 const project = ref(null)
 const snapshot = ref(null)
 const messages = ref([])
@@ -173,6 +210,7 @@ const productionRef = ref(null)
 const voiceRevision = ref(0)
 let pollTimer = null
 let transitionStartedAt = 0
+watch(()=>snapshot.value?.current_stage,(stage,previous)=>{if(stage && stage!==previous && previous && ['source','script'].includes(selectedView.value))selectView(defaultWorkspaceView(stage))})
 
 const sourceChars = computed(() => draft.source_text.trim().length)
 const roleDrafts = computed(() => snapshot.value?.role_drafts?.roles || [])
@@ -209,28 +247,33 @@ const assistantMission = computed(() => ({
 }[snapshot.value?.current_stage]||{title:'AI 正在推进制作',detail:'处理完成后会自动刷新并显示下一步。'}))
 
 onMounted(loadWorkspace)
-onBeforeUnmount(() => clearTimeout(pollTimer))
+onBeforeUnmount(() => {workspaceEpoch++;clearTimeout(pollTimer)})
 
 async function loadWorkspace() {
+  const epoch=++workspaceEpoch
+  clearTimeout(pollTimer);loadingWorkspace.value=true;workspaceError.value=''
   try {
-    const imported = sessionStorage.getItem(`auralis-source-${projectId}`)
-    if (imported) { Object.assign(draft, JSON.parse(imported)); sessionStorage.removeItem(`auralis-source-${projectId}`) }
-  } catch { /* The normal composer remains usable if browser storage is unavailable. */ }
-  const projectResponse = await getProjectDetail(projectId)
-  project.value = projectResponse?.code === 200 ? projectResponse.data : null
-  const sessionsResponse = await fetchChatSessions({ project_id: projectId, limit: 20 })
-  const sessions = sessionsResponse?.code === 200 ? sessionsResponse.data || [] : []
-  const projectCreatedAt = project.value?.created_at ? new Date(project.value.created_at).getTime() : 0
-  const latest = sessions.find((item) => {
-    if (['cancelled'].includes(item.current_stage)) return false
-    const sessionCreatedAt = item.created_at ? new Date(item.created_at).getTime() : 0
-    return !projectCreatedAt || sessionCreatedAt >= projectCreatedAt
-  })
-  if (latest) await loadSession(latest.session_id)
+    try {const imported=sessionStorage.getItem(`auralis-source-${projectId}`);if(imported){Object.assign(draft,JSON.parse(imported));sessionStorage.removeItem(`auralis-source-${projectId}`)}} catch {}
+    const [projectResponse,chaptersResponse,sessionsResponse]=await Promise.all([getProjectDetail(projectId),getChaptersByProject(projectId),fetchChatSessions({project_id:projectId,limit:100})])
+    if(epoch!==workspaceEpoch)return
+    if(projectResponse?.code!==200)throw new Error('项目不存在或无法读取')
+    project.value=projectResponse.data;chapters.value=chaptersResponse?.code===200?chaptersResponse.data||[]:[]
+    const projectCreatedAt=new Date(project.value.created_at||0).getTime()
+    const sessions=(sessionsResponse?.code===200?sessionsResponse.data||[]:[]).filter(item=>item.current_stage!=='cancelled' && (!projectCreatedAt || new Date(item.created_at||0).getTime()>=projectCreatedAt))
+    if(route.query.new==='1'){snapshot.value=null;messages.value=[];return}
+    const requested=Number(route.query.chapter_id)
+    if(requested && !chapters.value.some(chapter=>chapter.id===requested))throw new Error('该章节不属于当前项目或已被移除')
+    const latest=route.query.session_id?sessions.find(item=>item.session_id===route.query.session_id):requested?sessions.find(item=>item.chapter_id===requested):sessions[0]
+    snapshot.value=null;messages.value=[]
+    if(latest)await loadSession(latest.session_id,epoch)
+    else if(requested || chapters.value.length){const response=await openChapterWorkspace(projectId,requested||chapters.value[0].id);if(response?.code!==200)throw new Error(response?.message||'章节工作台打开失败');if(epoch===workspaceEpoch)await loadSession(response.data.session_id,epoch)}
+    if(snapshot.value && epoch===workspaceEpoch){const location=workspaceLocation(projectId,snapshot.value.chapter_id,resolveWorkspaceView(route.query.view,snapshot.value.current_stage,snapshot.value.chapter_id),selectedLineId.value);if(!snapshot.value.chapter_id)location.query.session_id=snapshot.value.session_id;await router.replace(location)}
+  } catch(error){if(epoch===workspaceEpoch){workspaceError.value=apiError(error,'工作台读取失败');snapshot.value=null}}
+  finally{if(epoch===workspaceEpoch)loadingWorkspace.value=false}
 }
 
 function requestId() { return globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}` }
-function startNew() { clearTimeout(pollTimer); snapshot.value=null;messages.value=[];feedback.value='';assistantBusy.value=false;pendingAssistantMessageId.value='';draft.title='';draft.source_text='';resultView.value='output' }
+function startNew(){workspaceEpoch++;clearTimeout(pollTimer);snapshot.value=null;messages.value=[];feedback.value='';assistantBusy.value=false;pendingAssistantMessageId.value='';draft.title='';draft.source_text='';resultView.value='output';workspaceError.value='';router.push({path:route.path,query:{view:'source',new:'1'}})}
 
 async function createSession() {
   if (!sourceChars.value) return
@@ -239,14 +282,15 @@ async function createSession() {
     const response = await createChatSession({ project_id:projectId, title:draft.title || null, source_text:draft.source_text, instruction:draft.instruction || null })
     if (![200,202].includes(response?.code)) throw new Error(response?.message || '创建会话失败')
     snapshot.value = response.data
+    await router.replace({path:route.path,query:{view:'script',session_id:response.data.session_id}})
     await refreshHistory()
     schedulePoll()
   } catch (error) { ElMessage.error(apiError(error,'创建改编失败')) } finally { submitting.value=false }
 }
 
-async function loadSession(sessionId) {
+async function loadSession(sessionId, epoch=workspaceEpoch) {
   const response = await fetchChatSession(sessionId)
-  if (response?.code === 200) {
+  if (response?.code === 200 && epoch===workspaceEpoch) {
     const nextStage=response.data.current_stage
     snapshot.value=response.data
     if (transitioning.value && nextStage!==transitionFromStage.value) {
@@ -328,8 +372,9 @@ function schedulePoll() {
 }
 async function applyAssistantActions(actions){
   if(!actions.length)return
+  await focusProductionLine(null)
   resultView.value='output'
-  await new Promise(resolve=>setTimeout(resolve,0))
+  await nextTick()
   if(actions.some(action=>action.type==='refresh_project'))await productionRef.value?.loadAll?.()
   const focus=actions.find(action=>action.type==='focus_line')
   if(focus)productionRef.value?.focusLine?.(focus.line_id)
@@ -349,4 +394,6 @@ function apiError(error,fallback){return error?.response?.data?.message||error?.
 .working-hint i{width:7px;height:7px;flex:0 0 7px;border-radius:50%;background:var(--el-color-primary);box-shadow:0 0 0 4px color-mix(in srgb,var(--el-color-primary) 14%,transparent);animation:assistant-pulse 1.4s ease-in-out infinite}
 @keyframes assistant-pulse{50%{opacity:.45;transform:scale(.82)}}
 .result-head{justify-content:center;min-height:42px;padding:5px 12px}.view-switch{display:flex;align-items:center;gap:8px}.view-switch .el-button{min-width:88px;font-size:13px}
+
+.project-workspace{height:auto;min-height:100%;display:flex;flex-direction:column;gap:16px}.workspace-header{display:flex;align-items:center;justify-content:space-between;gap:14px}.workspace-header h1{font-size:22px;margin:4px 0}.workspace-eyebrow{margin:0;font-size:11px;color:var(--el-text-color-secondary)}.workspace-actions{display:flex;gap:8px;align-items:center}.workspace-actions .el-select{width:240px}.workspace-grid{min-height:600px;flex:1;align-items:start}.workspace-grid.assistant-hidden{grid-template-columns:minmax(0,1fr)}.conversation-panel{position:sticky;top:12px;max-height:calc(100vh - 240px);min-height:500px}.result-panel{min-height:600px;overflow:visible}.workspace-source{padding:24px;max-width:960px}.workspace-source h2{margin:0 0 10px}.source-hint{color:var(--el-text-color-secondary)}.workspace-source pre{font:inherit;line-height:1.9;white-space:pre-wrap;overflow-wrap:anywhere;padding:20px;background:var(--el-fill-color-extra-light);border-radius:10px}.workspace-source .source-composer{padding:0;border:0}.workspace-source .source-composer .el-input{margin-bottom:10px}@media(max-width:900px){.workspace-header{align-items:flex-start;flex-direction:column}.workspace-actions{width:100%;flex-wrap:wrap}.workspace-actions .el-select{flex:1;min-width:160px}.workspace-grid{grid-template-columns:1fr}.conversation-panel{position:static;max-height:520px}.workspace-source{padding:16px}}
 </style>

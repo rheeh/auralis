@@ -4,12 +4,13 @@ from fastapi import FastAPI
 
 from app.core.ws_manager import manager
 from app.db.database import SessionLocal
-from app.routers.chapter_router import get_voice_service, get_emotion_service, get_strength_service
-from app.routers.multi_emotion_voice_router import get_multi_emotion_voice_service
-from app.routers.role_router import get_line_service, get_role_service, get_project_service
+from app.services.factory import get_voice_service, get_emotion_service, get_strength_service
+from app.services.factory import get_multi_emotion_voice_service
+from app.services.factory import get_line_service, get_role_service, get_project_service
 from app.models.po import ChatSessionPO
 from app.core.tts_guidance import emotion_text_to_vector
 from app.services.audio_task_service import AudioTaskService
+from app.services.production_configuration import effective_provider_id
 from app.workflows.drama.events import WorkflowEventPublisher
 
 TTS_TIMEOUT_SECONDS = 1200  # 可调
@@ -113,7 +114,7 @@ async def tts_worker(app: FastAPI):
                     ex,
                     line_service.generate_audio,
                     reference_path,
-                    (voice.tts_provider_id if voice and voice.tts_provider_id else project.tts_provider_id),
+                    effective_provider_id(project, voice),
                     dto.text_content,
                     emo_text,
                     emo_vector,

@@ -25,7 +25,8 @@ def get_drama_adaptation_service(db: Session = Depends(get_db)) -> DramaAdaptati
     "/runs",
     response_model=Res[DramaAdaptationResponseDTO],
     summary="小说改编为广播剧工程",
-    description="执行解析小说、生成广播剧台本、润色可播语言三段 Agent 流程，并可写入项目章节。",
+    description="历史结构化工作流兼容接口；新制作统一使用 /chat/sessions 的逐步确认流程。",
+    deprecated=True,
 )
 async def create_adaptation_run(
     dto: DramaAdaptationRequestDTO,

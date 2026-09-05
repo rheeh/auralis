@@ -22,7 +22,7 @@
         </aside>
 
         <main class="director-panel">
-          <nav class="director-tabs" aria-label="样片制作步骤"><button v-for="tab in tabs" :key="tab.id" :class="{ active: activeTab === tab.id }" :aria-pressed="activeTab === tab.id" @click="activeTab = tab.id"><span>{{ tab.number }}</span>{{ tab.label }}</button></nav>
+          <ProductionSteps v-model="activeTab" :steps="tabs" />
 
           <section v-if="activeTab === 'script'" class="script-view">
             <header class="section-heading"><div><p class="night-kicker">SCRIPT & PERFORMANCE</p><h2>每一句，都有目的。</h2></div><span class="quiet-badge">{{ lines.length }} 句 · 3 个声音</span></header>
@@ -66,7 +66,7 @@
         <aside class="sound-inspector">
           <header><p class="night-kicker">SOUND DESIGN</p><h2>给这一刻，一个声音。</h2><p>选中台词，试听，再一键加入。</p></header>
           <label class="anchor-picker">当前台词<select v-model="selectedLineId"><option v-for="line in lines" :key="line.id" :value="line.id">{{ line.id }} · {{ role(line.role).name }} · {{ line.text.slice(0, 16) }}</option></select></label>
-          <div class="cue-settings"><label>进入时机<select v-model="newPlacement"><option value="before">台词前</option><option value="with">与台词同时</option><option value="after">台词后</option></select></label><label>音量 <strong>{{ newGain }} dB</strong><input v-model.number="newGain" type="range" min="-32" max="0" aria-label="新增音效音量" /></label></div>
+          <div class="cue-settings"><label>进入时机<CuePlacementSelect v-model="newPlacement" /></label><label>音量 <strong>{{ newGain }} dB</strong><input v-model.number="newGain" type="range" min="-32" max="0" aria-label="新增音效音量" /></label></div>
           <label class="effect-search"><el-icon><Search /></el-icon><input v-model="search" aria-label="搜索音效" placeholder="搜索雨声、门铃、脚步…" /></label>
           <div class="effects-list"><article v-for="effect in filteredEffects" :key="effect.id"><div><strong>{{ effect.label }}</strong><small>{{ effect.kind }} · {{ effect.seconds }}s</small></div><button :aria-label="`试听${effect.label}`" :disabled="loadingAudio" @click="previewFile(effect.file, effect.seconds)"><el-icon><VideoPlay /></el-icon></button><button :aria-label="`添加${effect.label}`" @click="addCue(effect)"><el-icon><Plus /></el-icon></button></article><p v-if="!filteredEffects.length" class="empty-note">没有找到，试试“雨”或“门”。</p></div>
           <section class="selected-cues"><h3>本句声音 <span>{{ lineCues(selectedLineId).length }}</span></h3><p v-if="!lineCues(selectedLineId).length" class="empty-note">为第 {{ selectedLineId }} 句添加一个声音。</p><article v-for="cue in lineCues(selectedLineId)" :key="cue.id"><div><strong>{{ cue.label }}</strong><small>{{ placementLabel(cue.placement) }} · {{ cue.gain }} dB</small></div><button :aria-label="`移除${cue.label}`" @click="removeCue(cue.id)"><el-icon><Close /></el-icon></button><input v-model.number="cue.gain" type="range" min="-36" max="0" :aria-label="`${cue.label}音量`" @input="stopPlayback" /></article></section>
@@ -76,7 +76,7 @@
 
       <section class="mix-desk" aria-label="成片混音与导出"><div class="mix-transport"><button class="mix-play" :aria-label="playing ? '暂停成片' : '播放成片'" :disabled="!ready || loadingAudio || staleLines.length > 0" @click="toggleMix"><el-icon><component :is="playing ? VideoPause : VideoPlay" /></el-icon></button><div><strong>{{ playing ? '正在播放' : '成片预览' }} <span>{{ formatTime(playhead) }} / {{ formatTime(schedule.duration) }}</span></strong><p>{{ staleLines.length ? `${staleLines.length} 句台词已修改，重新配音前不能导出旧音频。` : '你的台词版本、音效位置与音量，会一起进入导出成片。' }}</p></div><div class="mix-actions"><button :class="{ muted: muteEffects }" :aria-pressed="muteEffects" @click="muteEffects = !muteEffects; stopPlayback()"><el-icon><Headset /></el-icon>{{ muteEffects ? '纯人声' : '含音效' }}</button><button class="night-primary" aria-label="导出 WAV" :disabled="!ready || exporting || staleLines.length > 0" @click="exportMix"><el-icon><Download /></el-icon>{{ exporting ? '正在混音…' : '导出 WAV' }}</button></div></div>
         <input class="mix-seek" type="range" :min="0" :max="schedule.duration" :value="playhead" step="0.1" aria-label="成片播放进度" @input="seekMix" />
-        <div class="track-lanes"><div v-for="kind in ['voice', 'sfx']" :key="kind" class="track-lane"><span>{{ kind === 'voice' ? '人声' : '音效' }}</span><div class="track-bed"><button v-for="clip in schedule.clips.filter(item => item.kind === kind)" :key="clip.id" :style="{ left: `${clip.start / schedule.duration * 100}%`, width: `${clip.duration / schedule.duration * 100}%` }" :title="`${clip.label} · ${clip.start.toFixed(1)}s`" :aria-label="`跳转到${clip.label}`" @click="jumpTo(clip.start)">{{ kind === 'voice' ? role(clip.role).initial : '' }}</button><i :style="{ left: `${playhead / schedule.duration * 100}%` }" /></div></div></div>
+        <TimelineTracks :tracks="demoTracks" :duration-ms="schedule.duration*1000" :selected-line-id="selectedLineId" compact @select="selectDemoClip" />
       </section>
       <p v-if="error" class="night-error" role="alert">{{ error }}</p><p class="night-notice" role="status" aria-live="polite">{{ notice }}</p>
       <footer class="night-footer"><span>AURALIS · NOVEL → SCRIPT → PERFORMANCE → SOUND</span><span>声音由 AI 合成 · 原创演示故事 · 可编辑的制作过程</span></footer>
@@ -88,6 +88,9 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowDown, Check, Close, Download, Headset, InfoFilled, Microphone, Plus, RefreshLeft, Search, TopRight, VideoPause, VideoPlay } from '@element-plus/icons-vue'
+import ProductionSteps from '../components/production/ProductionSteps.vue'
+import CuePlacementSelect from '../components/production/CuePlacementSelect.vue'
+import TimelineTracks from '../components/production/TimelineTracks.vue'
 import fixture from '../demo/suspense.json'
 import { DemoMixer, makeSchedule } from '../demo/audioMixer'
 import { IS_STATIC_DEMO } from '../api/config'
@@ -125,6 +128,8 @@ const hasAllNeutral = computed(() => lines.value.every(line => manifest.value?.l
 const allDirected = computed(() => Object.values(takes).every(take => take === 'directed'))
 const allNeutral = computed(() => Object.values(takes).every(take => take === 'neutral'))
 const schedule = computed(() => makeSchedule(lines.value, cues.value, manifest.value, takes, effects, muteEffects.value))
+const demoTracks = computed(() => ['voice','sfx'].map(kind=>({key:kind,label:kind==='voice'?'人声':'音效',clips:schedule.value.clips.filter(clip=>clip.kind===kind).map(clip=>({...clip,line_id:clip.kind==='voice'?clip.id:null,start_ms:clip.start*1000,duration_ms:clip.duration*1000,line:{text_content:clip.label,status:'done'}}))})))
+function selectDemoClip(clip){if(clip.line_id)selectedLineId.value=clip.line_id;jumpTo(clip.start_ms/1000)}
 const staleLines = computed(() => lines.value.filter(isStale))
 const currentLineId = computed(() => mode.value === 'mix' ? schedule.value.clips.find(clip => clip.kind === 'voice' && clip.start <= playhead.value && clip.start + clip.duration > playhead.value)?.id : null)
 const role = id => fixture.roles.find(item => item.id === id) || fixture.roles[0]

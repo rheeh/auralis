@@ -19,12 +19,12 @@ const routes = [
   {
     path: '/studio',
     name: 'Studio',
-    component: () => import('../pages/Studio.vue')
+    component: () => import('../pages/StudioEntry.vue')
   },
   {
     path: '/studio/session/:sessionId',
     name: 'StudioSession',
-    component: () => import('../pages/Studio.vue')
+    component: () => import('../pages/StudioEntry.vue')
   },
   {
     path: '/projects',
@@ -69,11 +69,11 @@ const routes = [
   },
   {
     path: '/projects/:id/overview',
-    redirect: to => `/projects/${to.params.id}/workspace`
+    redirect: to => ({path:`/projects/${to.params.id}/workspace`,query:to.query})
   },
   { 
     path: '/projects/:id/dubbing', 
-    redirect: to => `/projects/${to.params.id}/workspace`
+    redirect: to => ({path:`/projects/${to.params.id}/workspace`,query:to.query})
   },
   { path: '/prompts',
     name: 'PromptManager', 

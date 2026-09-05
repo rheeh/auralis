@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from app.core.config import DRAMA_WORKFLOW_MAX_SOURCE_CHARS, WORKFLOW_CHAT_UI_ENABLED
 from app.dto.chat_dto import ChatSessionCreateDTO, SourceDocumentCreateDTO
@@ -13,6 +14,7 @@ from app.models.po import (
     AdaptationRunPO,
     ChatMessagePO,
     ChatSessionPO,
+    ChapterPO,
     ProjectPO,
     SourceDocumentPO,
     WorkflowEventPO,
@@ -96,6 +98,43 @@ class ChatSessionService:
         from app.workflows.drama.events import WorkflowEventPublisher
         WorkflowEventPublisher(self.db).publish(session, "session_created", {"source_chars": len(source_text)})
         return DramaWorkflowService(self.db).snapshot(session.id)
+
+    def open_chapter(self, project_id: int, chapter_id: int) -> dict[str, Any]:
+        """Adopt an existing chapter into the workspace without regenerating content."""
+        chapter = self.db.get(ChapterPO, chapter_id)
+        if not self.db.get(ProjectPO, project_id) or not chapter or chapter.project_id != project_id:
+            raise ValueError("章节不存在或不属于当前项目")
+        existing = self.db.execute(select(ChatSessionPO).where(
+            ChatSessionPO.project_id == project_id,
+            ChatSessionPO.chapter_id == chapter_id,
+            ChatSessionPO.deleted_at.is_(None),
+            ChatSessionPO.current_stage != "cancelled",
+        ).order_by(ChatSessionPO.created_at.desc())).scalars().first()
+        if existing:
+            return self.get(existing.id)
+        # A deterministic ID makes repeated opening converge on the same workspace.
+        session = ChatSessionPO(
+            id=f"chapter_{project_id}_{chapter_id}", project_id=project_id, chapter_id=chapter_id,
+            title=chapter.title, source_text=chapter.text_content or "", status="completed",
+            current_stage="completed",
+        )
+        archived = self.db.get(ChatSessionPO, session.id)
+        if archived:
+            archived.deleted_at = None
+            archived.current_stage = "completed"
+            archived.status = "completed"
+            session = archived
+        else:
+            self.db.add(session)
+        session_id = session.id
+        try:
+            self.db.commit()
+        except IntegrityError:
+            self.db.rollback()
+            # Another tab may have opened the same existing chapter concurrently.
+            if not self.db.get(ChatSessionPO, session_id):
+                raise
+        return self.get(session_id)
 
     def list(self, project_id: int | None = None, status: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
         stmt = select(ChatSessionPO).where(ChatSessionPO.deleted_at.is_(None))

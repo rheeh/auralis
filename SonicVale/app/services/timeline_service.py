@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from app.services.audio_selection import selected_audio_path
+
 import hashlib
 import json
 import mimetypes
@@ -551,19 +553,7 @@ class TimelineService:
 
     @staticmethod
     def _selected_audio_path(line: LinePO) -> str | None:
-        active_variant = next(
-            (item for item in TimelineService._items(line.audio_variants) if item.get("id") == line.active_audio_variant_id),
-            None,
-        )
-        if active_variant and active_variant.get("audio_path"):
-            return active_variant["audio_path"]
-        active_version = next(
-            (item for item in TimelineService._items(line.audio_versions) if item.get("id") == line.active_audio_version_id),
-            None,
-        )
-        if active_version and active_version.get("audio_path"):
-            return active_version["audio_path"]
-        return line.audio_path
+        return selected_audio_path(line) or None
 
     @staticmethod
     def _normalise_path(path: str | None) -> str:

@@ -62,6 +62,9 @@ class LLMEngine:
         retries: int = 3,
         delay: float = 1.0,
     ) -> str:
+        model = (self.model_name or "").strip().lower()
+        if model == "qwen-plus" or model.startswith("qwen-plus-"):
+            raise ValueError("qwen-plus 已禁用，请在项目中选择 qwen3.8-27b 或 kimi-k3")
         request_params = dict(self.custom_params)
         if remove_custom_response_format:
             request_params.pop("response_format", None)

@@ -33,6 +33,7 @@ from app.repositories.tts_provider_repository import TTSProviderRepository
 from app.repositories.llm_provider_repository import LLMProviderRepository
 from app.core.llm_engine import LLMEngine
 from app.services.timeline_service import TimelineService
+from app.services.audio_selection import selected_audio_path
 
 import os
 
@@ -156,6 +157,10 @@ class LineService:
         po = self.repository.get_by_id(line_id)
         if po is None:
             return False
+        generation_fields = {"text_content", "production_note", "emotion_id", "strength_id", "voice_id"}
+        changed = any(key in data and data[key] != getattr(po, key, None) for key in generation_fields)
+        if changed and po.should_speak != 0 and po.track not in {"sfx", "bgm"}:
+            data = {**data, "status": "pending", "is_done": 0}
         res = self.repository.update(line_id, data)
         if res is None:
             return False
@@ -205,6 +210,8 @@ class LineService:
         voice_instruction = build_voice_instruction(emotion_name, strength_name, production_note)
         route = self.resolve_tts_route(role, line_type=line_type, track=track, emotion_name=emotion_name)
         provider = self.tts_provider_repository.get_by_id(tts_provider_id) if self.tts_provider_repository and tts_provider_id else None
+        if provider is not None and getattr(provider, "status", 1) == 0:
+            raise ValueError("当前角色绑定的配音模型已停用，请选择已启用的音色；已保存配音可继续试听")
         if (getattr(provider, "provider_type", None) or "").lower() == "edge":
             route = "edge"
         if self.resolve_cosyvoice_voice(voice):
@@ -932,28 +939,7 @@ class LineService:
         return variant
 
     def resolve_audio_path(self, line, original: bool = False) -> str:
-        """Return the currently adopted audio, falling back safely to the generated source."""
-        if not original:
-            active_id = getattr(line, "active_audio_variant_id", None)
-            variant = next(
-                (item for item in (getattr(line, "audio_variants", None) or []) if item.get("id") == active_id),
-                None,
-            )
-            raw_variant_path = (variant or {}).get("audio_path") or ""
-            variant_path = os.path.abspath(os.path.expanduser(raw_variant_path)) if raw_variant_path else ""
-            if variant_path and os.path.isfile(variant_path):
-                return variant_path
-        versions = list(getattr(line, "audio_versions", None) or [])
-        active_version_id = getattr(line, "active_audio_version_id", None)
-        version = next((item for item in versions if item.get("id") == active_version_id), None)
-        if not version and versions:
-            version = versions[-1]
-        raw_version_path = (version or {}).get("audio_path") or ""
-        version_path = os.path.abspath(os.path.expanduser(raw_version_path)) if raw_version_path else ""
-        if version_path and os.path.isfile(version_path):
-            return version_path
-        source_path = getattr(line, "audio_path", None) or ""
-        return os.path.abspath(os.path.expanduser(source_path)) if source_path else ""
+        return selected_audio_path(line, original=original)
 
     def activate_audio_variant(self, line_id: int, variant_id: str) -> dict:
         variant = self.get_audio_variant(line_id, variant_id)

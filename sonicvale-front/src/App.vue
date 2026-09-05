@@ -87,7 +87,7 @@
       </header>
 
       <main class="page-surface">
-        <router-view />
+        <router-view :key="$route.path" />
       </main>
     </section>
   </div>

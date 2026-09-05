@@ -340,16 +340,16 @@ print("Mixed-format export and processing ok")
 PY
 
 cd "$ROOT_DIR/sonicvale-front"
-if ! rg -q "fetchChapterTimeline|buildChapterTimeline|updateTimelineClip|renderChapterTimeline" src/pages/TimelineBoard.vue; then
-  echo "TimelineBoard must use the real timeline edit and render APIs" >&2
+if ! rg -q "fetchChapterTimeline|buildChapterTimeline|updateTimelineClip|renderChapterTimeline" src/components/production/ChapterTimeline.vue; then
+  echo "ChapterTimeline must use the real timeline edit and render APIs" >&2
   exit 1
 fi
-if rg -q "estimateSeconds|text_content.length" src/pages/TimelineBoard.vue; then
-  echo "TimelineBoard still contains text-length timeline estimation" >&2
+if rg -q "estimateSeconds|text_content.length" src/components/production/ChapterTimeline.vue; then
+  echo "ChapterTimeline still contains text-length timeline estimation" >&2
   exit 1
 fi
 echo "Frontend timeline API integration ok"
-node --experimental-default-type=module --test tests/audioMixer.test.mjs
+node --experimental-default-type=module --test tests/audioMixer.test.mjs src/workspace/navigation.test.mjs
 node --check electron/main.js
 node --check electron/preload.js
 node --check electron/logger.js

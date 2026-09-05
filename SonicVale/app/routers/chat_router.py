@@ -18,6 +18,7 @@ from app.dto.chat_dto import AudioReviewDTO, ChatCommitDTO, ChatConfirmDTO, Chat
 from app.dto.line_dto import LineCreateDTO
 from app.models.po import ChatSessionPO, LinePO
 from app.services.audio_task_service import AudioTaskService
+from app.services.production_configuration import chapter_configuration
 from app.services.chat_session_service import ChatSessionService
 from app.services.drama_commit_service import DramaCommitService
 from app.services.drama_workflow_service import DramaWorkflowService, WorkflowConflictError
@@ -75,6 +76,22 @@ class _ThreadsafeQueueProxy:
 
     def put_nowait(self, item) -> None:
         self.loop.call_soon_threadsafe(self.queue.put_nowait, item)
+
+
+@router.post("/projects/{project_id}/chapters/{chapter_id}/workspace", response_model=Res[dict])
+def open_chapter_workspace(project_id: int, chapter_id: int, service: ChatSessionService = Depends(get_chat_service)):
+    try:
+        return Res(code=200, data=service.open_chapter(project_id, chapter_id), message="章节工作台已就绪")
+    except ValueError as exc:
+        return _error(404, str(exc))
+
+
+@router.get("/projects/{project_id}/chapters/{chapter_id}/configuration", response_model=Res[dict])
+def production_configuration(project_id: int, chapter_id: int, db: Session = Depends(get_db)):
+    try:
+        return Res(code=200, data=chapter_configuration(db, project_id, chapter_id), message="查询成功")
+    except ValueError as exc:
+        return _error(404, str(exc))
 
 
 @router.get("/capabilities", response_model=Res[dict])

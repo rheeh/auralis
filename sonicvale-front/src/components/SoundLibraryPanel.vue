@@ -36,12 +36,7 @@
           <el-select v-model="anchorLineId" filterable :placeholder="anchorLines.length ? '选择定位台词' : '空章节：从场景开头加入'" :disabled="!anchorLines.length" aria-label="定位台词">
             <el-option v-for="line in anchorLines" :key="line.id" :label="`${line.scene_title ? `${line.scene_title} · ` : ''}${line.line_order || ''} ${line.text_content || `台词 #${line.id}`}`" :value="line.id" />
           </el-select>
-          <el-select v-model="insertForm.placement" aria-label="音效进入位置">
-            <el-option label="与这句同时" value="with" />
-            <el-option label="这句之前" value="before" />
-            <el-option label="这句之后" value="after" />
-            <el-option label="本场景开头" value="scene_start" />
-          </el-select>
+          <CuePlacementSelect v-model="insertForm.placement" allow-scene-start />
           <el-select v-model="mixPreset" aria-label="音效混音方式" @change="applyMixPreset">
             <el-option label="环境铺底 · 轻" value="ambience" />
             <el-option label="动作拟音 · 中" value="foley" />
@@ -154,6 +149,7 @@
 </template>
 
 <script setup>
+import CuePlacementSelect from './production/CuePlacementSelect.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { Delete, Link, Refresh, Search, Upload } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'

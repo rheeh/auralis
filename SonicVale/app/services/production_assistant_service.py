@@ -21,6 +21,8 @@ from app.models.po import (
     VoicePO,
 )
 from app.services.audio_task_service import AudioTaskService
+from app.services.role_service import RoleService
+from app.repositories.role_repository import RoleRepository
 from app.services.drama_workflow_service import DramaWorkflowService, WorkflowConflictError
 from app.services.workflow_llm_service import WorkflowLLMError, WorkflowLLMService
 from app.workflows.drama.events import WorkflowEventPublisher
@@ -501,8 +503,7 @@ class ProductionAssistantAgent:
         ).scalar_one_or_none()
         if conflict:
             raise WorkflowConflictError(f"音色“{voice.name}”已绑定给角色“{conflict.name}”")
-        role.default_voice_id = voice.id
-        self.db.commit()
+        RoleService(RoleRepository(self.db)).update_role(role.id, {"default_voice_id": voice.id})
         return self._ok(
             f"已将角色“{role.name}”绑定到音色“{voice.name}”",
             {"role_id": role.id, "role_name": role.name, "voice_id": voice.id, "voice_name": voice.name},

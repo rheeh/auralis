@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from app.core.tts_capabilities import cosyvoice_instruction_mode, http_instruction_field
+
 import asyncio
 import base64
 import json
@@ -348,20 +350,7 @@ class ConfigurableCloudTTSEngine:
         return {k: v for k, v in payload.items() if v is not None}
 
     def _instruction_field(self) -> str | None:
-        """Return the provider-specific instruction path for non-CosyVoice HTTP adapters."""
-        configured = self.custom_params.get("instruction_field")
-        if configured is False or self.custom_params.get("supports_instruction") is False:
-            return None
-        if isinstance(configured, str) and configured.strip():
-            return configured.strip()
-        model = (self.model or "").lower()
-        if self._is_qwen_audio_model():
-            return "input.instruction"
-        if "qwen" in model and "instruct" in model:
-            return "input.instructions"
-        if model.startswith("gpt-4o") and "tts" in model:
-            return "instructions"
-        return None
+        return http_instruction_field(self.model, self.custom_params)
 
     @staticmethod
     def _set_nested(payload: dict[str, Any], path: str, value: Any) -> None:
@@ -467,7 +456,8 @@ class ConfigurableCloudTTSEngine:
             return [str(item) for item in configured if item] + defaults
         return defaults
 
-    def _parse_params(self, custom_params: str | dict[str, Any] | None) -> dict[str, Any]:
+    @staticmethod
+    def _parse_params(custom_params: str | dict[str, Any] | None) -> dict[str, Any]:
         if not custom_params:
             return {}
         if isinstance(custom_params, dict):
@@ -635,29 +625,7 @@ class ConfigurableCloudTTSEngine:
         return "longxiaochun_v2" if model.startswith("cosyvoice-v2") else "longxiaochun"
 
     def _cosyvoice_instruction_mode(self, voice_name: str | None = None) -> str:
-        """Resolve capabilities per voice; most v3 system voices have no Instruct."""
-        configured = str(self.custom_params.get("instruction_mode") or "auto").strip().lower()
-        if configured in {"mapped", "none"}:
-            return configured
-        if self.custom_params.get("supports_instruction") is False:
-            return "mapped"
-        model = (self.model or "").lower()
-        if model.startswith(("cosyvoice-v1", "cosyvoice-v2")):
-            return "mapped"
-        if model.startswith(("cosyvoice-v3.5-plus", "cosyvoice-v3.5-flash")):
-            return "native"
-        if model.startswith(("cosyvoice-v3-flash", "cosyvoice-v3-plus")):
-            voice = voice_name or self.custom_params.get("voice") or "longanyang"
-            if voice in {"longanyang", "longanhuan", "longhuhu_v3"}:
-                return "structured"
-            if voice.startswith("cosyvoice-") and model.startswith("cosyvoice-v3-flash"):
-                return "native"
-            # longanhuan_v3 accepts dialect instructions only, not free acting notes.
-            # Other documented v3 system voices support prosody but not Instruct.
-            return "mapped"
-        if configured in {"native", "structured"}:
-            return configured
-        return "native" if self.custom_params.get("supports_instruction") is True else "none"
+        return cosyvoice_instruction_mode(self.model, self.custom_params, voice_name)
 
     def _prepare_cosyvoice_instruction(self, prompt: str, voice_name: str | None = None) -> str | None:
         mode = self._cosyvoice_instruction_mode(voice_name)

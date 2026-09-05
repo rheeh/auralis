@@ -92,3 +92,10 @@ export function reviewSessionAudioTask(sessionId, taskId, data) {
 export function regenerateLineAudio(sessionId, lineId, prompt = '') {
   return request.post(`/chat/sessions/${sessionId}/audio-tasks/lines/${lineId}/regenerate`, { prompt })
 }
+
+export function openChapterWorkspace(projectId, chapterId) {
+  return request.post(`/chat/projects/${projectId}/chapters/${chapterId}/workspace`)
+}
+export function fetchChapterProductionConfiguration(projectId, chapterId) {
+  return request.get(`/chat/projects/${projectId}/chapters/${chapterId}/configuration`)
+}
