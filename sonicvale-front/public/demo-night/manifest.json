@@ -1,0 +1,363 @@
+{
+  "schema_version": 1,
+  "model": "qwen3-tts-instruct-flash-2026-01-26",
+  "generated_at": "2026-09-05T04:17:17.770199+00:00",
+  "fixture_sha256": "7e50a4be95a7fa50d562e89fbfa5fb6fa05e5fa6a7438297ecb23398a28f44b2",
+  "roles": {
+    "lin": {
+      "voice": "Moon",
+      "label": "月白 · 青年男声",
+      "model": "qwen3-tts-instruct-flash-2026-01-26"
+    },
+    "xu": {
+      "voice": "Maia",
+      "label": "四月 · 知性女声",
+      "model": "qwen3-tts-instruct-flash-2026-01-26"
+    },
+    "narrator": {
+      "voice": "Vincent",
+      "label": "田叔 · 沙哑男声",
+      "model": "qwen3-tts-instruct-flash-2026-01-26"
+    }
+  },
+  "lines": {
+    "01": {
+      "directed": {
+        "file": "audio/01-directed.mp3",
+        "duration": 3.2,
+        "model": "qwen3-tts-instruct-flash-2026-01-26",
+        "voice": "Vincent",
+        "instruction": "近距离轻声讲述；十一点十七分清晰，句尾自然落下。",
+        "text_sha256": "91cf893954174d247b3096766dbf65712b959add658c984fdd911711c9c5272c",
+        "audio_sha256": "5d69b075e7bd429247258135a09bc337ed733c488a59ff74027199a75834c83e",
+        "generation_seconds": 2.35
+      },
+      "neutral": {
+        "file": "audio/01-neutral.mp3",
+        "duration": 3.36,
+        "model": "qwen3-tts-instruct-flash-2026-01-26",
+        "voice": "Vincent",
+        "instruction": "",
+        "text_sha256": "91cf893954174d247b3096766dbf65712b959add658c984fdd911711c9c5272c",
+        "audio_sha256": "3891a4eb257b71ed4b63aa359bf81a3d5d5a2069645aee222f7a6fcaec5d49f9",
+        "generation_seconds": 1.63
+      }
+    },
+    "03": {
+      "directed": {
+        "file": "audio/03-directed.mp3",
+        "duration": 3.44,
+        "model": "qwen3-tts-instruct-flash-2026-01-26",
+        "voice": "Moon",
+        "instruction": "困惑，话说一半被打断，不刻意拖长尾音。",
+        "text_sha256": "27ab7b8008ff5a7b92c7b4030a441847f301ea772b002f811cd2954cb235a4bb",
+        "audio_sha256": "cc214f3c99d825bfe0e0f3f70d54189c6726e8d2d8849cde7d6479349397f546",
+        "generation_seconds": 2.37
+      },
+      "neutral": {
+        "file": "audio/03-neutral.mp3",
+        "duration": 3.2,
+        "model": "qwen3-tts-instruct-flash-2026-01-26",
+        "voice": "Moon",
+        "instruction": "",
+        "text_sha256": "27ab7b8008ff5a7b92c7b4030a441847f301ea772b002f811cd2954cb235a4bb",
+        "audio_sha256": "f191f4308c123670cec20582e6ec8967b7babef59e5276d4df59c242f335a956",
+        "generation_seconds": 1.52
+      }
+    },
+    "02": {
+      "directed": {
+        "file": "audio/02-directed.mp3",
+        "duration": 3.04,
+        "model": "qwen3-tts-instruct-flash-2026-01-26",
+        "voice": "Maia",
+        "instruction": "像把东西递给熟人的日常对话，轻声，第二句稍慢。",
+        "text_sha256": "f83322502a8c622571b56413df42dfabf2cf6789f85633b75af109756404a8d5",
+        "audio_sha256": "bab8a5a0ca8c9cc75841b6bb098511ce91c9cbf65e3daf40ac582646a3b0b80c",
+        "generation_seconds": 2.42
+      },
+      "neutral": {
+        "file": "audio/02-neutral.mp3",
+        "duration": 3.04,
+        "model": "qwen3-tts-instruct-flash-2026-01-26",
+        "voice": "Maia",
+        "instruction": "",
+        "text_sha256": "f83322502a8c622571b56413df42dfabf2cf6789f85633b75af109756404a8d5",
+        "audio_sha256": "4435affb84093cc3d637870ce59abcbad7e7800e2f72a67588e2216c834e6ddb",
+        "generation_seconds": 1.59
+      }
+    },
+    "06": {
+      "directed": {
+        "file": "audio/06-directed.mp3",
+        "duration": 1.68,
+        "model": "qwen3-tts-instruct-flash-2026-01-26",
+        "voice": "Maia",
+        "instruction": "手停住后的轻声回应，有一点迟疑，别加笑声。",
+        "text_sha256": "817f3ee7de63063b0a8df0096ca94f0112c36a26edb83d39fa3c0a7643cbeac8",
+        "audio_sha256": "b01f80c9c70cdcbe6e6dd14c435e78df04692148b4f6b04697e577e605d959e7",
+        "generation_seconds": 1.09
+      },
+      "neutral": {
+        "file": "audio/06-neutral.mp3",
+        "duration": 1.52,
+        "model": "qwen3-tts-instruct-flash-2026-01-26",
+        "voice": "Maia",
+        "instruction": "",
+        "text_sha256": "817f3ee7de63063b0a8df0096ca94f0112c36a26edb83d39fa3c0a7643cbeac8",
+        "audio_sha256": "b6fc49aa256e0ca3ed3b163264b484f856ab1521c486f837118913ac0395d226",
+        "generation_seconds": 1.07
+      }
+    },
+    "05": {
+      "directed": {
+        "file": "audio/05-directed.mp3",
+        "duration": 2.72,
+        "model": "qwen3-tts-instruct-flash-2026-01-26",
+        "voice": "Moon",
+        "instruction": "前半句仔细辨认；别开灯三个字清晰、低声，像读出纸上的字。",
+        "text_sha256": "3f6e15edcea393bf5a4fc5a7a70a9f51fe48bd5abf135c5dd27e09afd35e7d6d",
+        "audio_sha256": "bcabfdcfd09335f601e0d4bd5c7441e517aaa0dc1ef1d9554db95da16184e6db",
+        "generation_seconds": 1.33
+      },
+      "neutral": {
+        "file": "audio/05-neutral.mp3",
+        "duration": 1.6,
+        "model": "qwen3-tts-instruct-flash-2026-01-26",
+        "voice": "Moon",
+        "instruction": "",
+        "text_sha256": "3f6e15edcea393bf5a4fc5a7a70a9f51fe48bd5abf135c5dd27e09afd35e7d6d",
+        "audio_sha256": "b2eaae95832293f5412771c330981cb0082abc218108443d046f8008a2eb1e11",
+        "generation_seconds": 1.14
+      }
+    },
+    "04": {
+      "directed": {
+        "file": "audio/04-directed.mp3",
+        "duration": 4.96,
+        "model": "qwen3-tts-instruct-flash-2026-01-26",
+        "voice": "Maia",
+        "instruction": "先轻轻制止，停顿一下；认出线索后压低声音，克制不安。",
+        "text_sha256": "38b7411e4bac0023bafd4a0b2b62ffdb28978ce39ac205c6663e8dcea378f1a5",
+        "audio_sha256": "f208ec24ae85e89dec0379ddc3394b821bf85814074e7139471ad1cff59f4a42",
+        "generation_seconds": 2.0
+      },
+      "neutral": {
+        "file": "audio/04-neutral.mp3",
+        "duration": 6.32,
+        "model": "qwen3-tts-instruct-flash-2026-01-26",
+        "voice": "Maia",
+        "instruction": "",
+        "text_sha256": "38b7411e4bac0023bafd4a0b2b62ffdb28978ce39ac205c6663e8dcea378f1a5",
+        "audio_sha256": "dc733bbcc127901e2634b22c112dcb7684ce863f208657c4a594aeff50dbe937",
+        "generation_seconds": 2.52
+      }
+    },
+    "07": {
+      "directed": {
+        "file": "audio/07-directed.mp3",
+        "duration": 1.6,
+        "model": "qwen3-tts-instruct-flash-2026-01-26",
+        "voice": "Moon",
+        "instruction": "试图安抚对方也说服自己，也许后停顿，后半句不太确定。",
+        "text_sha256": "b33c80888c8d3b01211ad6347eefb780e3df93c2ba45a5bfdbff39e6d8c1f5c6",
+        "audio_sha256": "c87bb1e23abf0d5d8899b004443dd29a44733d4162e4b958b9752dc751b3c830",
+        "generation_seconds": 1.09
+      },
+      "neutral": {
+        "file": "audio/07-neutral.mp3",
+        "duration": 1.68,
+        "model": "qwen3-tts-instruct-flash-2026-01-26",
+        "voice": "Moon",
+        "instruction": "",
+        "text_sha256": "b33c80888c8d3b01211ad6347eefb780e3df93c2ba45a5bfdbff39e6d8c1f5c6",
+        "audio_sha256": "1160f00ac173d3976953d6eadac61b3fe6bad3b1a9d5a543f5cd90017b70c88d",
+        "generation_seconds": 1.05
+      }
+    },
+    "08": {
+      "directed": {
+        "file": "audio/08-directed.mp3",
+        "duration": 1.28,
+        "model": "qwen3-tts-instruct-flash-2026-01-26",
+        "voice": "Maia",
+        "instruction": "听到振动后的小声疑问，重音落在手机，保持真实对话感。",
+        "text_sha256": "35c5ddefc992c5d836276cef57dc5a8b51739af09de838082e697ec5ed1c7e3f",
+        "audio_sha256": "2b23df3150e3a78aec60337e1ff72acfde507fed257919334c849a8d9fe504ca",
+        "generation_seconds": 0.92
+      },
+      "neutral": {
+        "file": "audio/08-neutral.mp3",
+        "duration": 1.28,
+        "model": "qwen3-tts-instruct-flash-2026-01-26",
+        "voice": "Maia",
+        "instruction": "",
+        "text_sha256": "35c5ddefc992c5d836276cef57dc5a8b51739af09de838082e697ec5ed1c7e3f",
+        "audio_sha256": "708e311393c23bdc90d1c6d206d507be10a2984ee29d54e7115d04237c878d3f",
+        "generation_seconds": 0.95
+      }
+    },
+    "09": {
+      "directed": {
+        "file": "audio/09-directed.mp3",
+        "duration": 0.4,
+        "model": "qwen3-tts-instruct-flash-2026-01-26",
+        "voice": "Moon",
+        "instruction": "隔着纸接起电话，试探性轻声询问，等待对方。",
+        "text_sha256": "b6c2305c4cad5214d5ae31130d80806c710fe7767f1e393c6f8542f55d86428f",
+        "audio_sha256": "5108d4bf726e6efb4f6356ac889bbcf5344e3f92339bc656f4587711c292a55a",
+        "generation_seconds": 0.75
+      },
+      "neutral": {
+        "file": "audio/09-neutral.mp3",
+        "duration": 0.48,
+        "model": "qwen3-tts-instruct-flash-2026-01-26",
+        "voice": "Moon",
+        "instruction": "",
+        "text_sha256": "b6c2305c4cad5214d5ae31130d80806c710fe7767f1e393c6f8542f55d86428f",
+        "audio_sha256": "e03af4192f214b531e56f5ffcef5a377cb6093d2d30d97b8356db921b4dfb258",
+        "generation_seconds": 0.81
+      }
+    },
+    "11": {
+      "directed": {
+        "file": "audio/11-directed.mp3",
+        "duration": 2.32,
+        "model": "qwen3-tts-instruct-flash-2026-01-26",
+        "voice": "Moon",
+        "instruction": "短促、低声、明确，声音贴近，不怒吼，句间留短停顿。",
+        "text_sha256": "51e72366a1afb7fcf6163c52e00b008e779f8a51707d29ca11c305566f966b3b",
+        "audio_sha256": "c33b0a55dbae2051317981d2f46c50b8bb305f7bb7984b1e1d500b97a2605470",
+        "generation_seconds": 1.29
+      },
+      "neutral": {
+        "file": "audio/11-neutral.mp3",
+        "duration": 2.96,
+        "model": "qwen3-tts-instruct-flash-2026-01-26",
+        "voice": "Moon",
+        "instruction": "",
+        "text_sha256": "51e72366a1afb7fcf6163c52e00b008e779f8a51707d29ca11c305566f966b3b",
+        "audio_sha256": "b5c76baf80e71de62e9634a452ce286c4a993025f9477b95dd39de1a0cce4385",
+        "generation_seconds": 1.43
+      }
+    },
+    "10": {
+      "directed": {
+        "file": "audio/10-directed.mp3",
+        "duration": 3.28,
+        "model": "qwen3-tts-instruct-flash-2026-01-26",
+        "voice": "Maia",
+        "instruction": "害怕但尽量不让门外听见，气声轻一些，三年前略重，不要大喊。",
+        "text_sha256": "accd59ac41c9ad1e0d37c2e13444559bec7ddfa1018efec911795a886c7e6f71",
+        "audio_sha256": "f95ddc290bc91197b9af357e79383541e4c235084e94bd91b331fe296a95aeba",
+        "generation_seconds": 1.61
+      },
+      "neutral": {
+        "file": "audio/10-neutral.mp3",
+        "duration": 2.64,
+        "model": "qwen3-tts-instruct-flash-2026-01-26",
+        "voice": "Maia",
+        "instruction": "",
+        "text_sha256": "accd59ac41c9ad1e0d37c2e13444559bec7ddfa1018efec911795a886c7e6f71",
+        "audio_sha256": "4fc5b18d6a85b382076531af230cde078d81e410ee03497532e97251be3c3a20",
+        "generation_seconds": 1.27
+      }
+    }
+  },
+  "auditions": [
+    {
+      "id": "moon",
+      "voice": "Moon",
+      "label": "月白",
+      "model": "qwen3-tts-instruct-flash-2026-01-26",
+      "role": "lin",
+      "description": "青年男角初选；完整自然语言表演指令。",
+      "mode": "native",
+      "file": "auditions/moon.mp3",
+      "duration": 5.44,
+      "instruction": "低声面对面说话，克制紧张，句间自然换气。你的声音前稍停，尾音收住，避免播音腔。",
+      "text_sha256": "b174d8d39b355e396f7ed255b830b04a7e1728126f35d6b5ec53a88793757559",
+      "audio_sha256": "46fc0e1ea973db81f674b85a6ba1e5a7d1622c2da5d96428dcb47d6a805b64b4",
+      "generation_seconds": 2.09
+    },
+    {
+      "id": "maia",
+      "voice": "Maia",
+      "label": "四月",
+      "model": "qwen3-tts-instruct-flash-2026-01-26",
+      "role": "xu",
+      "description": "都市女角初选；完整自然语言表演指令。",
+      "mode": "native",
+      "file": "auditions/maia.mp3",
+      "duration": 5.44,
+      "instruction": "低声面对面说话，克制紧张，句间自然换气。你的声音前稍停，尾音收住，避免播音腔。",
+      "text_sha256": "b174d8d39b355e396f7ed255b830b04a7e1728126f35d6b5ec53a88793757559",
+      "audio_sha256": "cad9bd49b975e35dc4f7f0cc0baad36e6ff020bd932b69393c5fe1b6dd12a80b",
+      "generation_seconds": 2.57
+    },
+    {
+      "id": "vincent",
+      "voice": "Vincent",
+      "label": "田叔",
+      "model": "qwen3-tts-instruct-flash-2026-01-26",
+      "role": "narrator",
+      "description": "有沙哑辨识度的旁白候选；完整自然语言表演指令。",
+      "mode": "native",
+      "file": "auditions/vincent.mp3",
+      "duration": 5.52,
+      "instruction": "低声面对面说话，克制紧张，句间自然换气。你的声音前稍停，尾音收住，避免播音腔。",
+      "text_sha256": "b174d8d39b355e396f7ed255b830b04a7e1728126f35d6b5ec53a88793757559",
+      "audio_sha256": "5fbd54fc78ac5793f87924bffa5663574e00f9e77d847c8c111956c664742ecc",
+      "generation_seconds": 5.11
+    },
+    {
+      "id": "longanyang",
+      "voice": "longanyang",
+      "label": "龙安洋",
+      "model": "cosyvoice-v3-flash",
+      "role": "lin",
+      "description": "现有系统男声对照；只接收固定情感格式及基础参数。",
+      "mode": "structured",
+      "file": "auditions/longanyang.mp3",
+      "duration": 5.303,
+      "instruction": "低声面对面说话，克制紧张，句间自然换气。你的声音前稍停，尾音收住，避免播音腔。",
+      "text_sha256": "b174d8d39b355e396f7ed255b830b04a7e1728126f35d6b5ec53a88793757559",
+      "audio_sha256": "bf35a85d30ab3026447167833aceb41f69257d9ce14f09a22dcbea21d242c8c3",
+      "generation_seconds": 2.46
+    },
+    {
+      "id": "longanhuan",
+      "voice": "longanhuan",
+      "label": "龙安欢",
+      "model": "cosyvoice-v3-flash",
+      "role": "xu",
+      "description": "现有系统女声对照；只接收固定情感格式及基础参数。",
+      "mode": "structured",
+      "file": "auditions/longanhuan.mp3",
+      "duration": 5.172,
+      "instruction": "低声面对面说话，克制紧张，句间自然换气。你的声音前稍停，尾音收住，避免播音腔。",
+      "text_sha256": "b174d8d39b355e396f7ed255b830b04a7e1728126f35d6b5ec53a88793757559",
+      "audio_sha256": "008f4c342b85a4f69f68c0edc2e3067185f2da9f8c8cdcd3e4f6a869843ad5fd",
+      "generation_seconds": 1.9
+    },
+    {
+      "id": "longsanshu",
+      "voice": "longsanshu_v3",
+      "label": "龙三叔",
+      "model": "cosyvoice-v3-flash",
+      "role": "narrator",
+      "description": "沉稳旁白候选；基础语速音高控制，无原生表演指令。",
+      "mode": "mapped",
+      "file": "auditions/longsanshu.mp3",
+      "duration": 5.433,
+      "instruction": "低声面对面说话，克制紧张，句间自然换气。你的声音前稍停，尾音收住，避免播音腔。",
+      "text_sha256": "b174d8d39b355e396f7ed255b830b04a7e1728126f35d6b5ec53a88793757559",
+      "audio_sha256": "4883a53f712d281b6c895c61f7836b9bb33e17d6552411be9f54f3ebcfcff1ce",
+      "generation_seconds": 1.59
+    }
+  ],
+  "audition_text": "别开门。先听我说，门外的人，刚刚用的是你的声音。",
+  "audition_direction": "低声面对面说话，克制紧张，句间自然换气。你的声音前稍停，尾音收住，避免播音腔。",
+  "evaluation": "已实测合成及音频解码；候选未经人工盲听评分，不声称自然度最佳。",
+  "errors": []
+}

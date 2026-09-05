@@ -8,6 +8,8 @@
     <header class="production-head">
       <div><p class="eyebrow">逐句制作时间线</p><h2>台本、音色与音频</h2></div>
       <div class="head-actions">
+        <el-button @click="$router.push({ path: '/timeline', query: { project_id: projectId, chapter_id: chapterId } })">成片与时间线</el-button>
+        <el-button :icon="Headset" @click="soundLibraryOpen = true">快捷加音效</el-button>
         <el-button :icon="Refresh" :loading="loading" @click="loadAll">刷新</el-button>
         <el-button :icon="MagicStick" :loading="autoBinding" @click="autoBind">AI 自动配音色</el-button>
         <el-button type="primary" :icon="Headset" :disabled="!voiceReady" :loading="generating" @click="generateAudio">
@@ -30,7 +32,8 @@
             <el-avatar v-if="isSpeakable(line)" :size="52" :src="roleAvatar(line.role_id)">{{ roleName(line.role_id).slice(0,1) }}</el-avatar>
             <div v-else class="material-icon"><el-icon><Headset /></el-icon></div>
             <div class="line-main">
-              <div class="line-meta"><strong>{{ roleName(line.role_id) }}</strong><el-tag size="small" effect="plain">{{ trackLabel(line) }}</el-tag><span v-if="activeVariant(line)" class="active-version">当前采用 {{ activeVariant(line).label }}</span><span v-if="isSpeakable(line)" class="line-expand-state">{{ expandedLineIds.has(line.id)?'收起':'展开' }}</span></div>
+              <div class="line-meta"><strong>{{ isSpeakable(line) ? roleName(line.role_id) : trackLabel(line) }}</strong><el-tag size="small" effect="plain">{{ trackLabel(line) }}</el-tag><span v-if="activeVariant(line)" class="active-version">当前采用 {{ activeVariant(line).label }}</span><span v-if="isSpeakable(line)" class="line-expand-state">{{ expandedLineIds.has(line.id)?'收起':'展开' }}</span></div>
+              <el-button text size="small" :icon="Headset" @click.stop="soundAnchorId = line.id; soundLibraryOpen = true">在这句附近加音效</el-button>
               <p>{{ line.text_content }}</p>
               <div v-if="isSpeakable(line)" class="line-annotations">
                 <el-tag size="small" :type="line.emotion_id?undefined:'warning'" effect="plain">情绪 · {{ emotionName(line.emotion_id) }}</el-tag>
@@ -95,13 +98,17 @@
     </div>
     <el-empty v-else description="台本写入后会在这里逐句制作" />
 
+    <el-drawer v-model="soundLibraryOpen" title="音效快捷加入" size="min(900px, 95vw)" append-to-body>
+      <SoundLibraryPanel :chapter-id="chapterId" :lines="lines" :material-lines="lines.filter(line => !isSpeakable(line))" :target-line-id="soundAnchorId" @inserted="onSoundInserted" @bound="onSoundInserted" />
+    </el-drawer>
+
     <footer v-if="playableLines.length" class="master-player">
       <div class="master-controls">
         <button aria-label="上一句" title="上一句" @click="playPrevious"><el-icon><ArrowLeftBold /></el-icon></button>
         <button class="master-play" :aria-label="isPlaying?'暂停连播':'开始连播'" :title="isPlaying?'暂停':'播放'" @click="togglePlayAll"><el-icon><component :is="isPlaying?VideoPause:VideoPlay" /></el-icon></button>
         <button aria-label="下一句" title="下一句" @click="playNext"><el-icon><ArrowRightBold /></el-icon></button>
       </div>
-      <div class="now-playing"><small>整章连播</small><strong>{{ currentLine ? `${roleName(currentLine.role_id)} · ${currentLine.text_content}` : '从第一句有音频的台词开始' }}</strong></div>
+      <div class="now-playing"><small>逐句人声连播</small><strong>{{ currentLine ? `${roleName(currentLine.role_id)} · ${currentLine.text_content}` : '从第一句有音频的台词开始' }}</strong></div>
       <div class="master-progress"><span>{{ formatTime(currentTime) }}</span><input aria-label="连播进度" type="range" min="0" :max="duration||0" :value="currentTime" @input="seek" /><span>{{ formatTime(duration) }}</span></div>
     </footer>
   </section>
@@ -120,9 +127,12 @@ import { fetchTTSProviders } from '../../api/provider'
 import { fetchAllEmotions, fetchAllStrengths } from '../../api/enums'
 import { getRoleAvatarUrl } from '../../api/drama'
 import WaveCellPro from '../WaveCellPro.vue'
+import SoundLibraryPanel from '../SoundLibraryPanel.vue'
 
 const props=defineProps({sessionId:{type:String,required:true},projectId:{type:Number,required:true},chapterId:{type:Number,required:true},ttsProviderId:Number,sourceText:String,voiceRevision:{type:Number,default:0}})
 const roles=ref([]),voices=ref([]),providers=ref([]),lines=ref([])
+const soundLibraryOpen = ref(false), soundAnchorId = ref(null)
+async function onSoundInserted() { audioVersion.value = Date.now(); await loadAll() }
 const emotions=ref([]),strengths=ref([])
 const roleVoiceMap=reactive({}),audioSummary=reactive({total:0,completed:0,counts:{},tasks:[]}),promptMap=reactive({}),editMap=reactive({})
 const expandedLineIds=reactive(new Set())
@@ -166,7 +176,7 @@ function roleColor(id){const index=Math.max(0,roles.value.findIndex(role=>role.i
 function voiceForLine(line){const role=roles.value.find(item=>item.id===line.role_id);return voices.value.find(item=>item.id===role?.default_voice_id)}
 function providerForLine(line){const voice=voiceForLine(line);return providers.value.find(item=>item.id===voice?.tts_provider_id)}
 function isEdgeLine(line){return providerForLine(line)?.provider_type==='edge'}
-function guidanceHint(line){const provider=providerForLine(line);if(!provider)return'尚未识别当前音色的 TTS 模型能力。';if(provider.provider_type==='edge')return'Edge 仅支持整句语速、音高和音量：情绪与强度会近似映射为这三个参数；精确停顿、反问语气和表演语义不会被理解。';return`${provider.model||provider.name||'云端 TTS'} 会按模型能力接收情绪、强度和声音指导。`}
+function guidanceHint(line){const provider=providerForLine(line);if(!provider)return hasAudio(line)?'已保存的配音可直接试听；新配音请先在音色页配置免费模型并绑定角色。':'请先为角色绑定已启用的配音模型音色。';if(provider.provider_type==='edge')return'Edge 仅支持整句语速、音高和音量：情绪与强度会近似映射为这三个参数；精确停顿、反问语气和表演语义不会被理解。';return`${provider.model||provider.name||'云端 TTS'} 会按模型能力接收情绪、强度和声音指导。`}
 function taskForLine(id){return(audioSummary.tasks||[]).find(task=>task.line_id===id)}function hasAudio(line){const task=taskForLine(line.id);return line.status==='done'&&(!task||task.status==='done')}
 function lineAudioUrl(id){return getLineAudioUrl(id,audioVersion.value)}function originalLineAudioUrl(id){return getLineAudioUrl(id,audioVersion.value,true)}function waveHeight(id,i){return 22+((Number(id||1)*13+i*17)%70)}
 function emotionName(id){return emotions.value.find(item=>item.id===id)?.name||'待补'}function strengthName(id){return strengths.value.find(item=>item.id===id)?.name||'待补'}

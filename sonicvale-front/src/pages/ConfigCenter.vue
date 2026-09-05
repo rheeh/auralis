@@ -106,6 +106,8 @@
       <el-tab-pane label="TTS 管理" name="tts">
         <div class="toolbar">
           <el-button type="primary" @click="openTTSDialog()">新增 TTS 引擎</el-button>
+          <el-button plain @click="openQwenDramaDialog">配置 Qwen 广播剧配音</el-button>
+          <el-button text @click="router.push('/voices')">打开音色库</el-button>
         </div>
 
         <el-table :data="ttsList" stripe border highlight-current-row class="styled-table">
@@ -120,7 +122,7 @@
               {{ row.model || (row.provider_type === 'edge' ? 'Edge 内置' : '未设置') }}
             </template>
           </el-table-column>
-          <el-table-column label="声音控制" min-width="150">
+          <el-table-column label="默认音色控制" min-width="150">
             <template #default="{ row }">
               <el-tag :type="ttsCapability(row).type" effect="plain">{{ ttsCapability(row).label }}</el-tag>
             </template>
@@ -271,7 +273,7 @@
 
 <script setup>
 import { ref, onMounted, nextTick, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { CopyDocument } from '@element-plus/icons-vue'
 import {
@@ -279,9 +281,11 @@ import {
   fetchTTSProviders, createTTSProvider, updateTTSProvider, deleteTTSProvider, testLLMProvider, testTTSProvider
 } from '../api/provider'
 import { fetchWorkflowCapabilities } from '../api/drama'
+import { QWEN_DRAMA_MODEL, ttsCapability } from '../utils/ttsCapabilities'
 
 const activeTab = ref('llm')
 const router = useRouter()
+const route = useRoute()
 const workflowCapability = ref(null)
 
 // ---------- LLM ----------
@@ -490,8 +494,22 @@ const loadTTS = async () => {
 
 const TTS_PARAM_PRESETS = [
   {
+    key: 'qwen_drama',
+    label: '阿里云 Qwen-Audio 3.0 Plus（原生表演指令）',
+    api_base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    model: QWEN_DRAMA_MODEL,
+    params: { driver: 'http', voice: 'longanlingxin', language_hints: ['zh'], format: 'mp3', sample_rate: 24000 }
+  },
+  {
+    key: 'qwen_audio_flash',
+    label: '阿里云 Qwen-Audio 3.0 Flash（原生表演指令）',
+    api_base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    model: 'qwen-audio-3.0-tts-flash',
+    params: { driver: 'http', voice: 'longanfengyue', language_hints: ['zh'], format: 'mp3', sample_rate: 24000 }
+  },
+  {
     key: 'dashscope_cosyvoice',
-    label: '阿里云 CosyVoice v3 Flash（指令控制）',
+    label: '阿里云 CosyVoice v3 Flash（固定情感）',
     api_base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     model: 'cosyvoice-v3-flash',
     params: {
@@ -585,10 +603,21 @@ function applyTTSPreset() {
   if (!ttsForm.value.api_base_url && preset.api_base_url) {
     ttsForm.value.api_base_url = preset.api_base_url
   }
-  if (!ttsForm.value.model && preset.model) {
+  if (preset.model) {
     ttsForm.value.model = preset.model
   }
   ElMessage.success('已插入参数模板')
+}
+
+function openQwenDramaDialog() {
+  openTTSDialog()
+  ttsForm.value.name = '阿里云 Qwen-Audio 3.0 广播剧'
+  selectedTTSPreset.value = 'qwen_drama'
+  applyTTSPreset()
+  // Reuse the configured credential only in this unsaved form, for the same host.
+  const existing = ttsList.value.find(provider => provider.api_key && provider.api_base_url === ttsForm.value.api_base_url)
+  if (existing) ttsForm.value.api_key = existing.api_key
+  activeTab.value = 'tts'
 }
 
 function openTTSDialog(row) {
@@ -664,24 +693,6 @@ async function testTTS() {
 
 // ---------- 工具 ----------
 const maskKey = (val) => (val ? '•'.repeat(Math.min(val.length, 8)) : '（未设置）')
-const ttsCapability = (provider) => {
-  if (provider?.provider_type === 'edge') return { label: '参数控制', type: 'info' }
-  let params = {}
-  try { params = JSON.parse(provider?.custom_params || '{}') } catch { params = {} }
-  const model = String(provider?.model || '').toLowerCase()
-  const mode = params.instruction_mode || (
-    model.startsWith('cosyvoice-v3.5') ? 'native'
-      : model.startsWith('cosyvoice-v3') ? 'structured'
-        : model.startsWith('cosyvoice-v1') || model.startsWith('cosyvoice-v2') ? 'mapped'
-          : params.instruction_field || JSON.stringify(params.payload || {}).includes('{{instruction}}') ? 'native' : 'none'
-  )
-  return {
-    native: { label: '原生指令', type: 'success' },
-    structured: { label: '结构化指令', type: 'success' },
-    mapped: { label: '基础参数映射', type: 'warning' },
-    none: { label: '基础生成', type: 'info' },
-  }[mode] || { label: String(mode), type: 'info' }
-}
 const providerTypeLabel = (value) => {
   const map = {
     edge: 'Edge-TTS',
@@ -699,6 +710,7 @@ onMounted(async () => {
     fetchWorkflowCapabilities().catch(() => null),
   ])
   workflowCapability.value = capabilityResponse?.code === 200 ? capabilityResponse.data : null
+  if (route.query.ttsPreset === 'qwen-drama') openQwenDramaDialog()
 })
 </script>
 

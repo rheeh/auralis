@@ -80,7 +80,7 @@ const presets = [
     name: 'DashScope',
     caption: '适合阿里云百炼兼容模式。',
     api_base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    model_list: 'qwen-plus',
+    model_list: 'qwen3.8-27b',
   },
   {
     key: 'deepseek',

@@ -1,0 +1,15 @@
+{
+  "sample_id": "DEMO-001",
+  "title": "雨夜来件",
+  "repetition": 1,
+  "variant": "c_director_example",
+  "status": "failed",
+  "started_at": "2026-09-05T04:33:56.326515+00:00",
+  "system_prompt_sha256": "ddafc9660c4df79c5ca0fd60672157f2156c6dc666f38503c950b38bbd6f6be8",
+  "user_prompt_sha256": "2ea82b556c243e8ee6bcd3524fc3b1f55e8eb72f0b7d120e3f153c8340bedfe3",
+  "error": {
+    "type": "BadRequestError",
+    "status_code": 400,
+    "provider_code": "Arrearage"
+  }
+}

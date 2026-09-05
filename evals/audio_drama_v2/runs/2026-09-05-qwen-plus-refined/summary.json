@@ -1,0 +1,11 @@
+[
+  {
+    "variant": "d_fact_audited",
+    "completed": 0,
+    "mean_weighted_score": null,
+    "fact_gate_passed": 0,
+    "mean_narration_ratio": null,
+    "raw_tts_contamination": 0,
+    "generation_seconds_mean": null
+  }
+]

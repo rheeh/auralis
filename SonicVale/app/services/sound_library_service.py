@@ -16,7 +16,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import getConfigPath
-from app.models.po import SoundLibraryAssetPO
+from app.dto.sound_library_dto import SoundLibraryInsertDTO
+from app.models.po import ChapterPO, LinePO, SoundLibraryAssetPO, TimelineClipPO, TimelineTrackPO
+from app.services.timeline_service import TimelineService
 
 
 SUPPORTED_EXTENSIONS = {".wav", ".mp3", ".m4a", ".ogg", ".flac"}
@@ -123,6 +125,121 @@ class SoundLibraryService:
         if not path.is_file():
             raise FileNotFoundError(f"素材文件不存在: {path}")
         return path
+
+    def insert_asset(self, asset_id: str, dto: SoundLibraryInsertDTO) -> dict[str, Any]:
+        """Copy a library sound and insert its cue atomically, preserving existing edits.
+
+        Timing intent lives on the cue so sounds added before TTS can be placed
+        against real audio durations when the timeline is built later.
+        """
+        chapter = self.db.get(ChapterPO, dto.chapter_id)
+        if chapter is None:
+            raise ValueError("章节不存在")
+        lines = self.db.query(LinePO).filter(LinePO.chapter_id == chapter.id).order_by(
+            LinePO.line_order.asc(), LinePO.id.asc()
+        ).all()
+        anchor = next((line for line in lines if line.id == dto.anchor_line_id), None)
+        if dto.anchor_line_id is not None and anchor is None:
+            raise ValueError("定位台词不存在或不属于当前章节")
+        if any(not TimelineService.sound_library_cue(line) for line in lines) and anchor is None:
+            raise ValueError("请选择当前章节中的定位台词")
+        if anchor and TimelineService.sound_library_cue(anchor):
+            raise ValueError("请选择对白、旁白或原始音效行作为定位台词")
+        source = self.resolve_path(asset_id)
+        asset = self._builtins()[asset_id] if asset_id.startswith("builtin_") else self._serialize_user(self._get_user(asset_id))
+        source_duration = self._audio_info(source)[0]
+        duration = dto.duration_ms or source_duration
+        if not source_duration or duration > source_duration:
+            raise ValueError(f"音效长度不能超过源音频时长 {source_duration} ms")
+        if dto.fade_in_ms + dto.fade_out_ms > duration:
+            raise ValueError("淡入和淡出总时长不能超过音效长度")
+
+        if dto.placement == "scene_start" and anchor:
+            # Repeated scene titles later in a chapter are separate occurrences.
+            anchor_index = lines.index(anchor)
+            while anchor_index > 0 and lines[anchor_index - 1].scene_title == anchor.scene_title:
+                anchor_index -= 1
+            anchor = next((line for line in lines[anchor_index:] if not TimelineService.sound_library_cue(line)), anchor)
+        insertion_index = lines.index(anchor) + int(dto.placement == "after") if anchor else 0
+        old_fingerprint = TimelineService._source_fingerprint(lines)
+        tracks = self.db.query(TimelineTrackPO).filter(TimelineTrackPO.chapter_id == chapter.id).all()
+        duplicate = any(
+            (cue := TimelineService.sound_library_cue(line))
+            and cue.get("library_asset_id") == asset_id
+            and cue.get("anchor_line_id") == (anchor.id if anchor else None)
+            for line in lines
+        )
+        cue = {
+            **dto.model_dump(exclude={"chapter_id"}),
+            "type": "sound_library_placement",
+            "anchor_line_id": anchor.id if anchor else None,
+            "library_asset_id": asset_id,
+            "duration_ms": duration,
+            "license": asset.get("license"),
+            "source_url": asset.get("source_url"),
+        }
+        target = None
+        clip = None
+        try:
+            new_line = LinePO(
+                chapter_id=chapter.id,
+                line_order=insertion_index + 1,
+                text_content=asset["name"],
+                line_type="bgm" if asset["category"] == "bgm" else "sfx",
+                track="bgm" if asset["category"] == "bgm" else "sfx",
+                should_speak=0,
+                scene_title=anchor.scene_title if anchor else chapter.title,
+                sound_prompt=asset["name"],
+                production_note=f"素材库：{asset['name']} · {asset.get('license', 'user-provided')}",
+                audio_events=[cue],
+                audio_versions=[],
+                audio_variants=[],
+                status="done",
+                is_done=1,
+            )
+            lines.insert(insertion_index, new_line)
+            for order, line in enumerate(lines, start=1):
+                line.line_order = order
+            self.db.add(new_line)
+            self.db.flush()
+            target_dir = Path(getConfigPath()) / "assets" / str(chapter.id) / "audio"
+            target_dir.mkdir(parents=True, exist_ok=True)
+            target = target_dir / f"id_{new_line.id}_asset_{uuid4().hex[:8]}{source.suffix.lower()}"
+            shutil.copy2(source, target)
+            new_line.audio_path = str(target)
+            self.db.flush()
+
+            timeline_service = TimelineService(self.db)
+            if tracks:
+                clips = self.db.query(TimelineClipPO).filter(TimelineClipPO.chapter_id == chapter.id).all()
+                track = next((track for track in tracks if track.track_type == new_line.track), None)
+                if track is None:
+                    tracks = timeline_service._ensure_tracks(chapter.project_id, chapter.id)
+                    track = next(track for track in tracks if track.track_type == new_line.track)
+                clip = timeline_service.add_sound_library_clip(chapter.project_id, chapter.id, new_line, track, clips)
+                fingerprint = timeline_service._source_fingerprint(lines)
+                for track in tracks:
+                    # A pre-existing stale source must remain stale. Updating only
+                    # synchronized fingerprints acknowledges our own insertion.
+                    if track.source_fingerprint == old_fingerprint:
+                        track.source_fingerprint = fingerprint
+                        track.revision += 1
+            self.db.commit()
+            return {
+                "line_id": new_line.id,
+                "chapter_id": chapter.id,
+                "clip_id": clip.id if clip else None,
+                "audio_path": str(target),
+                "asset_name": asset["name"],
+                "duplicate": duplicate,
+                "placement_pending": clip is None,
+                "start_ms": clip.start_ms if clip else None,
+            }
+        except Exception:
+            self.db.rollback()
+            if target:
+                target.unlink(missing_ok=True)
+            raise
 
     def delete_user_asset(self, asset_id: str) -> None:
         row = self._get_user(asset_id)

@@ -1,0 +1,25 @@
+{
+  "model": "qwen3.8-27b",
+  "provider_id": 1,
+  "sampling": {
+    "temperature": 0.3,
+    "top_p": 0.8,
+    "max_tokens": 5000,
+    "enable_thinking": false
+  },
+  "judge": "disabled; writer only",
+  "judge_temperature": null,
+  "sample_ids": [
+    "AD-001",
+    "AD-006",
+    "DEMO-001"
+  ],
+  "repetitions": 1,
+  "dataset_sha256": "24409ec88e5df3e4accfd2c4e08bf8c2b232f5171d3143358f301d8a294075cd",
+  "prompt_sha256": {
+    "a_current": "f132bbf4b0034eecc7f7916426ca7683d211d4e1265d873347dcee6f2a1ebc41",
+    "b_fact_locked": "b43ec56b4ab8b73b350ee3a646bc256900ee16bd528431845a4a732c2069cb5c",
+    "c_director_example": "ddafc9660c4df79c5ca0fd60672157f2156c6dc666f38503c950b38bbd6f6be8"
+  },
+  "scope": "draft prompt only; identical source, confirmed characters, model, schema and sampling; no parser/reviewer repair"
+}

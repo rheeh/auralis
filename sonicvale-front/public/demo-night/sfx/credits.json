@@ -1,0 +1,58 @@
+[
+  {
+    "id": "rain",
+    "label": "雨敲窗",
+    "file": "sfx/rain.mp3",
+    "author": "alxl",
+    "source_url": "https://opengameart.org/content/rain-on-window-loop",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "doorbell",
+    "label": "门铃",
+    "file": "sfx/doorbell.mp3",
+    "author": "Dub",
+    "source_url": "https://opengameart.org/content/doorbell-ring",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "paper",
+    "label": "纸张翻动",
+    "file": "sfx/paper.mp3",
+    "author": "Voltiment555",
+    "source_url": "https://opengameart.org/content/book-flip-sounds",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "steps",
+    "label": "木地板脚步",
+    "file": "sfx/steps.mp3",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "clock",
+    "label": "钟表滴答",
+    "file": "sfx/clock.mp3",
+    "author": "IgnasD",
+    "source_url": "https://opengameart.org/content/clock-tick-0",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "knock",
+    "label": "敲门 · 一慢两快",
+    "file": "sfx/knock.wav",
+    "author": "Auralis",
+    "license": "CC0-1.0",
+    "source": "Original procedural Foley, scripts/build_demo_effects.py"
+  },
+  {
+    "id": "vibration",
+    "label": "手机振动",
+    "file": "sfx/vibration.wav",
+    "author": "Auralis",
+    "license": "CC0-1.0",
+    "source": "Original procedural Foley, scripts/build_demo_effects.py"
+  }
+]

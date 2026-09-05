@@ -21,6 +21,10 @@ export function bindSoundLibraryAsset(assetId, lineId) {
   return request.post(`/sound-library/assets/${encodeURIComponent(assetId)}/bind/${lineId}`)
 }
 
+export function insertSoundLibraryAsset(assetId, payload) {
+  return request.post(`/sound-library/assets/${encodeURIComponent(assetId)}/insert`, payload)
+}
+
 export function deleteSoundLibraryAsset(assetId) {
   return request.delete(`/sound-library/assets/${encodeURIComponent(assetId)}`)
 }

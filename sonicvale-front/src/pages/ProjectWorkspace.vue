@@ -212,6 +212,10 @@ onMounted(loadWorkspace)
 onBeforeUnmount(() => clearTimeout(pollTimer))
 
 async function loadWorkspace() {
+  try {
+    const imported = sessionStorage.getItem(`auralis-source-${projectId}`)
+    if (imported) { Object.assign(draft, JSON.parse(imported)); sessionStorage.removeItem(`auralis-source-${projectId}`) }
+  } catch { /* The normal composer remains usable if browser storage is unavailable. */ }
   const projectResponse = await getProjectDetail(projectId)
   project.value = projectResponse?.code === 200 ? projectResponse.data : null
   const sessionsResponse = await fetchChatSessions({ project_id: projectId, limit: 20 })

@@ -143,8 +143,10 @@ class TTSProviderService:
                 instruction_mode = "none"
                 if engine._driver() == "dashscope_cosyvoice":
                     instruction_mode = engine._cosyvoice_instruction_mode()
-                    if instruction_mode in {"native", "structured"}:
-                        instruction = "开心、自然地说出这句话。"
+                elif engine._instruction_field():
+                    instruction_mode = "native"
+                if instruction_mode in {"native", "structured"}:
+                    instruction = "像面对面聊天，声音自然、克制，句尾轻轻收住。"
                 audio_bytes = engine.synthesize(
                     "这是一段云端 TTS 测试。", save_path=save_path, instruction=instruction,
                 )

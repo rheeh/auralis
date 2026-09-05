@@ -1,0 +1,15 @@
+{
+  "id": "qwen-audio-plus-lingxin",
+  "voice": "longanlingxin",
+  "model": "qwen-audio-3.0-tts-plus",
+  "label": "龙安灵心",
+  "role": "xu",
+  "description": "官方描述为温暖女声；都市女角候选，待盲听选择。",
+  "mode": "native",
+  "file": "free-auditions/qwen-audio-plus-lingxin.mp3",
+  "duration": 3.504,
+  "instruction": "低声克制，句间换气，尾音收住。",
+  "text_sha256": "270355cc4178d117075626d705b0b452636dd70eda4ec84be6299bfd7d03897b",
+  "audio_sha256": "7f9600e6a7925b32dcbe7e75a506dc515b8b57b6b8f9ed5f135558293ab930af",
+  "generated_at": "2026-09-05T04:53:24.117372+00:00"
+}

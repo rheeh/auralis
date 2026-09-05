@@ -1,0 +1,191 @@
+{
+  "raw_record": "runs/2026-09-05-qwen3.8-27b-demo/raw/AD-001-r1-c_director_example.json",
+  "original_evaluation_status": "failed",
+  "response_model": "qwen3.8-27b",
+  "network_calls": 0,
+  "normalization_change": "明确shouldSpeak=false且track为sfx/amb/缺省的amb行转为sfx，保留声源、text和audioEvents。break不转换。",
+  "script": {
+    "title": "雨夜末班车",
+    "logline": "在城南客运站，即将离城的许棠与试图解释的周砚在最后一班车的检票催促中完成了一次迟到的和解。",
+    "characters": [
+      {
+        "name": "许棠",
+        "role": "被旧事伤害、即将离城的设计师",
+        "voice_traits": [
+          "克制",
+          "锋利",
+          "不轻易原谅"
+        ]
+      },
+      {
+        "name": "周砚",
+        "role": "当年沉默、如今试图解释的旧同事",
+        "voice_traits": [
+          "内疚",
+          "迟疑",
+          "避免为自己辩护"
+        ]
+      }
+    ],
+    "scenes": [
+      {
+        "title": "雨夜车站",
+        "location": "城南客运站候车大厅",
+        "mood": "压抑、潮湿、充满未解的张力",
+        "lines": [
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "环境底噪",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "空旷室内混响，雨水顺着顶棚缺口滴落在水泥地上的清脆回声，远处广播反复播报检票提示音，低频空调嗡鸣",
+            "productionNote": "开场铺底，贯穿全场景，音量-28dB",
+            "audioEvents": []
+          },
+          {
+            "type": "narration",
+            "track": "narration",
+            "shouldSpeak": true,
+            "speaker": "旁白",
+            "text": "夜里十一点四十，城南客运站只剩最后一班车。",
+            "emotion": "平静",
+            "strength": "中等",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "语速平缓，交代时空背景",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "脚步声",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "湿透的皮鞋踩在积水地面上的沉重脚步声，由远及近，伴随水花溅起的细微声响",
+            "productionNote": "表现周砚匆忙赶来的状态，前景动作声，-12dB",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "周砚",
+            "text": "换到靠窗的位置了，你以前会晕车。",
+            "emotion": "内疚",
+            "strength": "中等",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "带着一丝喘息，语气迟疑但努力保持平稳，将车票压在纸箱上的轻微摩擦声同步",
+            "audioEvents": [
+              {
+                "timing": "台词前",
+                "type": "sfx",
+                "content": "硬纸片压住纸箱表面的摩擦声",
+                "volume_db": "-15dB"
+              }
+            ]
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "许棠",
+            "text": "你还记得我晕车，倒不记得自己欠我一句话。",
+            "emotion": "克制",
+            "strength": "较强",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "没有抬头，声音冷冽且直接，字句间有停顿，表现出压抑多年的情绪",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "握紧伞柄",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "手指用力捏紧湿滑木质伞柄发出的轻微挤压声，伴随布料摩擦声",
+            "productionNote": "表现周砚内心的挣扎与紧张，-18dB",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "周砚",
+            "text": "那次沉默……不是因为不相信你。是主管用父亲的手术名额威胁我。这三年我一直想解释，却每次都觉得，解释只是给自己减轻负担。",
+            "emotion": "悲伤",
+            "strength": "微弱",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "声音低沉，带有明显的自我剖析感，语速缓慢，透露出深深的无力感",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "广播催促",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "车站广播突然提高音量，机械女声急促播报“请乘坐末班车的乘客尽快前往检票口”",
+            "productionNote": "打破两人之间的沉默，推动剧情进入结尾，-20dB",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "递伞",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "从纸箱中抽出一把折叠伞并递出的动作声，伞骨发出轻微的金属碰撞声",
+            "productionNote": "配合许棠的动作，-15dB",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "许棠",
+            "text": "这把伞是你的。修好了，再来找我。",
+            "emotion": "坚定",
+            "strength": "中等",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "语气不再尖锐，多了一丝释然与期待，尾音微微上扬",
+            "audioEvents": []
+          },
+          {
+            "type": "bgm",
+            "track": "bgm",
+            "shouldSpeak": false,
+            "speaker": "BGM",
+            "text": "尾声配乐",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "单簧管或钢琴独奏，旋律舒缓而略带忧伤，随后逐渐淡出",
+            "productionNote": "在许棠说完后缓缓进入，营造余韵，-24dB",
+            "audioEvents": []
+          }
+        ]
+      }
+    ]
+  },
+  "posthoc_schema_status": "valid"
+}

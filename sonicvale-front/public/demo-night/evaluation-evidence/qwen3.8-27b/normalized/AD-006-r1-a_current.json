@@ -1,0 +1,355 @@
+{
+  "raw_record": "runs/2026-09-05-qwen3.8-27b-demo/raw/AD-006-r1-a_current.json",
+  "original_evaluation_status": "generated",
+  "response_model": "qwen3.8-27b",
+  "network_calls": 0,
+  "normalization_change": "明确shouldSpeak=false且track为sfx/amb/缺省的amb行转为sfx，保留声源、text和audioEvents。break不转换。",
+  "script": {
+    "title": "生鲜市场冷库惊魂",
+    "logline": "闭市后的生鲜市场，保安杜衡在冷库间听到异响，识破同事老韩的录音陷阱，救出被困送货员并阻止其逃脱。",
+    "characters": [
+      {
+        "name": "杜衡",
+        "role": "判断空间风险的市场保安",
+        "voice_traits": [
+          "冷静",
+          "行动直接",
+          "会核对安全后果"
+        ]
+      },
+      {
+        "name": "老韩",
+        "role": "用录音误导杜衡的同事",
+        "voice_traits": [
+          "录音中急迫",
+          "真实意图是拖延"
+        ]
+      },
+      {
+        "name": "送货员",
+        "role": "被锁在三号冷库的人",
+        "voice_traits": [
+          "虚弱",
+          "喘息",
+          "提供关键事实"
+        ]
+      }
+    ],
+    "scenes": [
+      {
+        "title": "冷库连环响",
+        "location": "生鲜市场冷库区走廊",
+        "mood": "悬疑、紧张",
+        "lines": [
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "金属撞击声连续三次，由远及近，带有空旷回音",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "金属撞击声连续三次，由远及近，带有空旷回音",
+            "productionNote": "开场声音锚点，建立危险感",
+            "audioEvents": [
+              {
+                "timing": "场景开始",
+                "type": "sfx",
+                "content": "金属撞击声连续三次，由远及近，带有空旷回音",
+                "volume_db": "-12dB"
+              },
+              {
+                "timing": "背景",
+                "type": "amb",
+                "content": "市场闭市后空旷走廊的底噪，偶尔有水滴声",
+                "volume_db": "-28dB"
+              }
+            ]
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "杜衡",
+            "text": "谁在那儿？",
+            "emotion": "严肃",
+            "strength": "中等",
+            "voiceProfile": "冷静，行动直接，会核对安全后果",
+            "soundPrompt": "手电筒光束扫过黑暗的声音",
+            "productionNote": "语速平稳，带有职业性的警觉",
+            "audioEvents": [
+              {
+                "timing": "台词前",
+                "type": "sfx",
+                "content": "手电筒开关咔哒声，光束扫过地面融水痕迹的声音",
+                "volume_db": "-18dB"
+              }
+            ]
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "第一扇门敞开的风声，第二扇门反锁的金属碰撞声，第三扇门警报灯故障的微弱电流声",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "第一扇门敞开的风声，第二扇门反锁的金属碰撞声，第三扇门警报灯故障的微弱电流声",
+            "productionNote": "通过声音呈现三扇门的异常状态",
+            "audioEvents": [
+              {
+                "timing": "台词后",
+                "type": "sfx",
+                "content": "第一扇门敞开的风声，第二扇门反锁的金属碰撞声，第三扇门警报灯故障的微弱电流声",
+                "volume_db": "-18dB"
+              }
+            ]
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "老韩",
+            "text": "别开！杜衡，别开！",
+            "emotion": "惊慌",
+            "strength": "强烈",
+            "voiceProfile": "录音中急迫，真实意图是拖延",
+            "soundPrompt": "从第二扇门内传出的喊声，带有门板阻隔的回音",
+            "productionNote": "声音带有明显的录音质感，略显失真",
+            "audioEvents": [
+              {
+                "timing": "台词中",
+                "type": "reverb",
+                "content": "门内空间的混响效果",
+                "volume_db": "-24dB"
+              }
+            ]
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "第三扇门后的敲击声变得急促",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "第三扇门后的敲击声变得急促",
+            "productionNote": "与老韩的喊声形成对比，制造紧迫感",
+            "audioEvents": [
+              {
+                "timing": "老韩台词后",
+                "type": "sfx",
+                "content": "第三扇门后的敲击声变得急促",
+                "volume_db": "-15dB"
+              }
+            ]
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "杜衡",
+            "text": "老韩？发生什么事了？",
+            "emotion": "疑惑",
+            "strength": "中等",
+            "voiceProfile": "冷静，行动直接，会核对安全后果",
+            "soundPrompt": "杜衡靠近第二扇门的脚步声",
+            "productionNote": "语气保持克制，但带有疑问",
+            "audioEvents": [
+              {
+                "timing": "台词前",
+                "type": "sfx",
+                "content": "杜衡靠近第二扇门的脚步声",
+                "volume_db": "-20dB"
+              }
+            ]
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "老韩",
+            "text": "切断总电源！快！",
+            "emotion": "焦急",
+            "strength": "强烈",
+            "voiceProfile": "录音中急迫，真实意图是拖延",
+            "soundPrompt": "录音中的指令，带有轻微的电子噪音",
+            "productionNote": "声音更加急切，但仍有录音的失真感",
+            "audioEvents": [
+              {
+                "timing": "台词中",
+                "type": "sfx",
+                "content": "录音设备的轻微电子噪音",
+                "volume_db": "-26dB"
+              }
+            ]
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "压缩机轰鸣声忽然升高，头顶管道开始震动",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "压缩机轰鸣声忽然升高，头顶管道开始震动",
+            "productionNote": "环境音变化，暗示断电的危险性",
+            "audioEvents": [
+              {
+                "timing": "老韩台词后",
+                "type": "sfx",
+                "content": "压缩机轰鸣声忽然升高，头顶管道开始震动",
+                "volume_db": "-18dB"
+              }
+            ]
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "杜衡",
+            "text": "不行。断电会让三号冷库的备用锁自动扣死。",
+            "emotion": "坚定",
+            "strength": "较强",
+            "voiceProfile": "冷静，行动直接，会核对安全后果",
+            "soundPrompt": "杜衡转身走向消防箱的脚步声",
+            "productionNote": "语气果断，体现专业判断",
+            "audioEvents": [
+              {
+                "timing": "台词后",
+                "type": "sfx",
+                "content": "杜衡转身走向消防箱的脚步声",
+                "volume_db": "-20dB"
+              }
+            ]
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "钥匙打开消防箱的声音，撬棍取出的金属摩擦声",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "钥匙打开消防箱的声音，撬棍取出的金属摩擦声",
+            "productionNote": "动作音效，展现杜衡的果断行动",
+            "audioEvents": [
+              {
+                "timing": "杜衡台词后",
+                "type": "sfx",
+                "content": "钥匙打开消防箱的声音，撬棍取出的金属摩擦声",
+                "volume_db": "-15dB"
+              }
+            ]
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "撬棍砸开三号门的巨响，冷气涌出的嘶嘶声",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "撬棍砸开三号门的巨响，冷气涌出的嘶嘶声",
+            "productionNote": "高潮动作音效，打破紧张氛围",
+            "audioEvents": [
+              {
+                "timing": "消防箱音效后",
+                "type": "sfx",
+                "content": "撬棍砸开三号门的巨响，冷气涌出的嘶嘶声",
+                "volume_db": "-12dB"
+              }
+            ]
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "送货员",
+            "text": "咳咳……老韩把我锁进去后，就跑去二号库了。",
+            "emotion": "虚弱",
+            "strength": "较弱",
+            "voiceProfile": "虚弱，喘息，提供关键事实",
+            "soundPrompt": "送货员跌倒在门口的声音，沉重的喘息",
+            "productionNote": "声音虚弱，带有喘息，信息传递清晰",
+            "audioEvents": [
+              {
+                "timing": "台词前",
+                "type": "sfx",
+                "content": "送货员跌倒在门口的声音，沉重的喘息",
+                "volume_db": "-18dB"
+              }
+            ]
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "二号门锁舌弹开的清脆声响",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "二号门锁舌弹开的清脆声响",
+            "productionNote": "揭示真相的关键音效",
+            "audioEvents": [
+              {
+                "timing": "送货员台词后",
+                "type": "sfx",
+                "content": "二号门锁舌弹开的清脆声响",
+                "volume_db": "-15dB"
+              }
+            ]
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "杜衡",
+            "text": "里面没人。手机在播放老韩的录音。",
+            "emotion": "震惊",
+            "strength": "中等",
+            "voiceProfile": "冷静，行动直接，会核对安全后果",
+            "soundPrompt": "杜衡查看手机的动作声",
+            "productionNote": "语气从震惊转为确认，体现冷静判断",
+            "audioEvents": [
+              {
+                "timing": "台词前",
+                "type": "sfx",
+                "content": "杜衡查看手机的动作声",
+                "volume_db": "-22dB"
+              }
+            ]
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "市场后门传来摩托车发动的声音，逐渐远去",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "市场后门传来摩托车发动的声音，逐渐远去",
+            "productionNote": "结尾声音锚点，暗示老韩逃脱",
+            "audioEvents": [
+              {
+                "timing": "杜衡台词后",
+                "type": "sfx",
+                "content": "市场后门传来摩托车发动的声音，逐渐远去",
+                "volume_db": "-18dB"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "posthoc_schema_status": "valid"
+}

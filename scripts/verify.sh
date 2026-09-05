@@ -344,11 +344,12 @@ if ! rg -q "fetchChapterTimeline|buildChapterTimeline|updateTimelineClip|renderC
   echo "TimelineBoard must use the real timeline edit and render APIs" >&2
   exit 1
 fi
-if rg -q "getLinesByChapter|estimateSeconds|text_content.length" src/pages/TimelineBoard.vue; then
+if rg -q "estimateSeconds|text_content.length" src/pages/TimelineBoard.vue; then
   echo "TimelineBoard still contains text-length timeline estimation" >&2
   exit 1
 fi
 echo "Frontend timeline API integration ok"
+node --experimental-default-type=module --test tests/audioMixer.test.mjs
 node --check electron/main.js
 node --check electron/preload.js
 node --check electron/logger.js

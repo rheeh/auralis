@@ -1,0 +1,14 @@
+{
+  "sample_id": "AD-004",
+  "title": "橱窗里的红线",
+  "repetition": 1,
+  "variant": "a_current",
+  "status": "failed",
+  "started_at": "2026-09-05T04:14:50.039795+00:00",
+  "system_prompt_sha256": "f132bbf4b0034eecc7f7916426ca7683d211d4e1265d873347dcee6f2a1ebc41",
+  "user_prompt_sha256": "d79463a773dd3235af2b9bd172f7751e4a68457384f5cde19f70d5af7204b44f",
+  "error": {
+    "type": "APIConnectionError",
+    "status_code": null
+  }
+}

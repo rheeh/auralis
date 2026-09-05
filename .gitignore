@@ -13,3 +13,5 @@ SonicVale/.venv/
 sonicvale-front/node_modules/
 sonicvale-front/dist/
 sonicvale-front/release/
+.playwright-cli/
+output/

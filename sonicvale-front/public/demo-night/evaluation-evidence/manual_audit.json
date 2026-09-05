@@ -1,0 +1,175 @@
+{
+  "method": "Agent逐句文本复核；不是独立人类专家审稿或真实听众试听。关键因果可追踪不等于可直接交付。",
+  "primary_records": [
+    {
+      "sample_id": "AD-001",
+      "variant": "a_current",
+      "close_reading_status": "需返修",
+      "fact_findings": [
+        "缺少“设计稿被指抄袭、周砚在会议上沉默”的具体事实关系，听众只听到“那次沉默”。"
+      ],
+      "production_findings": [
+        "“伞骨第三根，往左拧半圈能卡住”是原文没有的维修细节。",
+        "SFX主要只填audioEvents，独立轨没有soundPrompt。"
+      ],
+      "blind_score": 4.85,
+      "blind_fact_gate": true,
+      "raw_narration_ratio": 0.0,
+      "raw_empty_sound_prompts": 11,
+      "evidence_file": "AD-001-r1-a_current.json"
+    },
+    {
+      "sample_id": "AD-001",
+      "variant": "b_fact_locked",
+      "close_reading_status": "需返修",
+      "fact_findings": [
+        "漏掉设计稿抄袭与会议背景。",
+        "“换到靠窗的位置了。你以前会晕车。”被分给许棠，原文说话人是周砚。"
+      ],
+      "production_findings": [
+        "把客运站广播改成K307次列车，增加原文没有的车次与交通细节。",
+        "旁白中复述纯视觉动作。"
+      ],
+      "blind_score": 4.6,
+      "blind_fact_gate": true,
+      "raw_narration_ratio": 0.3427,
+      "raw_empty_sound_prompts": 0,
+      "evidence_file": "AD-001-r1-b_fact_locked.json"
+    },
+    {
+      "sample_id": "AD-001",
+      "variant": "c_director_example",
+      "close_reading_status": "需返修",
+      "fact_findings": [
+        "漏掉设计稿抄袭与会议背景。",
+        "“这三年，你哪次开口，不是为了自己轻松点？”暗示周砚多次解释，与原文三年始终没解释的状态不符。"
+      ],
+      "production_findings": [
+        "以布料/伞骨声音代替物件关联，信息仍不够。"
+      ],
+      "blind_score": 4.6,
+      "blind_fact_gate": true,
+      "raw_narration_ratio": 0.1567,
+      "raw_empty_sound_prompts": 0,
+      "evidence_file": "AD-001-r1-c_director_example.json"
+    },
+    {
+      "sample_id": "AD-006",
+      "variant": "a_current",
+      "close_reading_status": "关键因果可追踪",
+      "fact_findings": [
+        "三号库困人、断电扣锁、二号库录音和后门摩托构成原文主因果。"
+      ],
+      "production_findings": [
+        "14条SFX没有soundPrompt，声音只藏在audioEvents。",
+        "“别开”同时出现于SFX与角色台词，容易重复制作。",
+        "“光束划破黑暗”“瞬间降温感”不能作为实际声音。"
+      ],
+      "blind_score": 4.6,
+      "blind_fact_gate": true,
+      "raw_narration_ratio": 0.3588,
+      "raw_empty_sound_prompts": 14,
+      "evidence_file": "AD-006-r1-a_current.json"
+    },
+    {
+      "sample_id": "AD-006",
+      "variant": "b_fact_locked",
+      "close_reading_status": "关键因果可追踪",
+      "fact_findings": [
+        "救人、断电风险、录音反转、摩托离开均有对白/音效对应。"
+      ],
+      "production_findings": [
+        "旁白占45.86%，包括顶灯频闪、手电光等视觉叙述。",
+        "“闭市后十分钟”“后门液压杆”是原文未给出的非关键扩写。",
+        "录音的整句人声写在SFX，不利于稳定配音。"
+      ],
+      "blind_score": 4.6,
+      "blind_fact_gate": true,
+      "raw_narration_ratio": 0.4586,
+      "raw_empty_sound_prompts": 0,
+      "evidence_file": "AD-006-r1-b_fact_locked.json"
+    },
+    {
+      "sample_id": "AD-006",
+      "variant": "c_director_example",
+      "close_reading_status": "关键因果可追踪",
+      "fact_findings": [
+        "断电风险、救出送货员、二号库录音、后门摩托均保留。"
+      ],
+      "production_findings": [
+        "“光束扫过金属门框的轻微刮擦声”没有真实声源。",
+        "录音启动提示过早出现，可能提前暴露反转。",
+        "人声录音应保留同一角色dialogue轨，不用音效模型生成整句人声。"
+      ],
+      "blind_score": 4.6,
+      "blind_fact_gate": true,
+      "raw_narration_ratio": 0.2283,
+      "raw_empty_sound_prompts": 0,
+      "evidence_file": "AD-006-r1-c_director_example.json"
+    },
+    {
+      "sample_id": "DEMO-001",
+      "variant": "a_current",
+      "close_reading_status": "需返修",
+      "fact_findings": [
+        "说了“三个蓝点”，但没有说与三年前那封信相同；核心视觉线索的意义丢失。"
+      ],
+      "production_findings": [
+        "7条SFX没有soundPrompt。",
+        "“屋里只剩雨声”用旁白重复环境；表演提示偏全员气声。"
+      ],
+      "blind_score": 4.6,
+      "blind_fact_gate": true,
+      "raw_narration_ratio": 0.1489,
+      "raw_empty_sound_prompts": 7,
+      "evidence_file": "DEMO-001-r1-a_current.json"
+    },
+    {
+      "sample_id": "DEMO-001",
+      "variant": "b_fact_locked",
+      "close_reading_status": "需返修",
+      "fact_findings": [
+        "遗漏蓝点与三年前信封相同。",
+        "两次敲门的productionNote要求完全重叠，改变了先电话后现实的顺序。"
+      ],
+      "production_findings": [
+        "朗读了“谁在门外，原文没有给出答案”。",
+        "有只含“……”的TTS行。",
+        "旁白37.98%，并以开关半程咔哒声替代原文手停在半空。"
+      ],
+      "blind_score": 4.75,
+      "blind_fact_gate": true,
+      "raw_narration_ratio": 0.3798,
+      "raw_empty_sound_prompts": 0,
+      "evidence_file": "DEMO-001-r1-b_fact_locked.json"
+    },
+    {
+      "sample_id": "DEMO-001",
+      "variant": "c_director_example",
+      "close_reading_status": "需返修",
+      "fact_findings": [
+        "遗漏蓝点与三年前信封相同。"
+      ],
+      "production_findings": [
+        "把“手指悬停于墙壁开关上方”写成SFX。",
+        "有只含“……”的TTS行。",
+        "门外敲门在电话尾声未落时进入，顺序实现存在风险。"
+      ],
+      "blind_score": 4.85,
+      "blind_fact_gate": true,
+      "raw_narration_ratio": 0.1698,
+      "raw_empty_sound_prompts": 0,
+      "evidence_file": "DEMO-001-r1-c_director_example.json"
+    }
+  ],
+  "blind_fact_gate_passes": 9,
+  "close_reading_without_identified_critical_fact_issue": 3,
+  "close_reading_requires_fact_repair": 6,
+  "refinement": {
+    "completed_generations": 2,
+    "completed_judgments": 0,
+    "pending_demo_generation": true,
+    "provider_error": "HTTP 400 Arrearage",
+    "conclusion": "D未胜出：旧伞仍漏抄袭且加入列车，冷库更明确交代录音但仍有重复喊声/无源报警声。生产保留A基线并添加针对缺陷的守则，未声称这份组合候选已获模型比较验证。"
+  }
+}

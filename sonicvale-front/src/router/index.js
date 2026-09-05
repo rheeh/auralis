@@ -1,6 +1,7 @@
 import { createRouter, createWebHashHistory  } from 'vue-router'
 
 const routes = [
+  { path: '/demo', name: 'DemoStudio', component: () => import('../pages/DemoStudio.vue') },
   {
     path: '/',
     redirect: '/home'

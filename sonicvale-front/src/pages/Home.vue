@@ -25,12 +25,10 @@
           <h1 class="enter-title">Auralis</h1>
           <p class="cn-title enter-subtitle">AI 广 播 剧</p>
           <div class="hero-actions enter-actions">
-            <RouterLink v-if="isStaticDemo" class="start-button" :to="startRoute" @click="prepareDemo"><span>✦</span>开始体验</RouterLink>
+            <RouterLink v-if="isStaticDemo" class="start-button" to="/demo"><span>▶</span>体验雨夜来件</RouterLink>
             <template v-else>
               <RouterLink class="start-button" :to="startRoute"><span>✦</span>开始创作</RouterLink>
-              <button class="demo-button" type="button" :aria-pressed="demoPlaying" @click="toggleDemo">
-                <span class="button-icon">{{ demoPlaying ? 'Ⅱ' : '▶' }}</span>{{ demoPlaying ? '暂停 Demo' : '体验 Demo' }}
-              </button>
+              <RouterLink class="demo-button" to="/demo"><span class="button-icon">▶</span>体验 Demo</RouterLink>
             </template>
           </div>
         </div>

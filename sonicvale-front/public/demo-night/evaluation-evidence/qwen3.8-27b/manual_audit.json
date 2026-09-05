@@ -1,0 +1,56 @@
+{
+  "model": "qwen3.8-27b",
+  "method": "Agent逐句文本复核；没有额外模型自评或人类听众盲听。",
+  "attempted_writer_calls": 9,
+  "complete_responses": 4,
+  "initial_schema_valid": 1,
+  "posthoc_schema_valid": 3,
+  "provider_Arrearage_without_output": 5,
+  "notes": [
+    {
+      "sample_id": "AD-001",
+      "variant": "a_current",
+      "fact_findings": [
+        "仍遗漏设计稿抄袭与会议背景，只有“那次沉默”。"
+      ],
+      "schema_issue": "lines[0].type=amb；非朗读环境行可保守规范为sfx。",
+      "posthoc_status": "valid"
+    },
+    {
+      "sample_id": "AD-001",
+      "variant": "c_director_example",
+      "fact_findings": [
+        "同样遗漏设计稿抄袭与会议背景。"
+      ],
+      "schema_issue": "lines[0].type=amb；非朗读环境行可保守规范为sfx。",
+      "posthoc_status": "valid"
+    },
+    {
+      "sample_id": "AD-006",
+      "variant": "a_current",
+      "fact_findings": [
+        "主因果可追踪，明确读出“里面没人。手机在播放老韩的录音。”"
+      ],
+      "schema_issue": null,
+      "production_findings": [
+        "多声源写入一条音效，空间对应需导演拆分；独立音效与audioEvents有重复制作风险。"
+      ],
+      "posthoc_status": "valid"
+    },
+    {
+      "sample_id": "DEMO-001",
+      "variant": "b_fact_locked",
+      "fact_findings": [
+        "明确说出“三个蓝色圆点。和三年前那封信，一模一样。”",
+        "电话敲门后有0.5秒留白，再现实敲门，顺序正确。"
+      ],
+      "schema_issue": "lines[7]、[15]、[20].type=break；保留可诊断失败，不丢弃时序。",
+      "production_findings": [
+        "以笔尖划过纸面暗示读字是新增错误声源。",
+        "“手悬停半空”仍被写成SFX。"
+      ],
+      "posthoc_status": "invalid"
+    }
+  ],
+  "conclusion": "27b Demo B在关键事实关系上优于历史qwen-plus Demo稿，但有结构与声音实现问题；同模型完整A/B/C比较未完成，不能认定最佳。"
+}

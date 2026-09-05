@@ -1,0 +1,69 @@
+[
+  {
+    "raw_record": "runs/2026-09-05-qwen3.8-27b-demo/raw/AD-001-r1-a_current.json",
+    "original_evaluation_status": "failed",
+    "response_model": "qwen3.8-27b",
+    "network_calls": 0,
+    "normalization_change": "明确shouldSpeak=false且track为sfx/amb/缺省的amb行转为sfx，保留声源、text和audioEvents。break不转换。",
+    "posthoc_schema_status": "valid"
+  },
+  {
+    "raw_record": "runs/2026-09-05-qwen3.8-27b-demo/raw/AD-001-r1-c_director_example.json",
+    "original_evaluation_status": "failed",
+    "response_model": "qwen3.8-27b",
+    "network_calls": 0,
+    "normalization_change": "明确shouldSpeak=false且track为sfx/amb/缺省的amb行转为sfx，保留声源、text和audioEvents。break不转换。",
+    "posthoc_schema_status": "valid"
+  },
+  {
+    "raw_record": "runs/2026-09-05-qwen3.8-27b-demo/raw/AD-006-r1-a_current.json",
+    "original_evaluation_status": "generated",
+    "response_model": "qwen3.8-27b",
+    "network_calls": 0,
+    "normalization_change": "明确shouldSpeak=false且track为sfx/amb/缺省的amb行转为sfx，保留声源、text和audioEvents。break不转换。",
+    "posthoc_schema_status": "valid"
+  },
+  {
+    "raw_record": "runs/2026-09-05-qwen3.8-27b-demo/raw/DEMO-001-r1-b_fact_locked.json",
+    "original_evaluation_status": "failed",
+    "response_model": "qwen3.8-27b",
+    "network_calls": 0,
+    "normalization_change": "明确shouldSpeak=false且track为sfx/amb/缺省的amb行转为sfx，保留声源、text和audioEvents。break不转换。",
+    "posthoc_schema_status": "invalid",
+    "schema_errors": [
+      {
+        "location": [
+          "scenes",
+          0,
+          "lines",
+          7,
+          "type"
+        ],
+        "type": "literal_error",
+        "message": "Input should be 'dialogue', 'narration', 'sfx' or 'bgm'"
+      },
+      {
+        "location": [
+          "scenes",
+          0,
+          "lines",
+          15,
+          "type"
+        ],
+        "type": "literal_error",
+        "message": "Input should be 'dialogue', 'narration', 'sfx' or 'bgm'"
+      },
+      {
+        "location": [
+          "scenes",
+          0,
+          "lines",
+          20,
+          "type"
+        ],
+        "type": "literal_error",
+        "message": "Input should be 'dialogue', 'narration', 'sfx' or 'bgm'"
+      }
+    ]
+  }
+]

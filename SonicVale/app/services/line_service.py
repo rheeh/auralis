@@ -340,7 +340,7 @@ class LineService:
     @staticmethod
     def resolve_cosyvoice_voice(voice=None) -> str | None:
         description = (getattr(voice, "description", None) or "").strip()
-        match = re.search(r"cosyvoice_voice\s*:\s*([^,\s]+)", description)
+        match = re.search(r"(?:cosyvoice_voice|qwen_voice)\s*:\s*([^,\s]+)", description)
         return match.group(1).strip() if match else None
 
     # 将角色role_id下所有台词的role_id都置位空

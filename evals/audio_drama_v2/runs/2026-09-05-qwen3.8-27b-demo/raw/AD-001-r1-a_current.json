@@ -1,0 +1,57 @@
+{
+  "sample_id": "AD-001",
+  "title": "末班车前的旧伞",
+  "repetition": 1,
+  "variant": "a_current",
+  "status": "failed",
+  "started_at": "2026-09-05T04:32:46.710251+00:00",
+  "system_prompt_sha256": "f132bbf4b0034eecc7f7916426ca7683d211d4e1265d873347dcee6f2a1ebc41",
+  "user_prompt_sha256": "0af3133b0d46adc2dde55d26afa8fe89d459a59606b8c39ce1c2f07a27f24d87",
+  "generation": {
+    "raw_response": "{\n  \"title\": \"雨夜末班车\",\n  \"logline\": \"在城南客运站最后一班车的雨夜里，许棠与周砚面对三年前那场沉默的背叛，没有原谅，只有一把修好的蓝格伞作为和解的契机。\",\n  \"characters\": [\n    {\n      \"name\": \"许棠\",\n      \"role\": \"被旧事伤害、即将离城的设计师\",\n      \"voice_traits\": [\"克制\", \"锋利\", \"不轻易原谅\"]\n    },\n    {\n      \"name\": \"周砚\",\n      \"role\": \"当年沉默、如今试图解释的旧同事\",\n      \"voice_traits\": [\"内疚\", \"迟疑\", \"避免为自己辩护\"]\n    }\n  ],\n  \"scenes\": [\n    {\n      \"title\": \"末班车前的对峙\",\n      \"location\": \"城南客运站候车区\",\n      \"mood\": \"压抑、潮湿、充满未解的张力\",\n      \"lines\": [\n        {\n          \"type\": \"amb\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"环境音\",\n          \"text\": \"\",\n          \"emotion\": null,\n          \"strength\": null,\n          \"voiceProfile\": null,\n          \"soundPrompt\": \"空旷车站底噪，远处广播机械女声反复播报检票信息，雨水滴落声\",\n          \"productionNote\": \"营造深夜车站的空旷感，广播声需带有轻微混响，体现空间距离\",\n          \"audioEvents\": [\n            {\n              \"timing\": \"场景开始\",\n              \"type\": \"amb\",\n              \"content\": \"空旷车站底噪，远处广播机械女声反复播报检票信息，雨水滴落声\",\n              \"volume_db\": \"-28dB\"\n            }\n          ]\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"音效\",\n          \"text\": \"\",\n          \"emotion\": null,\n          \"strength\": null,\n          \"voiceProfile\": null,\n          \"soundPrompt\": \"湿透的脚步声由远及近，皮鞋踩水声，急促呼吸声\",\n          \"productionNote\": \"脚步声要清晰，体现周砚赶来的急切和狼狈\",\n          \"audioEvents\": [\n            {\n              \"timing\": \"旁白后\",\n              \"type\": \"sfx\",\n              \"content\": \"湿透的脚步声由远及近，皮鞋踩水声，急促呼吸声\",\n              \"volume_db\": \"-18dB\"\n            }\n          ]\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"周砚\",\n          \"text\": \"换到靠窗的位置了，你以前会晕车。\",\n          \"emotion\": \"迟疑\",\n          \"strength\": \"中等\",\n          \"voiceProfile\": \"周砚：内疚，迟疑，避免为自己辩护\",\n          \"soundPrompt\": \"压低声音，语速稍快，带着一丝小心翼翼\",\n          \"productionNote\": \"台词前有一个轻微的停顿，体现他在开口前的犹豫；“晕车”二字说得极轻，像是怕触碰伤口\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"音效\",\n          \"text\": \"\",\n          \"emotion\": null,\n          \"strength\": null,\n          \"voiceProfile\": null,\n          \"soundPrompt\": \"纸箱被挪动的摩擦声，纸张压下的细微声响\",\n          \"productionNote\": \"动作声要干脆，体现许棠的冷漠和疏离\",\n          \"audioEvents\": [\n            {\n              \"timing\": \"周砚台词后\",\n              \"type\": \"sfx\",\n              \"content\": \"纸箱被挪动的摩擦声，纸张压下的细微声响\",\n              \"volume_db\": \"-24dB\"\n            }\n          ]\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"许棠\",\n          \"text\": \"你还记得我晕车，倒不记得自己欠我一句话。\",\n          \"emotion\": \"克制\",\n          \"strength\": \"较强\",\n          \"voiceProfile\": \"许棠：克制，锋利，不轻易原谅\",\n          \"soundPrompt\": \"语调平稳但字字清晰，没有起伏，像一把冰冷的刀\",\n          \"productionNote\": \"全程保持冷静，不加任何情绪修饰，用平淡的语气说出最尖锐的话；“一句话”三个字略微加重\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"音效\",\n          \"text\": \"\",\n          \"emotion\": null,\n          \"strength\": null,\n          \"voiceProfile\": null,\n          \"soundPrompt\": \"紧握伞柄的挤压声，布料摩擦声\",\n          \"productionNote\": \"体现周砚内心的挣扎和痛苦\",\n          \"audioEvents\": [\n            {\n              \"timing\": \"许棠台词后\",\n              \"type\": \"sfx\",\n              \"content\": \"紧握伞柄的挤压声，布料摩擦声\",\n              \"volume_db\": \"-20dB\"\n            }\n          ]\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"周砚\",\n          \"text\": \"那次沉默不是因为不相信你。主管用父亲的手术名额威胁我。这三年我一直想解释，却每次都觉得，解释只是给自己减轻负担。\",\n          \"emotion\": \"内疚\",\n          \"strength\": \"强烈\",\n          \"voiceProfile\": \"周砚：内疚，迟疑，避免为自己辩护\",\n          \"soundPrompt\": \"声音低沉，带着颤抖，语速缓慢，每个字都像是从喉咙里挤出来的\",\n          \"productionNote\": \"前半句极力辩解，后半句突然转为自我剖析，语气从防御变为彻底的坦白；“减轻负担”四字几乎耳语\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"bgm\",\n          \"track\": \"bgm\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"背景音乐\",\n          \"text\": \"\",\n          \"emotion\": null,\n          \"strength\": null,\n          \"voiceProfile\": null,\n          \"soundPrompt\": \"单簧管独奏，旋律缓慢而忧伤，逐渐加入大提琴低音\",\n          \"productionNote\": \"音乐不要铺满，只在周砚坦白时轻轻进入，烘托出沉重的情感氛围\",\n          \"audioEvents\": [\n            {\n              \"timing\": \"周砚坦白时\",\n              \"type\": \"bgm\",\n              \"content\": \"单簧管独奏，旋律缓慢而忧伤，逐渐加入大提琴低音\",\n              \"volume_db\": \"-22dB\"\n            }\n          ]\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"音效\",\n          \"text\": \"\",\n          \"emotion\": null,\n          \"strength\": null,\n          \"voiceProfile\": null,\n          \"soundPrompt\": \"检票口催促声，人群移动声，行李箱轮子滚动声\",\n          \"productionNote\": \"外部环境的紧迫感打破两人之间的沉默，推动剧情走向结尾\",\n          \"audioEvents\": [\n            {\n              \"timing\": \"BGM渐弱时\",\n              \"type\": \"sfx\",\n              \"content\": \"检票口催促声，人群移动声，行李箱轮子滚动声\",\n              \"volume_db\": \"-18dB\"\n            }\n          ]\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"许棠\",\n          \"text\": \"这把伞是你的。修好了，再来找我。\",\n          \"emotion\": \"坚定\",\n          \"strength\": \"中等\",\n          \"voiceProfile\": \"许棠：克制，锋利，不轻易原谅\",\n          \"soundPrompt\": \"语气平静，没有怨恨，也没有原谅，只是一种陈述事实的态度\",\n          \"productionNote\": \"“修好了”三个字说得格外清楚，既是说伞，也是说关系；“再来找我”是整部剧唯一的希望出口，语气中不带温度，但也不冰冷\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"音效\",\n          \"text\": \"\",\n          \"emotion\": null,\n          \"strength\": null,\n          \"voiceProfile\": null,\n          \"soundPrompt\": \"雨伞递出的轻响，纸箱合上的声音，脚步声远去\",\n          \"productionNote\": \"以声音结束场景，留白给听众想象后续\",\n          \"audioEvents\": [\n            {\n              \"timing\": \"许棠台词后\",\n              \"type\": \"sfx\",\n              \"content\": \"雨伞递出的轻响，纸箱合上的声音，脚步声远去\",\n              \"volume_db\": \"-20dB\"\n            }\n          ]\n        }\n      ]\n    }\n  ]\n}",
+    "finish_reason": "stop",
+    "seconds": 37.417,
+    "usage": {
+      "completion_tokens": 2147,
+      "prompt_tokens": 2284,
+      "total_tokens": 4431,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": null,
+        "audio_tokens": null,
+        "reasoning_tokens": null,
+        "rejected_prediction_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": null,
+        "cached_tokens": 0,
+        "text_tokens": 2284
+      }
+    },
+    "response_model": "qwen3.8-27b"
+  },
+  "raw_metrics": {
+    "scene_count": 1,
+    "line_counts": {
+      "dialogue": 4,
+      "narration": 0,
+      "sfx": 5,
+      "bgm": 1
+    },
+    "spoken_chars": 108,
+    "narration_ratio": 0.0,
+    "consecutive_narrations": 0,
+    "long_narrations": 0,
+    "tts_contamination": 0,
+    "unvoiced_spoken_lines": 0,
+    "empty_sound_prompts": 0,
+    "max_spoken_line_chars": 56,
+    "actor_notes": 4,
+    "audio_event_count": 6,
+    "opening_sound_scenes": 1
+  },
+  "error": {
+    "type": "ValidationError",
+    "status_code": null,
+    "provider_code": ""
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "sample_id": "AD-001",
+  "title": "末班车前的旧伞",
+  "repetition": 1,
+  "variant": "c_director_example",
+  "status": "failed",
+  "started_at": "2026-09-05T04:14:50.673285+00:00",
+  "system_prompt_sha256": "ddafc9660c4df79c5ca0fd60672157f2156c6dc666f38503c950b38bbd6f6be8",
+  "user_prompt_sha256": "0af3133b0d46adc2dde55d26afa8fe89d459a59606b8c39ce1c2f07a27f24d87",
+  "error": {
+    "type": "APIConnectionError",
+    "status_code": null
+  }
+}

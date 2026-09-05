@@ -2,6 +2,7 @@ import json
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 import soundfile as sf
@@ -11,9 +12,11 @@ from sqlalchemy.orm import sessionmaker
 from app.db.database import Base
 from app.db.migrations import apply_schema_migrations
 from app.dto.timeline_dto import TimelineClipUpdateDTO
+from app.dto.sound_library_dto import SoundLibraryInsertDTO
 from app.models.po import ChapterPO, LinePO, ProjectPO, TimelineClipPO
 from app.services.timeline_render_service import TimelineRenderService
 from app.services.timeline_service import TimelineService
+from app.services.sound_library_service import SoundLibraryService
 
 
 class TimelineRenderServiceTest(unittest.TestCase):
@@ -128,6 +131,28 @@ class TimelineRenderServiceTest(unittest.TestCase):
 
         latest = service.get_latest_render(self.project.id, self.chapter.id)
         self.assertEqual(latest["render_fingerprint"], result["render_fingerprint"])
+
+    def test_quick_added_sound_is_audible_at_anchor_with_requested_gain(self):
+        voice = LinePO(
+            chapter_id=self.chapter.id, line_order=1, text_content="门外是谁？", track="voice",
+            audio_path=self._tone("dialogue.wav", 0.1, 1.0), status="done", is_done=1,
+        )
+        self.session.add(voice)
+        self.session.commit()
+        library = SoundLibraryService(self.session)
+        with patch("app.services.sound_library_service.getConfigPath", return_value=self.temp_dir.name):
+            asset = library.import_path(self._tone("door.wav", 0.2, 0.5), "门锁响动", "doors")
+            added = library.insert_asset(asset["id"], SoundLibraryInsertDTO(
+                chapter_id=self.chapter.id, anchor_line_id=voice.id,
+                placement="with", offset_ms=500, volume_db=-6,
+            ))
+        self.assertTrue(added["placement_pending"])
+        TimelineService(self.session).build_chapter_timeline(self.project.id, self.chapter.id)
+        result = TimelineRenderService(self.session).render_chapter(self.project.id, self.chapter.id)
+        audio, sample_rate = sf.read(result["audio_path"], dtype="float32", always_2d=True)
+        self.assertAlmostEqual(len(audio) / sample_rate, 1.0, delta=0.02)
+        self.assertAlmostEqual(float(audio[round(0.25 * sample_rate), 0]), 0.1, delta=0.015)
+        self.assertAlmostEqual(float(audio[round(0.75 * sample_rate), 0]), 0.2, delta=0.025)
 
     def test_edit_invalidates_previous_render_and_stale_timeline_is_rejected(self):
         clips = self._build_three_clip_timeline()

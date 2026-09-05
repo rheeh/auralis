@@ -1,0 +1,15 @@
+{
+  "sample_id": "AD-006",
+  "title": "冷库里的第三扇门",
+  "repetition": 1,
+  "variant": "b_fact_locked",
+  "status": "failed",
+  "started_at": "2026-09-05T04:33:57.498102+00:00",
+  "system_prompt_sha256": "b43ec56b4ab8b73b350ee3a646bc256900ee16bd528431845a4a732c2069cb5c",
+  "user_prompt_sha256": "7c6389695d2822715717a7f085a78737b2470fcd72a5f1ad715f6a44272e24a5",
+  "error": {
+    "type": "BadRequestError",
+    "status_code": 400,
+    "provider_code": "Arrearage"
+  }
+}

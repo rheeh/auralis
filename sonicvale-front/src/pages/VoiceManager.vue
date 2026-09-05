@@ -3,15 +3,16 @@
     <div class="page-header">
       <h2>音色管理</h2>
       <div class="actions">
-        <el-select v-model="selectedTTS" placeholder="选择 TTS 引擎" class="tts-select" @change="loadVoices">
+        <el-select v-model="selectedTTS" :disabled="isSeedingPresets" placeholder="选择 TTS 引擎" class="tts-select" @change="loadVoices">
           <el-option v-for="t in ttsProviders" :key="t.id" :label="t.name" :value="t.id" />
         </el-select>
-        <el-button type="primary" plain :disabled="!canSeedPresets" :loading="isSeedingPresets" @click="handleSeedPresets">
-          {{ isCosyVoice ? '生成 CosyVoice 兼容音色' : '生成 Edge 常见音色' }}
+        <el-button type="primary" plain :disabled="!canSeedPresets" :loading="isSeedingPresets" @click="handleSeedPresets(false)">
+          {{ isQwenDrama ? '导入对应模型音色' : isCosyVoice ? '生成 CosyVoice 兼容音色' : '生成 Edge 常见音色' }}
         </el-button>
-        <el-button type="warning" plain :disabled="!canSeedPresets" :loading="isSeedingPresets" @click="handleSeedPresets(true)">
+        <el-button v-if="!isQwenDrama" type="warning" plain :disabled="!canSeedPresets" :loading="isSeedingPresets" @click="handleSeedPresets(true)">
           覆盖重生成
         </el-button>
+        <el-button v-if="!isQwenDrama" plain @click="$router.push({ path: '/config', query: { ttsPreset: 'qwen-drama' } })">配置 Qwen 广播剧配音</el-button>
         <el-button type="primary" :disabled="!selectedTTS" @click="openDialog()">新增音色</el-button>
         <el-button type="success" plain :disabled="!selectedTTS || selectedCount === 0" @click="handleExportSelected">导出音色库（选中）</el-button>
         <el-popconfirm
@@ -81,9 +82,9 @@
         <template #default="{ row }">
           <el-button
             size="small"
-            :type="row.reference_path ? 'primary' : 'default'"
-            :plain="!row.reference_path"
-            :disabled="!row.reference_path"
+            :type="hasPreview(row) ? 'primary' : 'default'"
+            :plain="!hasPreview(row)"
+            :disabled="!hasPreview(row)"
             @click="togglePlay(row)"
           >
             <el-icon style="margin-right:4px;">
@@ -91,6 +92,12 @@
             </el-icon>
             {{ isPlaying && currentPath === row.id ? '暂停' : '播放' }}
           </el-button>
+        </template>
+      </el-table-column>
+
+      <el-table-column label="声音控制" min-width="125">
+        <template #default="{ row }">
+          <el-tag :type="voiceCapability(row).type" effect="plain">{{ voiceCapability(row).label }}</el-tag>
         </template>
       </el-table-column>
 
@@ -306,6 +313,7 @@ import dayjs from 'dayjs'
 import { createVoice, fetchVoicesByTTS, updateVoice, deleteVoice, exportVoices, importVoices, processVoiceAudio, copyVoice, seedEdgeVoicePresets, seedCosyVoicePresets, getVoiceAudioUrl } from '../api/voice'
 import { fetchTTSProviders } from '../api/provider'
 import WaveCellPro from '../components/WaveCellPro.vue'
+import { isQwenDramaModel, qwenDramaVoices, ttsCapability } from '../utils/ttsCapabilities'
 
 
 const defaultTags = ref([
@@ -332,14 +340,18 @@ const selectedProvider = computed(() => ttsProviders.value.find(provider => prov
 const selectedModel = computed(() => (selectedProvider.value?.model || '').toLowerCase())
 const selectedProviderType = computed(() => (selectedProvider.value?.provider_type || '').toLowerCase())
 const isCosyVoice = computed(() => selectedModel.value.startsWith('cosyvoice'))
-const isCosyVoiceInstruct = computed(() => selectedModel.value.startsWith('cosyvoice-v3'))
+const isQwenDrama = computed(() => isQwenDramaModel(selectedModel.value))
 const isEdgeProvider = computed(() => selectedProviderType.value === 'edge' || selectedModel.value.includes('edge'))
-const canSeedPresets = computed(() => !!selectedTTS.value && (isCosyVoice.value || isEdgeProvider.value))
-const voiceHelperText = computed(() => isCosyVoice.value
-  ? (isCosyVoiceInstruct.value
-      ? '当前为 CosyVoice v3 指令模式。生成的兼容音色支持按模型要求接收情绪/表演指令；旧 v1/v2 音色不可与 v3 模型混用。'
-      : '当前为 CosyVoice 基础模式，只会把声音指导映射为语速、音高和音量。需要自然语言情绪控制时，请在设置中改用 v3 Flash 指令模板。')
-  : 'Edge-TTS 不需要参考文件。可以先生成旁白、男女主、儿童等免费预置音色；需要复刻特定真人声音时再上传有合法使用权的参考音频。')
+const canSeedPresets = computed(() => !!selectedTTS.value && (isQwenDrama.value || isEdgeProvider.value || /^cosyvoice-(v1|v3-flash|v3-plus)/.test(selectedModel.value)))
+const voiceHelperText = computed(() => {
+  if (selectedModel.value.startsWith('qwen-audio-3.0-tts-')) return '导入当前模型的系统音色，无需参考文件；Plus 与 Flash 音色不能混用。支持逐句自然语言表演指令。导入不调用云端；可用额度与仅免费调用设置请在百炼核对，已有 Demo 配音保持原样。'
+  if (isQwenDrama.value) return '月白、四月、田叔已提供原创悬疑试听。点击导入后可在角色配音中选用；导入与试听不调用云端，已有同音色会跳过。正式生成可接收逐句表演指令。'
+  if (selectedModel.value.startsWith('cosyvoice-v3.5')) return 'CosyVoice v3.5 需要该模型的设计或复刻音色，可使用原生表演指令；不能直接复用 v3 系统音色。'
+  if (selectedModel.value.startsWith('cosyvoice-v3')) return 'CosyVoice v3 的控制能力取决于具体音色：龙安洋、龙安欢等使用固定情感；龙三叔等支持基础韵律。每行会标明能力。需要自由表演指导时，可配置 Qwen 广播剧配音。'
+  if (isCosyVoice.value) return '当前 CosyVoice 基础模式只映射语速、音高与音量；v1 与 v2 音色编号不能混用。可配置 Qwen 广播剧配音使用逐句表演指令。'
+  if (isEdgeProvider.value) return 'Edge-TTS 不需要参考文件。可生成免费常见声线，声音指导只映射语速、音高与音量。'
+  return '选择对应引擎的系统音色或参考音频；具体表演能力取决于模型和音色。'
+})
 
 const filterTags = ref([])
 const searchName = ref('')
@@ -380,10 +392,30 @@ function formatDateTime(value) {
 }
 
 function isSystemVoice(row) {
-  return /(?:cosyvoice_voice|edge_voice)\s*:/.test(row?.description || '')
+  return /(?:cosyvoice_voice|qwen_voice|edge_voice)\s*:/.test(row?.description || '')
+}
+
+function cloudVoiceId(row) {
+  return (row?.description || '').match(/(?:cosyvoice_voice|qwen_voice)\s*:\s*([^,\s]+)/)?.[1]
+}
+
+function voiceCapability(row) {
+  return ttsCapability(selectedProvider.value, cloudVoiceId(row))
+}
+
+function bundledPreview(row) {
+  if (!isQwenDrama.value || !(row?.description || '').includes('qwen_voice:')) return ''
+  const preset = qwenDramaVoices(selectedModel.value).find(voice => voice.voice === cloudVoiceId(row))
+  const file = preset?.sampleFile || (preset?.sample ? `auditions/${preset.sample}.mp3` : '')
+  return file ? new URL(`demo-night/${file}`, document.baseURI).href : ''
+}
+
+function hasPreview(row) {
+  return !!row.reference_path || !!bundledPreview(row)
 }
 
 function referenceLabel(row) {
+  if (!row.reference_path && bundledPreview(row)) return '系统音色（Demo 预录试听）'
   if (isSystemVoice(row)) return row.reference_path ? '系统音色（已生成试听）' : '系统音色（无需参考音频）'
   return row.reference_path || '（未设置）'
 }
@@ -402,8 +434,8 @@ const currentPath = ref(null)
 function togglePlay(row) {
   const isPathOnly = typeof row === 'string'
   const referencePath = isPathOnly ? row : row?.reference_path
-  if (!referencePath) return
-  const url = isPathOnly ? toFileUrl(referencePath) : getVoiceAudioUrl(row.id, Date.now())
+  if (!referencePath && (isPathOnly || !bundledPreview(row))) return
+  const url = isPathOnly ? toFileUrl(referencePath) : referencePath ? getVoiceAudioUrl(row.id, Date.now()) : bundledPreview(row)
   if (!url) {
     ElMessage.error('无法播放该音频文件，请检查参考音频是否存在')
     return
@@ -507,6 +539,10 @@ async function handleSeedPresets(overwrite = false) {
     ElMessage.warning('请先选择 TTS 引擎')
     return
   }
+  if (isQwenDrama.value) {
+    await importQwenDramaVoices()
+    return
+  }
   if (overwrite) {
     try {
       await ElMessageBox.confirm(
@@ -535,6 +571,34 @@ async function handleSeedPresets(overwrite = false) {
     ElMessage.error(`生成常见音色失败，请检查${isCosyVoice.value ? ' API Key、地域、模型与音色兼容性' : '网络或 Edge-TTS 可用性'}`)
   } finally {
     isSeedingPresets.value = false
+  }
+}
+
+async function importQwenDramaVoices() {
+  const providerId = selectedTTS.value
+  isSeedingPresets.value = true
+  let added = 0
+  let skipped = 0
+  try {
+    for (const preset of qwenDramaVoices(selectedModel.value)) {
+      const name = `${preset.label} · ${preset.voice}`
+      if (voices.value.some(row => cloudVoiceId(row) === preset.voice || row.name === name)) {
+        skipped += 1
+        continue
+      }
+      const response = await createVoice({
+        tts_provider_id: providerId, name, reference_path: null,
+        description: `系统音色,${selectedModel.value},原生表演指令,${preset.role},qwen_voice:${preset.voice}`,
+        is_multi_emotion: 0,
+      })
+      if (response.code !== 200) throw new Error(response.message || '导入失败')
+      added += 1
+    }
+    ElMessage.success(`已导入 ${added} 个音色，跳过 ${skipped} 个；可在角色配音中选用`)
+  } catch (error) {
+    ElMessage.error(`已导入 ${added} 个。${error?.message || '导入中断，请重试'}`)
+  } finally {
+    try { await loadVoices() } finally { isSeedingPresets.value = false }
   }
 }
 

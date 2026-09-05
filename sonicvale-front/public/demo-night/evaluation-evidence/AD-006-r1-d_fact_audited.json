@@ -1,0 +1,450 @@
+{
+  "sample_id": "AD-006",
+  "title": "冷库里的第三扇门",
+  "repetition": 1,
+  "variant": "d_fact_audited",
+  "status": "failed",
+  "started_at": "2026-09-05T04:24:45.742408+00:00",
+  "system_prompt_sha256": "795ef980701f21efcaccf2793446b5bd364c4f31c040bf932179f670454d3e28",
+  "user_prompt_sha256": "7c6389695d2822715717a7f085a78737b2470fcd72a5f1ad715f6a44272e24a5",
+  "generation": {
+    "raw_response": "{\n  \"title\": \"冷库三响\",\n  \"logline\": \"闭市后的生鲜市场，三次金属撞击声引保安杜衡前往冷库；他识破录音陷阱，在冷气与轰鸣中救出被锁的送货员，而真正的老韩早已消失在后门摩托声里。\",\n  \"characters\": [\n    {\n      \"name\": \"杜衡\",\n      \"role\": \"判断空间风险的市场保安\",\n      \"voice_traits\": [\"冷静\", \"行动直接\", \"会核对安全后果\"]\n    },\n    {\n      \"name\": \"老韩\",\n      \"role\": \"用录音误导杜衡的同事\",\n      \"voice_traits\": [\"录音中急迫\", \"真实意图是拖延\"]\n    },\n    {\n      \"name\": \"送货员\",\n      \"role\": \"被锁在三号冷库的人\",\n      \"voice_traits\": [\"虚弱\", \"喘息\", \"提供关键事实\"]\n    }\n  ],\n  \"scenes\": [\n    {\n      \"title\": \"三号冷库门前\",\n      \"location\": \"生鲜市场三号冷库外走廊\",\n      \"mood\": \"低温、紧迫、金属回响\",\n      \"lines\": [\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"远处金属撞击声——沉闷、钝响、间隔约2秒，共三次；每次余震轻微嗡鸣\",\n          \"productionNote\": \"第一次撞击入点0:00，第二、三次严格等距；底噪保留冷库低频嗡鸣（-30dB）\"\n        },\n        {\n          \"type\": \"narration\",\n          \"track\": \"narration\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"旁白\",\n          \"text\": \"生鲜市场闭市后，冷库方向传来三次金属撞击。\",\n          \"productionNote\": \"语速平稳，略带环境底噪感；不渲染，仅陈述事实\"\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"手电筒开关‘咔哒’声，随即亮起高频LED电流微嘶\",\n          \"productionNote\": \"入点紧接旁白结束，-12dB，清晰短促\"\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"杜衡\",\n          \"text\": \"一扇门开着。\",\n          \"emotion\": \"冷静\",\n          \"strength\": \"中等\",\n          \"productionNote\": \"边走边说，脚步声同步入；语气无起伏，是确认而非疑问\"\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"胶底鞋踩湿滑地面——黏滞拖行声，伴随细微融水‘滋啦’\",\n          \"productionNote\": \"持续3秒，与台词同步铺底\"\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"杜衡\",\n          \"text\": \"二号门反锁。\",\n          \"emotion\": \"冷静\",\n          \"strength\": \"中等\",\n          \"productionNote\": \"停顿半拍，手抵门板试探后说出；无情绪，纯信息输出\"\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"金属门把手下压‘咔’声，未转动；随后门板被推，发出空洞闷响\",\n          \"productionNote\": \"入点在台词‘反锁’后0.3秒，-14dB\"\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"三号门警报灯故障——间歇性‘滴…滴…’电子断续音，微弱失真\",\n          \"productionNote\": \"从此时起持续存在，-28dB，每2.5秒一次\"\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"三号门内传来微弱敲击：‘咚…咚…’，木槌敲铁皮节奏，缓慢、断续\",\n          \"productionNote\": \"入点在‘滴’声间隙，-26dB；每敲一次，底噪嗡鸣略颤\"\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"杜衡\",\n          \"text\": \"三号门灯坏了。\",\n          \"emotion\": \"冷静\",\n          \"strength\": \"中等\",\n          \"productionNote\": \"目光扫过灯壳，语调平直；不强调‘坏’，只标记异常\"\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"二号门内突然喊声——‘别开！’，失真、急促，带明显录音压缩感\",\n          \"productionNote\": \"入点在杜衡话尾0.2秒，-16dB；声源明显来自门内，但质感偏干、少混响\"\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"老韩\",\n          \"text\": \"别开！快切断总电源！\",\n          \"emotion\": \"焦急\",\n          \"strength\": \"较强\",\n          \"productionNote\": \"语速快，句尾上扬，有刻意制造的窒息感；非实时反应，是预录剪辑\"\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"三号门内敲击骤然加快：‘咚咚咚咚！’，频率翻倍，节奏紊乱\",\n          \"productionNote\": \"紧随老韩台词结束，-24dB；敲击声略带颤抖感\"\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"杜衡\",\n          \"text\": \"断电会让三号门备用锁扣死。\",\n          \"emotion\": \"冷静\",\n          \"strength\": \"坚定\",\n          \"productionNote\": \"不看二号门，声音转向三号门方向；语速不变，但字字清晰如指令\"\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"头顶管道震动——低频‘嗡…嗡…’加剧，伴随金属松动‘咯吱’声\",\n          \"productionNote\": \"入点在‘扣死’后0.5秒，-22dB；持续5秒，渐强后维持\"\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"消防箱弹开‘啪嗒’声，塑料铰链脆响\",\n          \"productionNote\": \"入点明确，-14dB\"\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"杜衡\",\n          \"text\": \"撬棍。\",\n          \"emotion\": \"冷静\",\n          \"strength\": \"中等\",\n          \"productionNote\": \"单字，短促；手已握柄，无多余动作音\"\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"撬棍尖端猛凿三号门锁舌位——‘铛！’金属爆裂声，高频刺耳\",\n          \"productionNote\": \"入点精准，-10dB；随后锁舌弹飞‘叮啷’滚地声\"\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"三号门被猛地向内推开——铰链长啸，冷气‘呼——’涌出，带冰晶摩擦嘶响\",\n          \"productionNote\": \"持续3秒，-18dB；冷气声含高频风噪与低频压迫感\"\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"送货员\",\n          \"text\": \"咳……老韩把我锁进来……他跑向二号库了……\",\n          \"emotion\": \"虚弱\",\n          \"strength\": \"微弱\",\n          \"productionNote\": \"气声断续，每句后吸气声可闻；‘二号库’三字稍用力，是最后清醒指认\"\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"送货员身体前扑倒地——棉服摩擦水泥地‘沙’声，闷响\",\n          \"productionNote\": \"入点在‘二号库’后，-16dB\"\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"杜衡\",\n          \"text\": \"二号门开了。\",\n          \"emotion\": \"冷静\",\n          \"strength\": \"中等\",\n          \"productionNote\": \"转身时脚步顿住，观察后说出；无惊讶，是确认\"\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"二号门锁舌‘咔’一声弹开，金属簧片回位轻震\",\n          \"productionNote\": \"清脆短促，-15dB；入点在杜衡台词‘开了’落音处\"\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"二号库内手机播放声——‘别开！快切断总电源！’，同前段录音，但音量略低、带库内混响\",\n          \"productionNote\": \"入点在锁舌声后0.4秒，-20dB；持续3秒后自然淡出\"\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"市场后门铁皮门被撞开‘哐当！’，随即摩托车引擎启动——‘突突突…’由低转高，排气管爆鸣两声\",\n          \"productionNote\": \"入点在手机声淡出瞬间，-18dB；引擎声加速远去，5秒内完全消失\"\n        },\n        {\n          \"type\": \"narration\",\n          \"track\": \"narration\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"旁白\",\n          \"text\": \"二号库里，只有回放的求救声。\",\n          \"productionNote\": \"平静收束，不加评判；底噪中残留未散尽的冷气嘶声\"\n        }\n      ]\n    }\n  ]\n}",
+    "finish_reason": "stop",
+    "seconds": 56.899,
+    "usage": {
+      "completion_tokens": 2505,
+      "prompt_tokens": 2453,
+      "total_tokens": 4958,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": {
+        "audio_tokens": null,
+        "cached_tokens": 512
+      }
+    },
+    "response_model": "qwen-plus"
+  },
+  "raw_metrics": {
+    "scene_count": 1,
+    "line_counts": {
+      "dialogue": 8,
+      "narration": 2,
+      "sfx": 16,
+      "bgm": 0
+    },
+    "spoken_chars": 107,
+    "narration_ratio": 0.3271,
+    "consecutive_narrations": 0,
+    "long_narrations": 0,
+    "tts_contamination": 0,
+    "unvoiced_spoken_lines": 0,
+    "empty_sound_prompts": 0,
+    "max_spoken_line_chars": 21,
+    "actor_notes": 10,
+    "audio_event_count": 0,
+    "opening_sound_scenes": 1
+  },
+  "script": {
+    "title": "冷库三响",
+    "logline": "闭市后的生鲜市场，三次金属撞击声引保安杜衡前往冷库；他识破录音陷阱，在冷气与轰鸣中救出被锁的送货员，而真正的老韩早已消失在后门摩托声里。",
+    "characters": [
+      {
+        "name": "杜衡",
+        "role": "判断空间风险的市场保安",
+        "voice_traits": [
+          "冷静",
+          "行动直接",
+          "会核对安全后果"
+        ]
+      },
+      {
+        "name": "老韩",
+        "role": "用录音误导杜衡的同事",
+        "voice_traits": [
+          "录音中急迫",
+          "真实意图是拖延"
+        ]
+      },
+      {
+        "name": "送货员",
+        "role": "被锁在三号冷库的人",
+        "voice_traits": [
+          "虚弱",
+          "喘息",
+          "提供关键事实"
+        ]
+      }
+    ],
+    "scenes": [
+      {
+        "title": "三号冷库门前",
+        "location": "生鲜市场三号冷库外走廊",
+        "mood": "低温、紧迫、金属回响",
+        "lines": [
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "远处金属撞击声——沉闷、钝响、间隔约2秒，共三次；每次余震轻微嗡鸣",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "远处金属撞击声——沉闷、钝响、间隔约2秒，共三次；每次余震轻微嗡鸣",
+            "productionNote": "第一次撞击入点0:00，第二、三次严格等距；底噪保留冷库低频嗡鸣（-30dB）",
+            "audioEvents": []
+          },
+          {
+            "type": "narration",
+            "track": "narration",
+            "shouldSpeak": true,
+            "speaker": "旁白",
+            "text": "生鲜市场闭市后，冷库方向传来三次金属撞击。",
+            "emotion": "平静",
+            "strength": "中等",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "语速平稳，略带环境底噪感；不渲染，仅陈述事实",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "手电筒开关‘咔哒’声，随即亮起高频LED电流微嘶",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "手电筒开关‘咔哒’声，随即亮起高频LED电流微嘶",
+            "productionNote": "入点紧接旁白结束，-12dB，清晰短促",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "杜衡",
+            "text": "一扇门开着。",
+            "emotion": "冷静",
+            "strength": "中等",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "边走边说，脚步声同步入；语气无起伏，是确认而非疑问",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "胶底鞋踩湿滑地面——黏滞拖行声，伴随细微融水‘滋啦’",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "胶底鞋踩湿滑地面——黏滞拖行声，伴随细微融水‘滋啦’",
+            "productionNote": "持续3秒，与台词同步铺底",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "杜衡",
+            "text": "二号门反锁。",
+            "emotion": "冷静",
+            "strength": "中等",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "停顿半拍，手抵门板试探后说出；无情绪，纯信息输出",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "金属门把手下压‘咔’声，未转动；随后门板被推，发出空洞闷响",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "金属门把手下压‘咔’声，未转动；随后门板被推，发出空洞闷响",
+            "productionNote": "入点在台词‘反锁’后0.3秒，-14dB",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "三号门警报灯故障——间歇性‘滴…滴…’电子断续音，微弱失真",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "三号门警报灯故障——间歇性‘滴…滴…’电子断续音，微弱失真",
+            "productionNote": "从此时起持续存在，-28dB，每2.5秒一次",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "三号门内传来微弱敲击：‘咚…咚…’，木槌敲铁皮节奏，缓慢、断续",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "三号门内传来微弱敲击：‘咚…咚…’，木槌敲铁皮节奏，缓慢、断续",
+            "productionNote": "入点在‘滴’声间隙，-26dB；每敲一次，底噪嗡鸣略颤",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "杜衡",
+            "text": "三号门灯坏了。",
+            "emotion": "冷静",
+            "strength": "中等",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "目光扫过灯壳，语调平直；不强调‘坏’，只标记异常",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "二号门内突然喊声——‘别开！’，失真、急促，带明显录音压缩感",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "二号门内突然喊声——‘别开！’，失真、急促，带明显录音压缩感",
+            "productionNote": "入点在杜衡话尾0.2秒，-16dB；声源明显来自门内，但质感偏干、少混响",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "老韩",
+            "text": "别开！快切断总电源！",
+            "emotion": "焦急",
+            "strength": "较强",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "语速快，句尾上扬，有刻意制造的窒息感；非实时反应，是预录剪辑",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "三号门内敲击骤然加快：‘咚咚咚咚！’，频率翻倍，节奏紊乱",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "三号门内敲击骤然加快：‘咚咚咚咚！’，频率翻倍，节奏紊乱",
+            "productionNote": "紧随老韩台词结束，-24dB；敲击声略带颤抖感",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "杜衡",
+            "text": "断电会让三号门备用锁扣死。",
+            "emotion": "冷静",
+            "strength": "坚定",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "不看二号门，声音转向三号门方向；语速不变，但字字清晰如指令",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "头顶管道震动——低频‘嗡…嗡…’加剧，伴随金属松动‘咯吱’声",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "头顶管道震动——低频‘嗡…嗡…’加剧，伴随金属松动‘咯吱’声",
+            "productionNote": "入点在‘扣死’后0.5秒，-22dB；持续5秒，渐强后维持",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "消防箱弹开‘啪嗒’声，塑料铰链脆响",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "消防箱弹开‘啪嗒’声，塑料铰链脆响",
+            "productionNote": "入点明确，-14dB",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "杜衡",
+            "text": "撬棍。",
+            "emotion": "冷静",
+            "strength": "中等",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "单字，短促；手已握柄，无多余动作音",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "撬棍尖端猛凿三号门锁舌位——‘铛！’金属爆裂声，高频刺耳",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "撬棍尖端猛凿三号门锁舌位——‘铛！’金属爆裂声，高频刺耳",
+            "productionNote": "入点精准，-10dB；随后锁舌弹飞‘叮啷’滚地声",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "三号门被猛地向内推开——铰链长啸，冷气‘呼——’涌出，带冰晶摩擦嘶响",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "三号门被猛地向内推开——铰链长啸，冷气‘呼——’涌出，带冰晶摩擦嘶响",
+            "productionNote": "持续3秒，-18dB；冷气声含高频风噪与低频压迫感",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "送货员",
+            "text": "咳……老韩把我锁进来……他跑向二号库了……",
+            "emotion": "虚弱",
+            "strength": "微弱",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "气声断续，每句后吸气声可闻；‘二号库’三字稍用力，是最后清醒指认",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "送货员身体前扑倒地——棉服摩擦水泥地‘沙’声，闷响",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "送货员身体前扑倒地——棉服摩擦水泥地‘沙’声，闷响",
+            "productionNote": "入点在‘二号库’后，-16dB",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "杜衡",
+            "text": "二号门开了。",
+            "emotion": "冷静",
+            "strength": "中等",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "转身时脚步顿住，观察后说出；无惊讶，是确认",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "二号门锁舌‘咔’一声弹开，金属簧片回位轻震",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "二号门锁舌‘咔’一声弹开，金属簧片回位轻震",
+            "productionNote": "清脆短促，-15dB；入点在杜衡台词‘开了’落音处",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "二号库内手机播放声——‘别开！快切断总电源！’，同前段录音，但音量略低、带库内混响",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "二号库内手机播放声——‘别开！快切断总电源！’，同前段录音，但音量略低、带库内混响",
+            "productionNote": "入点在锁舌声后0.4秒，-20dB；持续3秒后自然淡出",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "市场后门铁皮门被撞开‘哐当！’，随即摩托车引擎启动——‘突突突…’由低转高，排气管爆鸣两声",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "市场后门铁皮门被撞开‘哐当！’，随即摩托车引擎启动——‘突突突…’由低转高，排气管爆鸣两声",
+            "productionNote": "入点在手机声淡出瞬间，-18dB；引擎声加速远去，5秒内完全消失",
+            "audioEvents": []
+          },
+          {
+            "type": "narration",
+            "track": "narration",
+            "shouldSpeak": true,
+            "speaker": "旁白",
+            "text": "二号库里，只有回放的求救声。",
+            "emotion": "平静",
+            "strength": "中等",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "平静收束，不加评判；底噪中残留未散尽的冷气嘶声",
+            "audioEvents": []
+          }
+        ]
+      }
+    ]
+  },
+  "normalized_metrics": {
+    "scene_count": 1,
+    "line_counts": {
+      "dialogue": 8,
+      "narration": 2,
+      "sfx": 16,
+      "bgm": 0
+    },
+    "spoken_chars": 107,
+    "narration_ratio": 0.3271,
+    "consecutive_narrations": 0,
+    "long_narrations": 0,
+    "tts_contamination": 0,
+    "unvoiced_spoken_lines": 0,
+    "empty_sound_prompts": 0,
+    "max_spoken_line_chars": 21,
+    "actor_notes": 10,
+    "audio_event_count": 0,
+    "opening_sound_scenes": 1
+  },
+  "error": {
+    "type": "BadRequestError",
+    "status_code": 400,
+    "provider_code": "Arrearage"
+  }
+}

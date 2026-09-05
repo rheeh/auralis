@@ -1,0 +1,57 @@
+{
+  "sample_id": "AD-001",
+  "title": "末班车前的旧伞",
+  "repetition": 1,
+  "variant": "c_director_example",
+  "status": "failed",
+  "started_at": "2026-09-05T04:33:32.291547+00:00",
+  "system_prompt_sha256": "ddafc9660c4df79c5ca0fd60672157f2156c6dc666f38503c950b38bbd6f6be8",
+  "user_prompt_sha256": "0af3133b0d46adc2dde55d26afa8fe89d459a59606b8c39ce1c2f07a27f24d87",
+  "generation": {
+    "raw_response": "{\n  \"title\": \"雨夜末班车\",\n  \"logline\": \"在城南客运站，即将离城的许棠与试图解释的周砚在最后一班车的检票催促中完成了一次迟到的和解。\",\n  \"characters\": [\n    {\n      \"name\": \"许棠\",\n      \"role\": \"被旧事伤害、即将离城的设计师\",\n      \"voice_traits\": [\n        \"克制\",\n        \"锋利\",\n        \"不轻易原谅\"\n      ]\n    },\n    {\n      \"name\": \"周砚\",\n      \"role\": \"当年沉默、如今试图解释的旧同事\",\n      \"voice_traits\": [\n        \"内疚\",\n        \"迟疑\",\n        \"避免为自己辩护\"\n      ]\n    }\n  ],\n  \"scenes\": [\n    {\n      \"title\": \"雨夜车站\",\n      \"location\": \"城南客运站候车大厅\",\n      \"mood\": \"压抑、潮湿、充满未解的张力\",\n      \"lines\": [\n        {\n          \"type\": \"amb\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"音效\",\n          \"text\": \"环境底噪\",\n          \"soundPrompt\": \"空旷室内混响，雨水顺着顶棚缺口滴落在水泥地上的清脆回声，远处广播反复播报检票提示音，低频空调嗡鸣\",\n          \"productionNote\": \"开场铺底，贯穿全场景，音量-28dB\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"narration\",\n          \"track\": \"narration\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"旁白\",\n          \"text\": \"夜里十一点四十，城南客运站只剩最后一班车。\",\n          \"emotion\": \"平静\",\n          \"strength\": \"稍弱\",\n          \"productionNote\": \"语速平缓，交代时空背景\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"音效\",\n          \"text\": \"脚步声\",\n          \"soundPrompt\": \"湿透的皮鞋踩在积水地面上的沉重脚步声，由远及近，伴随水花溅起的细微声响\",\n          \"productionNote\": \"表现周砚匆忙赶来的状态，前景动作声，-12dB\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"周砚\",\n          \"text\": \"换到靠窗的位置了，你以前会晕车。\",\n          \"emotion\": \"内疚\",\n          \"strength\": \"中等\",\n          \"productionNote\": \"带着一丝喘息，语气迟疑但努力保持平稳，将车票压在纸箱上的轻微摩擦声同步\",\n          \"audioEvents\": [\n            {\n              \"timing\": \"台词前\",\n              \"type\": \"sfx\",\n              \"content\": \"硬纸片压住纸箱表面的摩擦声\",\n              \"volume_db\": \"-15dB\"\n            }\n          ]\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"许棠\",\n          \"text\": \"你还记得我晕车，倒不记得自己欠我一句话。\",\n          \"emotion\": \"克制\",\n          \"strength\": \"较强\",\n          \"productionNote\": \"没有抬头，声音冷冽且直接，字句间有停顿，表现出压抑多年的情绪\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"音效\",\n          \"text\": \"握紧伞柄\",\n          \"soundPrompt\": \"手指用力捏紧湿滑木质伞柄发出的轻微挤压声，伴随布料摩擦声\",\n          \"productionNote\": \"表现周砚内心的挣扎与紧张，-18dB\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"周砚\",\n          \"text\": \"那次沉默……不是因为不相信你。是主管用父亲的手术名额威胁我。这三年我一直想解释，却每次都觉得，解释只是给自己减轻负担。\",\n          \"emotion\": \"悲伤\",\n          \"strength\": \"微弱\",\n          \"productionNote\": \"声音低沉，带有明显的自我剖析感，语速缓慢，透露出深深的无力感\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"音效\",\n          \"text\": \"广播催促\",\n          \"soundPrompt\": \"车站广播突然提高音量，机械女声急促播报“请乘坐末班车的乘客尽快前往检票口”\",\n          \"productionNote\": \"打破两人之间的沉默，推动剧情进入结尾，-20dB\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"音效\",\n          \"text\": \"递伞\",\n          \"soundPrompt\": \"从纸箱中抽出一把折叠伞并递出的动作声，伞骨发出轻微的金属碰撞声\",\n          \"productionNote\": \"配合许棠的动作，-15dB\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"许棠\",\n          \"text\": \"这把伞是你的。修好了，再来找我。\",\n          \"emotion\": \"坚定\",\n          \"strength\": \"中等\",\n          \"productionNote\": \"语气不再尖锐，多了一丝释然与期待，尾音微微上扬\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"bgm\",\n          \"track\": \"bgm\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"音乐\",\n          \"text\": \"尾声配乐\",\n          \"soundPrompt\": \"单簧管或钢琴独奏，旋律舒缓而略带忧伤，随后逐渐淡出\",\n          \"productionNote\": \"在许棠说完后缓缓进入，营造余韵，-24dB\",\n          \"audioEvents\": []\n        }\n      ]\n    }\n  ]\n}",
+    "finish_reason": "stop",
+    "seconds": 23.713,
+    "usage": {
+      "completion_tokens": 1499,
+      "prompt_tokens": 2534,
+      "total_tokens": 4033,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": null,
+        "audio_tokens": null,
+        "reasoning_tokens": null,
+        "rejected_prediction_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": null,
+        "cached_tokens": 0,
+        "text_tokens": 2534
+      }
+    },
+    "response_model": "qwen3.8-27b"
+  },
+  "raw_metrics": {
+    "scene_count": 1,
+    "line_counts": {
+      "dialogue": 4,
+      "narration": 1,
+      "sfx": 4,
+      "bgm": 1
+    },
+    "spoken_chars": 132,
+    "narration_ratio": 0.1591,
+    "consecutive_narrations": 0,
+    "long_narrations": 0,
+    "tts_contamination": 0,
+    "unvoiced_spoken_lines": 0,
+    "empty_sound_prompts": 0,
+    "max_spoken_line_chars": 59,
+    "actor_notes": 5,
+    "audio_event_count": 1,
+    "opening_sound_scenes": 0
+  },
+  "error": {
+    "type": "ValidationError",
+    "status_code": null,
+    "provider_code": ""
+  }
+}

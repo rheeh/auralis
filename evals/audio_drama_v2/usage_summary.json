@@ -1,0 +1,7 @@
+{
+  "prompt_tokens": 53550,
+  "completion_tokens": 31431,
+  "total_tokens": 84981,
+  "successful_generation_responses": 11,
+  "successful_judge_responses": 9
+}

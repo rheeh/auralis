@@ -1,0 +1,57 @@
+{
+  "sample_id": "DEMO-001",
+  "title": "雨夜来件",
+  "repetition": 1,
+  "variant": "b_fact_locked",
+  "status": "failed",
+  "started_at": "2026-09-05T04:33:24.161412+00:00",
+  "system_prompt_sha256": "b43ec56b4ab8b73b350ee3a646bc256900ee16bd528431845a4a732c2069cb5c",
+  "user_prompt_sha256": "2ea82b556c243e8ee6bcd3524fc3b1f55e8eb72f0b7d120e3f153c8340bedfe3",
+  "generation": {
+    "raw_response": "{\n  \"title\": \"别开灯\",\n  \"logline\": \"一封没有寄件人的旧信封，一个已停用的号码，门外响起的三声敲门。\",\n  \"characters\": [\n    {\n      \"name\": \"林澈\",\n      \"role\": \"公寓住客 · 用理性掩饰不安\"\n    },\n    {\n      \"name\": \"许遥\",\n      \"role\": \"旧事知情人 · 比他先发现异常\"\n    }\n  ],\n  \"scenes\": [\n    {\n      \"title\": \"雨夜信箱\",\n      \"location\": \"林澈的公寓内\",\n      \"mood\": \"悬疑、压抑\",\n      \"lines\": [\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"\",\n          \"text\": \"\",\n          \"emotion\": null,\n          \"strength\": null,\n          \"voiceProfile\": null,\n          \"soundPrompt\": \"持续的中大雨滴敲击玻璃窗的声音，伴随轻微的室内底噪\",\n          \"productionNote\": \"作为环境底音贯穿全场景，音量保持在 -28dB，不随台词起伏变化\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"narration\",\n          \"track\": \"narration\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"旁白\",\n          \"text\": \"晚上十一点十七分，雨水敲着林澈公寓的窗户。门铃响了。\",\n          \"emotion\": \"平静\",\n          \"strength\": \"微弱\",\n          \"voiceProfile\": \"中性男声，语速平缓\",\n          \"soundPrompt\": null,\n          \"productionNote\": \"在雨声中清晰切入，交代时间与事件起因\",\n          \"audioEvents\": [\n            {\n              \"timing\": \"台词中\",\n              \"type\": \"sfx\",\n              \"content\": \"清脆的电子门铃声，短促两下\",\n              \"volume_db\": \"-15dB\"\n            }\n          ]\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"许遥\",\n          \"text\": \"楼下信箱里放了这个。没有寄件人。\",\n          \"emotion\": \"克制\",\n          \"strength\": \"中等\",\n          \"voiceProfile\": \"女声，语调平稳但带有一丝紧绷\",\n          \"soundPrompt\": null,\n          \"productionNote\": \"声音靠近麦克风，体现刚进门的状态，语气直接\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"\",\n          \"text\": \"\",\n          \"emotion\": null,\n          \"strength\": null,\n          \"voiceProfile\": null,\n          \"soundPrompt\": \"牛皮纸信封被放在木质桌面上的摩擦声，轻微且干燥\",\n          \"productionNote\": \"动作音效，紧随许遥台词之后，体现物品的质感\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"林澈\",\n          \"text\": \"等等。\",\n          \"emotion\": \"疑惑\",\n          \"strength\": \"稍弱\",\n          \"voiceProfile\": \"男声，低声，短句\",\n          \"soundPrompt\": null,\n          \"productionNote\": \"突然打断，声音压低，表现出警觉\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"\",\n          \"text\": \"\",\n          \"emotion\": null,\n          \"strength\": null,\n          \"voiceProfile\": null,\n          \"soundPrompt\": \"手指按住另一只手的轻微布料摩擦声与骨骼挤压感（拟音化处理）\",\n          \"productionNote\": \"表现许遥按住林澈手的动作，声音极轻，需仔细辨别\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"许遥\",\n          \"text\": \"看封口。三个蓝色圆点。和三年前那封信，一模一样。\",\n          \"emotion\": \"紧张\",\n          \"strength\": \"较弱\",\n          \"voiceProfile\": \"女声，越说越轻，咬字清晰\",\n          \"soundPrompt\": null,\n          \"productionNote\": \"声音刻意压低，接近耳语，强调“一模一样”时的停顿\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"break\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"\",\n          \"text\": \"\",\n          \"emotion\": null,\n          \"strength\": null,\n          \"voiceProfile\": null,\n          \"soundPrompt\": \"短暂的静默，仅保留雨声底噪，时长约1.5秒\",\n          \"productionNote\": \"制造心理压迫感，让听众消化信息\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"\",\n          \"text\": \"\",\n          \"emotion\": null,\n          \"strength\": null,\n          \"voiceProfile\": null,\n          \"soundPrompt\": \"纸张被翻转的沙沙声，随后是笔尖划过纸面的细微声响（暗示阅读背面文字）\",\n          \"productionNote\": \"表现林澈翻看信封的动作\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"林澈\",\n          \"text\": \"背面写着……别开灯。\",\n          \"emotion\": \"震惊\",\n          \"strength\": \"中等\",\n          \"voiceProfile\": \"男声，声音发紧，气息不稳\",\n          \"soundPrompt\": null,\n          \"productionNote\": \"读出文字时带有迟疑，最后一句加重语气\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"\",\n          \"text\": \"\",\n          \"emotion\": null,\n          \"strength\": null,\n          \"voiceProfile\": null,\n          \"soundPrompt\": \"手悬停在半空未触碰到开关的静止状态（无实际音效，通过后续静音体现），紧接着雨声略微放大以填补空白\",\n          \"productionNote\": \"表现许遥伸向开关又停下的瞬间，利用雨声的相对突出营造空旷感\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"林澈\",\n          \"text\": \"也许……只是有人恶作剧。\",\n          \"emotion\": \"冷静\",\n          \"strength\": \"微弱\",\n          \"voiceProfile\": \"男声，试图恢复理智，语速放慢\",\n          \"soundPrompt\": null,\n          \"productionNote\": \"自我安慰的语气，尾音下沉，留白较长\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"\",\n          \"text\": \"\",\n          \"emotion\": null,\n          \"strength\": null,\n          \"voiceProfile\": null,\n          \"soundPrompt\": \"手机在牛皮纸信封内部发出的闷响振动声，频率急促，透过纸张传播显得沉闷\",\n          \"productionNote\": \"突然插入，打破寂静，音量适中但极具穿透力\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"林澈\",\n          \"text\": \"接了。\",\n          \"emotion\": \"惊慌\",\n          \"strength\": \"较强\",\n          \"voiceProfile\": \"男声，短促，几乎是气声\",\n          \"soundPrompt\": null,\n          \"productionNote\": \"反应迅速，声音因惊吓而变高变细\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"\",\n          \"text\": \"\",\n          \"emotion\": null,\n          \"strength\": null,\n          \"voiceProfile\": null,\n          \"soundPrompt\": \"电话接通后的电流底噪，随后是清晰的三声敲门声：一慢，两快。声音来自听筒方向，带有明显的电话音质失真\",\n          \"productionNote\": \"关键线索音效，必须清晰可辨节奏，电话音质要真实\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"break\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"\",\n          \"text\": \"\",\n          \"emotion\": null,\n          \"strength\": null,\n          \"voiceProfile\": null,\n          \"soundPrompt\": \"短暂静默，0.5秒\",\n          \"productionNote\": \"为接下来的现实敲门声做铺垫\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"\",\n          \"text\": \"\",\n          \"emotion\": null,\n          \"strength\": null,\n          \"voiceProfile\": null,\n          \"soundPrompt\": \"公寓房门处传来的三声敲门声：一慢，两快。声音厚重、真实，就在两人面前不远处\",\n          \"productionNote\": \"与电话中的声音形成恐怖呼应，音量较大，具有压迫感\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"许遥\",\n          \"text\": \"你不是说……那个号码，三年前就停了吗？\",\n          \"emotion\": \"恐惧\",\n          \"strength\": \"较弱\",\n          \"voiceProfile\": \"女声，极度压低，颤抖但克制\",\n          \"soundPrompt\": null,\n          \"productionNote\": \"声音贴近麦克风，几乎是在耳边低语，充满难以置信\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"林澈\",\n          \"text\": \"别出声。\",\n          \"emotion\": \"坚定\",\n          \"strength\": \"中等\",\n          \"voiceProfile\": \"男声，果断，切断对方话语\",\n          \"soundPrompt\": null,\n          \"productionNote\": \"语气强硬但音量极低，展现保护欲与控制力\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"\",\n          \"text\": \"\",\n          \"emotion\": null,\n          \"strength\": null,\n          \"voiceProfile\": null,\n          \"soundPrompt\": \"椅子腿在地面轻微刮擦的声音，随后是缓慢、小心翼翼的脚步声逐渐远离镜头方向\",\n          \"productionNote\": \"表现林澈离开座位走向门口（或避开门口）的动作，脚步声要有距离感的变化\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"break\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"\",\n          \"text\": \"\",\n          \"emotion\": null,\n          \"strength\": null,\n          \"voiceProfile\": null,\n          \"soundPrompt\": \"雨声持续，脚步声消失后留下更深的寂静，直到结束\",\n          \"productionNote\": \"结尾留白，不揭示门外是谁，保持悬念\",\n          \"audioEvents\": []\n        }\n      ]\n    }\n  ]\n}",
+    "finish_reason": "stop",
+    "seconds": 44.278,
+    "usage": {
+      "completion_tokens": 2788,
+      "prompt_tokens": 2088,
+      "total_tokens": 4876,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": null,
+        "audio_tokens": null,
+        "reasoning_tokens": null,
+        "rejected_prediction_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": null,
+        "cached_tokens": 0,
+        "text_tokens": 2088
+      }
+    },
+    "response_model": "qwen3.8-27b"
+  },
+  "raw_metrics": {
+    "scene_count": 1,
+    "line_counts": {
+      "dialogue": 8,
+      "narration": 1,
+      "sfx": 9,
+      "bgm": 0
+    },
+    "spoken_chars": 117,
+    "narration_ratio": 0.2222,
+    "consecutive_narrations": 0,
+    "long_narrations": 0,
+    "tts_contamination": 0,
+    "unvoiced_spoken_lines": 0,
+    "empty_sound_prompts": 0,
+    "max_spoken_line_chars": 26,
+    "actor_notes": 9,
+    "audio_event_count": 1,
+    "opening_sound_scenes": 1
+  },
+  "error": {
+    "type": "ValidationError",
+    "status_code": null,
+    "provider_code": ""
+  }
+}

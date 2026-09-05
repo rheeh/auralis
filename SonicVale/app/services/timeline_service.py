@@ -168,14 +168,17 @@ class TimelineService:
             cursors = 0
             track_by_type = {track.track_type: track for track in tracks}
             missing_tracks: set[str] = set()
+            built_clips: list[TimelineClipPO] = []
             for line in lines:
+                if self.sound_library_cue(line):
+                    continue
                 track_type = self._track_type(line)
                 asset = self._register_line_assets(project_id, chapter.id, line, track_type)
                 if asset is None or asset.duration_ms <= 0:
                     missing_tracks.add(track_type)
                     continue
                 track = track_by_type[track_type]
-                self.db.add(TimelineClipPO(
+                clip = TimelineClipPO(
                     project_id=project_id,
                     chapter_id=chapter.id,
                     track_id=track.id,
@@ -190,8 +193,23 @@ class TimelineService:
                     is_muted=False,
                     is_user_edited=False,
                     revision=track.revision,
-                ))
+                )
+                self.db.add(clip)
+                built_clips.append(clip)
                 cursors += asset.duration_ms
+            # Quick-added ambience and foley overlay their anchor instead of
+            # pushing the whole chapter forward by their source-file duration.
+            for line in lines:
+                if not self.sound_library_cue(line):
+                    continue
+                track_type = self._track_type(line)
+                clip = self.add_sound_library_clip(
+                    project_id, chapter.id, line, track_by_type[track_type], built_clips
+                )
+                if clip is None:
+                    missing_tracks.add(track_type)
+                else:
+                    built_clips.append(clip)
             for track in tracks:
                 track.source_fingerprint = source_fingerprint
                 track.status = "missing_audio" if track.track_type in missing_tracks else "ready"
@@ -205,6 +223,47 @@ class TimelineService:
             self.db.commit()
             raise
         return self.get_chapter_timeline(project_id, chapter_id)
+
+    @staticmethod
+    def sound_library_cue(line: LinePO) -> dict[str, Any] | None:
+        return next((event for event in TimelineService._items(line.audio_events)
+                     if event.get("type") == "sound_library_placement"), None)
+
+    def add_sound_library_clip(
+        self, project_id: int, chapter_id: int, line: LinePO,
+        track: TimelineTrackPO, clips: list[TimelineClipPO],
+    ) -> TimelineClipPO | None:
+        """Place a persistent library cue using its anchor's real audio timing."""
+        cue = self.sound_library_cue(line)
+        if not cue:
+            return None
+        anchor_id = cue.get("anchor_line_id")
+        anchor_clip = next((clip for clip in clips if clip.line_id == anchor_id), None)
+        if anchor_id and anchor_clip is None:
+            return None
+        asset = self._register_line_assets(project_id, chapter_id, line, self._track_type(line))
+        if asset is None or asset.duration_ms <= 0:
+            return None
+        duration_ms = min(asset.duration_ms, max(1, int(cue.get("duration_ms") or asset.duration_ms)))
+        start_ms = anchor_clip.start_ms if anchor_clip else 0
+        if anchor_clip and cue.get("placement") == "after":
+            start_ms += anchor_clip.duration_ms
+        elif anchor_clip and cue.get("placement") == "before":
+            start_ms -= duration_ms
+        start_ms = max(0, start_ms + int(cue.get("offset_ms") or 0))
+        fade_in = min(duration_ms, max(0, int(cue.get("fade_in_ms") or 0)))
+        fade_out = min(duration_ms - fade_in, max(0, int(cue.get("fade_out_ms") or 0)))
+        clip = TimelineClipPO(
+            project_id=project_id, chapter_id=chapter_id, track_id=track.id,
+            line_id=line.id, asset_id=asset.id, track_type=self._track_type(line),
+            start_ms=start_ms, duration_ms=duration_ms,
+            volume_db=max(-60, min(12, float(cue.get("volume_db", -12)))),
+            fade_in_ms=fade_in, fade_out_ms=fade_out,
+            is_muted=False, is_user_edited=False, revision=track.revision,
+        )
+        self.db.add(clip)
+        self.db.flush()
+        return clip
 
     def update_clip(
         self,

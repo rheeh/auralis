@@ -1,0 +1,10 @@
+﻿sample_id,repetition,variant,status,weighted_score,fact_gate_passed,narration_ratio,raw_tts_contamination
+AD-001,1,a_current,failed,,,0.0,0
+AD-006,1,a_current,generated,,,0.0,0
+AD-001,1,c_director_example,failed,,,0.1591,0
+DEMO-001,1,a_current,failed,,,,
+DEMO-001,1,c_director_example,failed,,,,
+AD-006,1,c_director_example,failed,,,,
+AD-001,1,b_fact_locked,failed,,,,
+AD-006,1,b_fact_locked,failed,,,,
+DEMO-001,1,b_fact_locked,failed,,,0.2222,0

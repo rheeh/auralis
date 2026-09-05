@@ -10,6 +10,16 @@
 
 本文档给下一位 AI 助手接手执行用。它不是聊天总结，所有判断都应以当前 checkout 为准。
 
+## 2026-09-05 增量状态
+
+- 新演示入口 `/#/demo`：《雨夜来件》导演审定稿、22 个真实 A/B take、6 个候选试音、音效编排和浏览器 WAV 导出。见 [本次验收](demo-2026-09-05.md)。
+- 本地真实工程由 `scripts/seed_director_demo.py` 导入；不覆盖已有项目、不请求云端。历史 `scripts/seed_demo.py` 仍是静音流程 smoke，不当作听感样片。
+- 用户明确禁止后续使用 `qwen-plus`；LLM 评测和 Demo 新建项目仅选择 `qwen3.8-27b` / `kimi-k3`，默认前者。历史错误调用保留型号和用量记录；不能混入新型号结果。真实评测受 `Arrearage` 限制，详见 [实验报告](../evals/audio_drama_v2/REPORT.md)。
+- 修复旧 Qwen3 TTS 的 `input.instructions`、CosyVoice 倍率和音色级能力判断；接入免费 `qwen-audio-3.0-tts-plus/flash` 独立协议（`input.instruction`）。原 28 个音频与 manifest 保留，新增 3 条免费短句候选使用独立文件。TTS 型号独立于上述 LLM 型号约束，已合成的 Demo 试听不消耗额度。
+- 音效库增加 `POST /sound-library/assets/{asset_id}/insert`，可按原始台词锚点加入，持久化加入意图并保护手动时间线。前端工作台和时间线均有入口。
+
+下文为先前基线；发生冲突时以上述增量和当前代码为准。
+
 ## 1. 项目背景和最终目标
 
 Auralis 是一个本地优先的 AI 广播剧制作工作台，用于把小说或叙事文本改编成可审查、可修改、可配音、可连播的音频项目。

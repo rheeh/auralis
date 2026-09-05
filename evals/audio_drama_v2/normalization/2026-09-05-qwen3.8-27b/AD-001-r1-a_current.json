@@ -1,0 +1,233 @@
+{
+  "raw_record": "runs/2026-09-05-qwen3.8-27b-demo/raw/AD-001-r1-a_current.json",
+  "original_evaluation_status": "failed",
+  "response_model": "qwen3.8-27b",
+  "network_calls": 0,
+  "normalization_change": "明确shouldSpeak=false且track为sfx/amb/缺省的amb行转为sfx，保留声源、text和audioEvents。break不转换。",
+  "script": {
+    "title": "雨夜末班车",
+    "logline": "在城南客运站最后一班车的雨夜里，许棠与周砚面对三年前那场沉默的背叛，没有原谅，只有一把修好的蓝格伞作为和解的契机。",
+    "characters": [
+      {
+        "name": "许棠",
+        "role": "被旧事伤害、即将离城的设计师",
+        "voice_traits": [
+          "克制",
+          "锋利",
+          "不轻易原谅"
+        ]
+      },
+      {
+        "name": "周砚",
+        "role": "当年沉默、如今试图解释的旧同事",
+        "voice_traits": [
+          "内疚",
+          "迟疑",
+          "避免为自己辩护"
+        ]
+      }
+    ],
+    "scenes": [
+      {
+        "title": "末班车前的对峙",
+        "location": "城南客运站候车区",
+        "mood": "压抑、潮湿、充满未解的张力",
+        "lines": [
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "空旷车站底噪，远处广播机械女声反复播报检票信息，雨水滴落声",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "空旷车站底噪，远处广播机械女声反复播报检票信息，雨水滴落声",
+            "productionNote": "营造深夜车站的空旷感，广播声需带有轻微混响，体现空间距离",
+            "audioEvents": [
+              {
+                "timing": "场景开始",
+                "type": "amb",
+                "content": "空旷车站底噪，远处广播机械女声反复播报检票信息，雨水滴落声",
+                "volume_db": "-28dB"
+              }
+            ]
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "湿透的脚步声由远及近，皮鞋踩水声，急促呼吸声",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "湿透的脚步声由远及近，皮鞋踩水声，急促呼吸声",
+            "productionNote": "脚步声要清晰，体现周砚赶来的急切和狼狈",
+            "audioEvents": [
+              {
+                "timing": "旁白后",
+                "type": "sfx",
+                "content": "湿透的脚步声由远及近，皮鞋踩水声，急促呼吸声",
+                "volume_db": "-18dB"
+              }
+            ]
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "周砚",
+            "text": "换到靠窗的位置了，你以前会晕车。",
+            "emotion": "迟疑",
+            "strength": "中等",
+            "voiceProfile": "周砚：内疚，迟疑，避免为自己辩护",
+            "soundPrompt": "压低声音，语速稍快，带着一丝小心翼翼",
+            "productionNote": "台词前有一个轻微的停顿，体现他在开口前的犹豫；“晕车”二字说得极轻，像是怕触碰伤口",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "纸箱被挪动的摩擦声，纸张压下的细微声响",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "纸箱被挪动的摩擦声，纸张压下的细微声响",
+            "productionNote": "动作声要干脆，体现许棠的冷漠和疏离",
+            "audioEvents": [
+              {
+                "timing": "周砚台词后",
+                "type": "sfx",
+                "content": "纸箱被挪动的摩擦声，纸张压下的细微声响",
+                "volume_db": "-24dB"
+              }
+            ]
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "许棠",
+            "text": "你还记得我晕车，倒不记得自己欠我一句话。",
+            "emotion": "克制",
+            "strength": "较强",
+            "voiceProfile": "许棠：克制，锋利，不轻易原谅",
+            "soundPrompt": "语调平稳但字字清晰，没有起伏，像一把冰冷的刀",
+            "productionNote": "全程保持冷静，不加任何情绪修饰，用平淡的语气说出最尖锐的话；“一句话”三个字略微加重",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "紧握伞柄的挤压声，布料摩擦声",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "紧握伞柄的挤压声，布料摩擦声",
+            "productionNote": "体现周砚内心的挣扎和痛苦",
+            "audioEvents": [
+              {
+                "timing": "许棠台词后",
+                "type": "sfx",
+                "content": "紧握伞柄的挤压声，布料摩擦声",
+                "volume_db": "-20dB"
+              }
+            ]
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "周砚",
+            "text": "那次沉默不是因为不相信你。主管用父亲的手术名额威胁我。这三年我一直想解释，却每次都觉得，解释只是给自己减轻负担。",
+            "emotion": "内疚",
+            "strength": "强烈",
+            "voiceProfile": "周砚：内疚，迟疑，避免为自己辩护",
+            "soundPrompt": "声音低沉，带着颤抖，语速缓慢，每个字都像是从喉咙里挤出来的",
+            "productionNote": "前半句极力辩解，后半句突然转为自我剖析，语气从防御变为彻底的坦白；“减轻负担”四字几乎耳语",
+            "audioEvents": []
+          },
+          {
+            "type": "bgm",
+            "track": "bgm",
+            "shouldSpeak": false,
+            "speaker": "BGM",
+            "text": "单簧管独奏，旋律缓慢而忧伤，逐渐加入大提琴低音",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "单簧管独奏，旋律缓慢而忧伤，逐渐加入大提琴低音",
+            "productionNote": "音乐不要铺满，只在周砚坦白时轻轻进入，烘托出沉重的情感氛围",
+            "audioEvents": [
+              {
+                "timing": "周砚坦白时",
+                "type": "bgm",
+                "content": "单簧管独奏，旋律缓慢而忧伤，逐渐加入大提琴低音",
+                "volume_db": "-22dB"
+              }
+            ]
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "检票口催促声，人群移动声，行李箱轮子滚动声",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "检票口催促声，人群移动声，行李箱轮子滚动声",
+            "productionNote": "外部环境的紧迫感打破两人之间的沉默，推动剧情走向结尾",
+            "audioEvents": [
+              {
+                "timing": "BGM渐弱时",
+                "type": "sfx",
+                "content": "检票口催促声，人群移动声，行李箱轮子滚动声",
+                "volume_db": "-18dB"
+              }
+            ]
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "许棠",
+            "text": "这把伞是你的。修好了，再来找我。",
+            "emotion": "坚定",
+            "strength": "中等",
+            "voiceProfile": "许棠：克制，锋利，不轻易原谅",
+            "soundPrompt": "语气平静，没有怨恨，也没有原谅，只是一种陈述事实的态度",
+            "productionNote": "“修好了”三个字说得格外清楚，既是说伞，也是说关系；“再来找我”是整部剧唯一的希望出口，语气中不带温度，但也不冰冷",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "雨伞递出的轻响，纸箱合上的声音，脚步声远去",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "雨伞递出的轻响，纸箱合上的声音，脚步声远去",
+            "productionNote": "以声音结束场景，留白给听众想象后续",
+            "audioEvents": [
+              {
+                "timing": "许棠台词后",
+                "type": "sfx",
+                "content": "雨伞递出的轻响，纸箱合上的声音，脚步声远去",
+                "volume_db": "-20dB"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "posthoc_schema_status": "valid"
+}

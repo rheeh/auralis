@@ -1,0 +1,427 @@
+{
+  "sample_id": "DEMO-001",
+  "title": "雨夜来件",
+  "repetition": 1,
+  "variant": "c_director_example",
+  "status": "completed",
+  "started_at": "2026-09-05T04:19:23.620245+00:00",
+  "system_prompt_sha256": "ddafc9660c4df79c5ca0fd60672157f2156c6dc666f38503c950b38bbd6f6be8",
+  "user_prompt_sha256": "2ea82b556c243e8ee6bcd3524fc3b1f55e8eb72f0b7d120e3f153c8340bedfe3",
+  "generation": {
+    "raw_response": "{\n  \"title\": \"蓝点信封\",\n  \"logline\": \"一封无寄件人的牛皮纸信封，三个蓝色圆点，一句‘别开灯’，和三年前完全相同的敲门节奏——当旧事以声音重现，理性成了最薄的屏障。\",\n  \"characters\": [\n    {\n      \"name\": \"林澈\",\n      \"role\": \"公寓住客 · 用理性掩饰不安\"\n    },\n    {\n      \"name\": \"许遥\",\n      \"role\": \"旧事知情人 · 比他先发现异常\"\n    }\n  ],\n  \"scenes\": [\n    {\n      \"title\": \"雨夜·玄关\",\n      \"location\": \"林澈公寓内，玄关处\",\n      \"mood\": \"潮湿、静压、时间凝滞\",\n      \"lines\": [\n        {\n          \"type\": \"narration\",\n          \"track\": \"narration\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"旁白\",\n          \"text\": \"晚上十一点十七分。雨声持续敲打玻璃。\",\n          \"productionNote\": \"雨声已铺底；语速平缓，不渲染，仅作时空锚点\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"音效\",\n          \"text\": \"门铃短促响一声\",\n          \"soundPrompt\": \"电子门铃单次短响，中高频清晰，近景，0.8秒\",\n          \"productionNote\": \"雨声持续，门铃切入时略压雨声0.2秒后恢复\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"许遥\",\n          \"text\": \"它在楼下信箱里，没写寄件人。\",\n          \"emotion\": \"克制\",\n          \"strength\": \"稍弱\",\n          \"productionNote\": \"递出动作同步发声，气息稳，尾音轻收\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"音效\",\n          \"text\": \"牛皮纸信封被轻轻放在玄关台面\",\n          \"soundPrompt\": \"厚牛皮纸与木质台面轻碰，闷而实，0.3秒\",\n          \"productionNote\": \"接上句尾，无停顿\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"林澈\",\n          \"text\": \"……我拆开看看。\",\n          \"emotion\": \"平静\",\n          \"strength\": \"稍弱\",\n          \"productionNote\": \"抬手动作前置，语气像日常拆件，但‘看看’微顿\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"音效\",\n          \"text\": \"指尖刮过牛皮纸封口\",\n          \"soundPrompt\": \"指甲轻刮粗糙纸面，近景，干涩摩擦声，0.5秒\",\n          \"productionNote\": \"紧接上句，强调触感细节\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"许遥\",\n          \"text\": \"别撕。\",\n          \"emotion\": \"紧张\",\n          \"strength\": \"稍弱\",\n          \"productionNote\": \"手按上他手腕瞬间出口，音量未升反降\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"音效\",\n          \"text\": \"手掌覆上手背的布料摩擦声\",\n          \"soundPrompt\": \"棉质衣袖与皮肤轻微摩擦，极近，0.4秒\",\n          \"productionNote\": \"与台词同步，强化肢体阻断感\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"许遥\",\n          \"text\": \"封口上有三个蓝色圆点。\",\n          \"emotion\": \"冷静\",\n          \"strength\": \"稍弱\",\n          \"productionNote\": \"字字清晰，像报出一个已确认的坐标\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"林澈\",\n          \"text\": \"……\",\n          \"emotion\": \"克制\",\n          \"strength\": \"微弱\",\n          \"productionNote\": \"沉默1.2秒；不喘气，喉结微动可闻\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"音效\",\n          \"text\": \"信封翻转，背面朝上\",\n          \"soundPrompt\": \"厚纸信封180度翻转，边缘轻磕木台，0.6秒\",\n          \"productionNote\": \"动作明确，为下句铺垫方位\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"林澈\",\n          \"text\": \"背面写着——别开灯。\",\n          \"emotion\": \"平静\",\n          \"strength\": \"稍弱\",\n          \"productionNote\": \"念出四字时目光已移向开关，语速不变\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"音效\",\n          \"text\": \"手指悬停于墙壁开关上方\",\n          \"soundPrompt\": \"指尖悬停0.5秒，空气微扰，极轻微气流声\",\n          \"productionNote\": \"无声胜有声；雨声在此刻略提0.5dB\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"林澈\",\n          \"text\": \"也许只是有人恶作剧。\",\n          \"emotion\": \"平静\",\n          \"strength\": \"中等\",\n          \"productionNote\": \"说完即收，不等回应；‘恶作剧’后留白1秒\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"音效\",\n          \"text\": \"手机在信封内突然振动\",\n          \"soundPrompt\": \"老式手机马达震动声，沉闷短促，从纸层内透出，0.8秒\",\n          \"productionNote\": \"雨声短暂压低；振动声带纸盒共振感\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"林澈\",\n          \"text\": \"……我接。\",\n          \"emotion\": \"克制\",\n          \"strength\": \"稍弱\",\n          \"productionNote\": \"低头，隔着纸按压动作；‘接’字气声更重\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"音效\",\n          \"text\": \"信封内传出听筒接通音\",\n          \"soundPrompt\": \"老式电话‘嘟’一声接通音，失真、窄频，从纸内闷传\",\n          \"productionNote\": \"振动声退，接通音起，雨声同步淡入\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"林澈\",\n          \"text\": \"喂？\",\n          \"emotion\": \"冷静\",\n          \"strength\": \"稍弱\",\n          \"productionNote\": \"试探性开口，音量比平时低半度\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"音效\",\n          \"text\": \"电话中传来三声敲门声：慢、快、快\",\n          \"soundPrompt\": \"木质门板敲击声，第一声间隔0.9秒，后两声0.3秒连击，录音质感，略带空洞混响\",\n          \"productionNote\": \"严格匹配节奏；电话音效明显区别于现场\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"音效\",\n          \"text\": \"门外同步响起三声敲门：慢、快、快\",\n          \"soundPrompt\": \"同材质门板真实敲击，位置更近、更实，无混响，与电话声错开0.2秒进入\",\n          \"productionNote\": \"电话声尾音未落，门外声已起；雨声骤静0.3秒\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"许遥\",\n          \"text\": \"你不是说，那个号码三年前就停了吗？\",\n          \"emotion\": \"疑惑\",\n          \"strength\": \"稍弱\",\n          \"productionNote\": \"压至耳语，每个字都像从齿间挤出，不抖但绷紧\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"speaker\": \"音效\",\n          \"text\": \"林澈后退半步，鞋底擦过地板\",\n          \"soundPrompt\": \"室内拖鞋后撤半步，棉布底与木地板涩擦，0.4秒\",\n          \"productionNote\": \"接上句尾，强调主动撤离动作\",\n          \"audioEvents\": []\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"林澈\",\n          \"text\": \"……别出声。\",\n          \"emotion\": \"冷静\",\n          \"strength\": \"较强\",\n          \"productionNote\": \"转身时侧身低语，气流压向许遥耳侧，不看她\",\n          \"audioEvents\": []\n        }\n      ]\n    }\n  ]\n}",
+    "finish_reason": "stop",
+    "seconds": 53.444,
+    "usage": {
+      "completion_tokens": 2401,
+      "prompt_tokens": 2604,
+      "total_tokens": 5005,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": {
+        "audio_tokens": null,
+        "cached_tokens": 0
+      }
+    },
+    "response_model": "qwen-plus"
+  },
+  "raw_metrics": {
+    "scene_count": 1,
+    "line_counts": {
+      "dialogue": 11,
+      "narration": 1,
+      "sfx": 11,
+      "bgm": 0
+    },
+    "spoken_chars": 106,
+    "narration_ratio": 0.1698,
+    "consecutive_narrations": 0,
+    "long_narrations": 0,
+    "tts_contamination": 0,
+    "unvoiced_spoken_lines": 0,
+    "empty_sound_prompts": 0,
+    "max_spoken_line_chars": 18,
+    "actor_notes": 12,
+    "audio_event_count": 0,
+    "opening_sound_scenes": 0
+  },
+  "script": {
+    "title": "蓝点信封",
+    "logline": "一封无寄件人的牛皮纸信封，三个蓝色圆点，一句‘别开灯’，和三年前完全相同的敲门节奏——当旧事以声音重现，理性成了最薄的屏障。",
+    "characters": [
+      {
+        "name": "林澈",
+        "role": "公寓住客 · 用理性掩饰不安"
+      },
+      {
+        "name": "许遥",
+        "role": "旧事知情人 · 比他先发现异常"
+      }
+    ],
+    "scenes": [
+      {
+        "title": "雨夜·玄关",
+        "location": "林澈公寓内，玄关处",
+        "mood": "潮湿、静压、时间凝滞",
+        "lines": [
+          {
+            "type": "narration",
+            "track": "narration",
+            "shouldSpeak": true,
+            "speaker": "旁白",
+            "text": "晚上十一点十七分。雨声持续敲打玻璃。",
+            "emotion": "平静",
+            "strength": "中等",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "雨声已铺底；语速平缓，不渲染，仅作时空锚点",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "门铃短促响一声",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "电子门铃单次短响，中高频清晰，近景，0.8秒",
+            "productionNote": "雨声持续，门铃切入时略压雨声0.2秒后恢复",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "许遥",
+            "text": "它在楼下信箱里，没写寄件人。",
+            "emotion": "克制",
+            "strength": "稍弱",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "递出动作同步发声，气息稳，尾音轻收",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "牛皮纸信封被轻轻放在玄关台面",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "厚牛皮纸与木质台面轻碰，闷而实，0.3秒",
+            "productionNote": "接上句尾，无停顿",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "林澈",
+            "text": "……我拆开看看。",
+            "emotion": "平静",
+            "strength": "稍弱",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "抬手动作前置，语气像日常拆件，但‘看看’微顿",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "指尖刮过牛皮纸封口",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "指甲轻刮粗糙纸面，近景，干涩摩擦声，0.5秒",
+            "productionNote": "紧接上句，强调触感细节",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "许遥",
+            "text": "别撕。",
+            "emotion": "紧张",
+            "strength": "稍弱",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "手按上他手腕瞬间出口，音量未升反降",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "手掌覆上手背的布料摩擦声",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "棉质衣袖与皮肤轻微摩擦，极近，0.4秒",
+            "productionNote": "与台词同步，强化肢体阻断感",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "许遥",
+            "text": "封口上有三个蓝色圆点。",
+            "emotion": "冷静",
+            "strength": "稍弱",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "字字清晰，像报出一个已确认的坐标",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "林澈",
+            "text": "……",
+            "emotion": "克制",
+            "strength": "微弱",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "沉默1.2秒；不喘气，喉结微动可闻",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "信封翻转，背面朝上",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "厚纸信封180度翻转，边缘轻磕木台，0.6秒",
+            "productionNote": "动作明确，为下句铺垫方位",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "林澈",
+            "text": "背面写着——别开灯。",
+            "emotion": "平静",
+            "strength": "稍弱",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "念出四字时目光已移向开关，语速不变",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "手指悬停于墙壁开关上方",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "指尖悬停0.5秒，空气微扰，极轻微气流声",
+            "productionNote": "无声胜有声；雨声在此刻略提0.5dB",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "林澈",
+            "text": "也许只是有人恶作剧。",
+            "emotion": "平静",
+            "strength": "中等",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "说完即收，不等回应；‘恶作剧’后留白1秒",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "手机在信封内突然振动",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "老式手机马达震动声，沉闷短促，从纸层内透出，0.8秒",
+            "productionNote": "雨声短暂压低；振动声带纸盒共振感",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "林澈",
+            "text": "……我接。",
+            "emotion": "克制",
+            "strength": "稍弱",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "低头，隔着纸按压动作；‘接’字气声更重",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "信封内传出听筒接通音",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "老式电话‘嘟’一声接通音，失真、窄频，从纸内闷传",
+            "productionNote": "振动声退，接通音起，雨声同步淡入",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "林澈",
+            "text": "喂？",
+            "emotion": "冷静",
+            "strength": "稍弱",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "试探性开口，音量比平时低半度",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "电话中传来三声敲门声：慢、快、快",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "木质门板敲击声，第一声间隔0.9秒，后两声0.3秒连击，录音质感，略带空洞混响",
+            "productionNote": "严格匹配节奏；电话音效明显区别于现场",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "门外同步响起三声敲门：慢、快、快",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "同材质门板真实敲击，位置更近、更实，无混响，与电话声错开0.2秒进入",
+            "productionNote": "电话声尾音未落，门外声已起；雨声骤静0.3秒",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "许遥",
+            "text": "你不是说，那个号码三年前就停了吗？",
+            "emotion": "疑惑",
+            "strength": "稍弱",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "压至耳语，每个字都像从齿间挤出，不抖但绷紧",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "林澈后退半步，鞋底擦过地板",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "室内拖鞋后撤半步，棉布底与木地板涩擦，0.4秒",
+            "productionNote": "接上句尾，强调主动撤离动作",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "林澈",
+            "text": "……别出声。",
+            "emotion": "冷静",
+            "strength": "较强",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "转身时侧身低语，气流压向许遥耳侧，不看她",
+            "audioEvents": []
+          }
+        ]
+      }
+    ]
+  },
+  "normalized_metrics": {
+    "scene_count": 1,
+    "line_counts": {
+      "dialogue": 11,
+      "narration": 1,
+      "sfx": 11,
+      "bgm": 0
+    },
+    "spoken_chars": 106,
+    "narration_ratio": 0.1698,
+    "consecutive_narrations": 0,
+    "long_narrations": 0,
+    "tts_contamination": 0,
+    "unvoiced_spoken_lines": 0,
+    "empty_sound_prompts": 0,
+    "max_spoken_line_chars": 18,
+    "actor_notes": 12,
+    "audio_event_count": 0,
+    "opening_sound_scenes": 0
+  },
+  "judge_response": {
+    "raw_response": "{\n  \"source_fidelity\": 5,\n  \"audible_comprehension\": 5,\n  \"dialogue_subtext\": 5,\n  \"production_readiness\": 4,\n  \"critical_fact_errors\": [],\n  \"invented_facts\": [],\n  \"evidence\": [\n    \"‘它在楼下信箱里，没写寄件人’——自然确认信封无寄件人（required_facts[1]）\",\n    \"‘封口上有三个蓝色圆点’——许遥台词直接陈述蓝点存在与位置，无需旁白或音效佐证（required_facts[2]）\",\n    \"‘背面写着——别开灯’——林澈台词明确揭示背面文字，且‘——’停顿模拟视觉确认动作（required_facts[5]）\",\n    \"‘……我接。’ + ‘喂？’ + 电话内三声敲门（soundPrompt明确标注节奏：慢、快、快）→ 紧接着门外同步三声（错开0.2秒、材质/混响区分）——完整实现‘先电话敲门，再现实敲门’且节奏一致（required_facts[3][7]）\",\n    \"‘你不是说，那个号码三年前就停了吗？’——许遥台词以反问形式自然带出‘号码三年前已停’这一原文隐含但可推知的关键事实（required_facts[4]），未新增身份/动机（prohibited_inventions[1-2]）\",\n    \"‘也许只是有人恶作剧。’——林澈原句复现，且置于电话振动前，符合因果时序（required_facts[8]）\",\n    \"‘……别出声。’ + ‘鞋底擦过地板’ + 无后续开门/对峙——林澈远离房门动作由台词+音效闭环完成，门外人身份始终未揭晓（required_facts[4][8]，prohibited_inventions[1]）\"\n  ],\n  \"revision_needed\": [\n    \"sfx line ‘手机在信封内突然振动’的soundPrompt描述为‘老式手机马达震动声’，但原文仅说‘手机的振动声’，未限定‘老式’；‘老式’属无依据添加，易误导制作（audio_challenges[4]强调‘克制自然’，且原文未提机型），应改为中性描述如‘手机振动声，沉闷短促，从纸层内透出’\",\n    \"sfx line ‘信封内传出听筒接通音’的soundPrompt写‘老式电话‘嘟’一声接通音’，但原文是‘手机的振动声’后‘按下接听’，接听对象是手机，非座机；‘电话’一词在中文口语中虽可泛指，但‘老式电话’+‘嘟’声强烈指向座机，与‘手机’矛盾（required_facts[6]：‘信封里突然传出手机的振动声。林澈隔着纸按下接听’），必须修正为‘手机接通提示音（单音，短促，略带电子感）’以保事实一致\"\n  ]\n}",
+    "finish_reason": "stop",
+    "seconds": 15.602,
+    "usage": {
+      "completion_tokens": 688,
+      "prompt_tokens": 3192,
+      "total_tokens": 3880,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": {
+        "audio_tokens": null,
+        "cached_tokens": 0
+      }
+    },
+    "response_model": "qwen-plus"
+  },
+  "judgment": {
+    "source_fidelity": 5,
+    "audible_comprehension": 5,
+    "dialogue_subtext": 5,
+    "production_readiness": 4,
+    "critical_fact_errors": [],
+    "invented_facts": [],
+    "evidence": [
+      "‘它在楼下信箱里，没写寄件人’——自然确认信封无寄件人（required_facts[1]）",
+      "‘封口上有三个蓝色圆点’——许遥台词直接陈述蓝点存在与位置，无需旁白或音效佐证（required_facts[2]）",
+      "‘背面写着——别开灯’——林澈台词明确揭示背面文字，且‘——’停顿模拟视觉确认动作（required_facts[5]）",
+      "‘……我接。’ + ‘喂？’ + 电话内三声敲门（soundPrompt明确标注节奏：慢、快、快）→ 紧接着门外同步三声（错开0.2秒、材质/混响区分）——完整实现‘先电话敲门，再现实敲门’且节奏一致（required_facts[3][7]）",
+      "‘你不是说，那个号码三年前就停了吗？’——许遥台词以反问形式自然带出‘号码三年前已停’这一原文隐含但可推知的关键事实（required_facts[4]），未新增身份/动机（prohibited_inventions[1-2]）",
+      "‘也许只是有人恶作剧。’——林澈原句复现，且置于电话振动前，符合因果时序（required_facts[8]）",
+      "‘……别出声。’ + ‘鞋底擦过地板’ + 无后续开门/对峙——林澈远离房门动作由台词+音效闭环完成，门外人身份始终未揭晓（required_facts[4][8]，prohibited_inventions[1]）"
+    ],
+    "revision_needed": [
+      "sfx line ‘手机在信封内突然振动’的soundPrompt描述为‘老式手机马达震动声’，但原文仅说‘手机的振动声’，未限定‘老式’；‘老式’属无依据添加，易误导制作（audio_challenges[4]强调‘克制自然’，且原文未提机型），应改为中性描述如‘手机振动声，沉闷短促，从纸层内透出’",
+      "sfx line ‘信封内传出听筒接通音’的soundPrompt写‘老式电话‘嘟’一声接通音’，但原文是‘手机的振动声’后‘按下接听’，接听对象是手机，非座机；‘电话’一词在中文口语中虽可泛指，但‘老式电话’+‘嘟’声强烈指向座机，与‘手机’矛盾（required_facts[6]：‘信封里突然传出手机的振动声。林澈隔着纸按下接听’），必须修正为‘手机接通提示音（单音，短促，略带电子感）’以保事实一致"
+    ]
+  },
+  "weighted_score": 4.85,
+  "fact_gate_passed": true
+}

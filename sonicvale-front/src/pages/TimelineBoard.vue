@@ -41,6 +41,7 @@
         @click="renderTimeline"
       >渲染成片</el-button>
       <el-button @click="openDubbingProject">打开配音工程</el-button>
+      <el-button :icon="Bell" :disabled="!chapterId" @click="openSoundLibrary()">快捷加音效</el-button>
     </section>
 
     <section v-if="renderResult" class="render-result">
@@ -94,6 +95,17 @@
       </div>
     </section>
 
+    <el-dialog v-model="soundLibraryVisible" title="给场景加入音效" width="min(1120px, 94vw)" destroy-on-close>
+      <SoundLibraryPanel
+        :chapter-id="chapterId"
+        :lines="chapterLines"
+        :material-lines="materialLines"
+        :target-line-id="soundTargetLineId"
+        @inserted="loadTimeline"
+        @bound="loadTimeline"
+      />
+    </el-dialog>
+
     <el-dialog v-model="clipEditorVisible" title="编辑时间线片段" width="min(520px, 92vw)" destroy-on-close>
       <el-form v-if="clipForm" label-position="top">
         <div class="clip-form-grid">
@@ -118,6 +130,7 @@
         </div>
       </el-form>
       <template #footer>
+        <el-button :icon="Bell" @click="openSoundLibrary(clipForm?.line_id)">在这句附近加音效</el-button>
         <el-button @click="clipEditorVisible = false">取消</el-button>
         <el-button type="primary" :icon="Check" :loading="savingClip" @click="saveClip">保存片段</el-button>
       </template>
@@ -132,9 +145,12 @@ import { ElMessage } from 'element-plus'
 import { Bell, Check, Download, Film, Headset, Microphone, Refresh, VideoPlay } from '@element-plus/icons-vue'
 import { fetchProjects } from '../api/project'
 import { getChaptersByProject } from '../api/chapter'
+import { getLinesByChapter } from '../api/line'
+import SoundLibraryPanel from '../components/SoundLibraryPanel.vue'
 import {
   buildChapterTimeline,
   fetchChapterTimeline,
+  fetchLatestTimelineRender,
   getTimelineRenderAudioUrl,
   renderChapterTimeline,
   updateTimelineClip,
@@ -157,6 +173,10 @@ const clipForm = ref(null)
 const savingClip = ref(false)
 const clipInteraction = ref(null)
 const suppressClipClick = ref(false)
+const soundLibraryVisible = ref(false)
+const soundTargetLineId = ref(null)
+const chapterLines = ref([])
+const materialLines = computed(() => chapterLines.value.filter((line) => ['sfx', 'bgm'].includes(line.track || line.line_type)))
 
 const zoomOptions = [
   { label: '紧凑', value: 'compact' },
@@ -213,19 +233,24 @@ function selectProjectFromQuery() {
 async function loadChapters() {
   chapters.value = []
   chapterId.value = null
+  chapterLines.value = []
   timeline.value = { status: 'not_built', tracks: [], clip_count: 0, duration_ms: 0 }
   if (!projectId.value) return
   const response = await getChaptersByProject(projectId.value)
   chapters.value = response.code === 200 ? response.data : []
   if (chapters.value.length) {
-    chapterId.value = chapters.value[0].id
+    chapterId.value = chapters.value.find((chapter) => chapter.id === Number(route.query.chapter_id))?.id || chapters.value[0].id
     await loadTimeline()
   }
 }
 
 async function loadTimeline() {
   if (!projectId.value || !chapterId.value) return
-  const response = await fetchChapterTimeline(projectId.value, chapterId.value)
+  const [response, linesResponse] = await Promise.all([
+    fetchChapterTimeline(projectId.value, chapterId.value),
+    getLinesByChapter(chapterId.value),
+  ])
+  if (linesResponse.code === 200) chapterLines.value = linesResponse.data || []
   if (response.code !== 200) {
     ElMessage.error(response.message || '读取真实时间线失败')
     return
@@ -234,6 +259,24 @@ async function loadTimeline() {
   renderResult.value = null
   renderAudioUrl.value = ''
   if (timeline.value.status === 'not_built') await rebuildTimeline(true)
+  if (timeline.value.status === 'ready') {
+    const requestedProject = projectId.value, requestedChapter = chapterId.value
+    try {
+      const latest = await fetchLatestTimelineRender(requestedProject, requestedChapter)
+      if (latest.code === 200 && requestedProject === projectId.value && requestedChapter === chapterId.value) {
+        renderResult.value = latest.data
+        renderAudioUrl.value = getTimelineRenderAudioUrl(requestedProject, requestedChapter, Date.now())
+      }
+    } catch (error) {
+      if (![404, 409].includes(error?.response?.status)) ElMessage.warning('已保存成片暂时无法读取，请稍后刷新。')
+    }
+  }
+}
+
+function openSoundLibrary(lineId = null) {
+  soundTargetLineId.value = lineId || soundTargetLineId.value || chapterLines.value[0]?.id || null
+  clipEditorVisible.value = false
+  soundLibraryVisible.value = true
 }
 
 async function rebuildTimeline(silent = false) {
@@ -256,6 +299,7 @@ async function rebuildTimeline(silent = false) {
 function openClipEditor(clip) {
   clipForm.value = {
     id: clip.id,
+    line_id: clip.line_id,
     start_ms: Number(clip.start_ms || 0),
     duration_ms: Number(clip.duration_ms || 1),
     max_duration_ms: Number(clip.asset?.duration_ms || clip.duration_ms || 1),
@@ -366,7 +410,7 @@ async function saveClip() {
   }
   savingClip.value = true
   try {
-    const { id, max_duration_ms, ...payload } = clipForm.value
+    const { id, line_id, max_duration_ms, ...payload } = clipForm.value
     const response = await updateTimelineClip(projectId.value, chapterId.value, id, payload)
     if (response.code !== 200) throw new Error(response.message || '保存失败')
     timeline.value = response.data

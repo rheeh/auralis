@@ -1,6 +1,6 @@
 <template>
-  <div class="app-shell" :class="{ 'sidebar-compact': sidebarCompact, 'is-landing': route.name === 'Home' }">
-    <aside v-if="route.name !== 'Home'" class="app-sidebar">
+  <div class="app-shell" :class="{ 'sidebar-compact': sidebarCompact, 'is-landing': ['Home', 'DemoStudio'].includes(route.name) }">
+    <aside v-if="!['Home', 'DemoStudio'].includes(route.name)" class="app-sidebar">
       <RouterLink to="/home" class="brand" aria-label="返回 Auralis 首页">
         <span class="brand-mark" aria-hidden="true"><span class="app-brand-wave"><i v-for="i in 7" :key="i" /></span></span>
         <span class="brand-name">Auralis</span>
@@ -61,7 +61,7 @@
     </aside>
 
     <section class="app-stage" :class="{ 'is-project-workspace': route.name === 'ProjectWorkspace' }">
-      <header v-if="route.name !== 'Home'" class="workspace-bar" :class="{ compact: route.name === 'ProjectWorkspace' }">
+      <header v-if="!['Home', 'DemoStudio'].includes(route.name)" class="workspace-bar" :class="{ compact: route.name === 'ProjectWorkspace' }">
         <div class="workspace-title">
           <div class="breadcrumbs">
             <RouterLink v-if="route.name === 'ProjectWorkspace'" to="/projects">项目</RouterLink>
@@ -117,6 +117,7 @@ const isDark = ref(false)
 const activeProject = ref(null)
 
 const primaryNav = [
+  { path: '/demo', label: '体验 Demo', icon: Microphone, match: ['/demo'] },
   { path: '/projects', label: '项目', icon: Tickets, match: ['/projects', '/home'] },
   { path: '/voices', label: '音色', icon: Microphone, match: ['/voices'] },
   { path: '/queue', label: '任务', icon: DataLine, match: ['/queue'] },
@@ -248,6 +249,25 @@ body,
 .app-shell.is-landing .page-surface {
   padding: 0;
   overflow: auto;
+}
+
+/* The director demo uses one document scroll container at every viewport size. */
+html:has(.night-studio),
+html:has(.night-studio) body,
+html:has(.night-studio) #app {
+  height: auto;
+  min-height: 100%;
+  overflow: visible;
+  background: #151814;
+}
+.app-shell:has(.night-studio) {
+  height: auto;
+  min-height: 100dvh;
+}
+.app-shell:has(.night-studio) .app-stage,
+.app-shell:has(.night-studio) .page-surface {
+  height: auto;
+  overflow: visible;
 }
 
 .workspace-bar.compact {

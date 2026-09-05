@@ -45,6 +45,14 @@ class VoiceService:
         {"name": "故事女童·龙呼呼", "voice": "longhuhu_v3", "tags": ["预置", "CosyVoice-v3", "女", "儿童", "Instruct"], "sample": "姐姐，你有没有听见阁楼上传来的声音？", "instruction": "你说话的情感是fearful。"},
     ]
 
+    # These adult voices complement the three emotion-controlled presets. They
+    # accept base prosody controls only; never label them as Instruct voices.
+    SUSPENSE_COSYVOICE_V3_PRESETS = [
+        {"name": "理智男声·龙天", "voice": "longtian_v3", "tags": ["预置", "CosyVoice-v3", "男", "成年", "基础韵律", "都市对白"], "sample": "别出声。离门远一点。", "instruction": "低声、克制，语速稍慢。"},
+        {"name": "细腻女声·龙婉君", "voice": "longwanjun_v3", "tags": ["预置", "CosyVoice-v3", "女", "成年", "基础韵律", "都市对白"], "sample": "你不是说，那个号码三年前就停了吗？", "instruction": "轻声，克制。"},
+        {"name": "质感旁白·龙三叔", "voice": "longsanshu_v3", "tags": ["预置", "CosyVoice-v3", "男", "成年", "基础韵律", "旁白"], "sample": "晚上十一点十七分，林澈的公寓。", "instruction": "语速稍慢，低声讲述。"},
+    ]
+
     COMMON_EDGE_VOICE_PRESETS = [
         {
             "name": "旁白-温柔女声",
@@ -362,11 +370,15 @@ class VoiceService:
             raise ValueError("当前 TTS 引擎不是 CosyVoice，请先选择对应模型")
 
         if model.startswith(("cosyvoice-v3-flash", "cosyvoice-v3-plus")):
-            presets = self.COMMON_COSYVOICE_V3_INSTRUCT_PRESETS
+            presets = list(self.COMMON_COSYVOICE_V3_INSTRUCT_PRESETS)
+            if model.startswith("cosyvoice-v3-flash"):
+                presets += self.SUSPENSE_COSYVOICE_V3_PRESETS
             preset_family = "cosyvoice-v3-instruct"
-        elif model.startswith(("cosyvoice-v1", "cosyvoice-v2")):
+        elif model.startswith("cosyvoice-v1"):
             presets = self.COMMON_COSYVOICE_V1_PRESETS
             preset_family = "cosyvoice-base"
+        elif model.startswith("cosyvoice-v2"):
+            raise ValueError("CosyVoice-v2 不能复用 v1 音色编号，请按官方 v2 音色列表手动导入")
         else:
             raise ValueError("该 CosyVoice 模型没有可安全复用的系统音色预设；声音复刻/设计音色请手动导入")
 

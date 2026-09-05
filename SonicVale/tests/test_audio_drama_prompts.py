@@ -3,10 +3,10 @@ from types import SimpleNamespace
 
 from pydantic import ValidationError
 
-from app.core.prompts import get_audio_drama_adaptation_rules, get_prompt_str
+from app.core.prompts import get_audio_drama_adaptation_rules, get_audio_drama_script_prompt, get_prompt_str
 from app.services.chapter_service import ChapterService
 from app.services.script_draft_service import ScriptDraftService
-from app.workflows.drama.schemas import DramaScript
+from app.workflows.drama.schemas import DramaScript, ScriptLine
 
 
 class AudioDramaPromptTest(unittest.TestCase):
@@ -46,6 +46,15 @@ class AudioDramaPromptTest(unittest.TestCase):
             }]
         }
         self.assertEqual(ScriptDraftService._narration_issues(script), [])
+
+    def test_sound_insert_does_not_hide_consecutive_spoken_narration(self):
+        script = {"scenes": [{"lines": [
+            {"type": "narration", "text": "三年后。"},
+            {"type": "sfx", "text": "风声"},
+            {"type": "narration", "text": "他回到旧屋。"},
+            {"type": "dialogue", "text": "钥匙还在。我答应你的事没有忘，今天来给花浇水，这块桂花糕也带来了。"},
+        ]}]}
+        self.assertTrue(any("连续旁白" in issue for issue in ScriptDraftService._narration_issues(script)))
 
     def test_auto_voice_assignment_forces_unique_voices(self):
         assignments = ChapterService._unique_voice_assignments(
@@ -94,6 +103,32 @@ class AudioDramaPromptTest(unittest.TestCase):
         self.assertEqual(line["audioEvents"][0]["content"], "电流嘶啦声")
         self.assertNotIn("（", line["text"])
 
+    def test_explicit_nonspoken_amb_keeps_sound_and_events_on_sfx_track(self):
+        for track in ("sfx", "amb"):
+            event = {"timing": "开场", "type": "amb", "content": "远处雨声", "volume_db": "-28dB"}
+            source = {"type": "amb", "track": track, "shouldSpeak": False,
+                      "text": "持续雨声", "soundPrompt": "雨点击打玻璃，远景，10秒",
+                      "productionNote": "全场铺底，结束淡出", "audioEvents": [event]}
+            line = ScriptLine.model_validate(source).model_dump()
+            self.assertEqual(line["type"], "sfx")
+            self.assertEqual(line["track"], "sfx")
+            self.assertFalse(line["shouldSpeak"])
+            self.assertEqual(line["text"], source["text"])
+            self.assertEqual(line["soundPrompt"], source["soundPrompt"])
+            self.assertEqual(line["productionNote"], source["productionNote"])
+            self.assertEqual(line["audioEvents"], [event])
+            self.assertEqual(source["type"], "amb")
+
+    def test_amb_cannot_silently_reinterpret_possible_dialogue(self):
+        for overrides in ({}, {"shouldSpeak": True}, {"shouldSpeak": False, "track": "voice"}):
+            with self.assertRaises(ValidationError):
+                ScriptLine.model_validate({"type": "amb", "text": "听我说。", **overrides})
+
+    def test_independent_break_stays_invalid_instead_of_losing_timing(self):
+        with self.assertRaises(ValidationError):
+            ScriptLine.model_validate({"type": "break", "track": "sfx", "shouldSpeak": False,
+                                       "soundPrompt": "静默0.5秒，保留现场底声"})
+
     def test_script_schema_rejects_parallel_dialogue_arrays_without_lines(self):
         with self.assertRaises(ValidationError):
             DramaScript.model_validate({
@@ -131,6 +166,8 @@ class AudioDramaPromptTest(unittest.TestCase):
         )
 
         self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0]["system_prompt"], get_audio_drama_script_prompt())
+        self.assertIs(calls[0]["response_model"], DramaScript)
         self.assertTrue(ScriptDraftService._narration_issues(result))
 
 

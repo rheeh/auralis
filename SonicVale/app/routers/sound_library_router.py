@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.response import Res
 from app.db.database import get_db
-from app.dto.sound_library_dto import SoundLibraryImportDTO
+from app.dto.sound_library_dto import SoundLibraryImportDTO, SoundLibraryInsertDTO
 from app.models.po import LinePO
 from app.repositories.line_repository import LineRepository
 from app.repositories.llm_provider_repository import LLMProviderRepository
@@ -136,3 +136,15 @@ def delete_asset(asset_id: str, service: SoundLibraryService = Depends(get_sound
         return Res(data=True, message="素材已删除")
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/assets/{asset_id}/insert", response_model=Res[dict])
+def insert_asset(
+    asset_id: str,
+    dto: SoundLibraryInsertDTO,
+    service: SoundLibraryService = Depends(get_sound_library_service),
+):
+    try:
+        return Res(data=service.insert_asset(asset_id, dto), message="音效已加入章节")
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

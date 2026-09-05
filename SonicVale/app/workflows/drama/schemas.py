@@ -120,6 +120,17 @@ class ScriptLine(BaseModel):
         for source, target in aliases.items():
             if source in normalized and target not in normalized:
                 normalized[target] = normalized[source]
+        # Some compatible models use the audio-event label "amb" for a whole
+        # environmental row. Only normalize an explicitly non-spoken row with
+        # a compatible sound track; never reinterpret possible dialogue or
+        # silently discard a timing-only "break" row.
+        if (
+            normalized.get("type") == "amb"
+            and normalized.get("shouldSpeak") is False
+            and normalized.get("track") in {None, "amb", "sfx"}
+        ):
+            normalized["type"] = "sfx"
+            normalized["track"] = "sfx"
         return normalized
 
     @model_validator(mode="after")

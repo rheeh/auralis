@@ -1,0 +1,23 @@
+{
+  "model": "qwen-plus",
+  "provider_id": 1,
+  "sampling": {
+    "temperature": 0.3,
+    "top_p": 0.8,
+    "max_tokens": 8192,
+    "enable_thinking": false
+  },
+  "judge": "same-model, separate blinded calls; no human listening panel",
+  "judge_temperature": 0,
+  "sample_ids": [
+    "AD-001",
+    "AD-006",
+    "DEMO-001"
+  ],
+  "repetitions": 1,
+  "dataset_sha256": "24409ec88e5df3e4accfd2c4e08bf8c2b232f5171d3143358f301d8a294075cd",
+  "prompt_sha256": {
+    "d_fact_audited": "795ef980701f21efcaccf2793446b5bd364c4f31c040bf932179f670454d3e28"
+  },
+  "scope": "draft prompt only; identical source, confirmed characters, model, schema and sampling; no parser/reviewer repair"
+}

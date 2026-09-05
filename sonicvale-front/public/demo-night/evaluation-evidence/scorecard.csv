@@ -1,0 +1,10 @@
+﻿sample_id,repetition,variant,status,weighted_score,fact_gate_passed,narration_ratio,raw_tts_contamination
+AD-001,1,a_current,completed,4.85,True,0.0,0
+AD-006,1,a_current,completed,4.6,True,0.3588,0
+DEMO-001,1,b_fact_locked,completed,4.75,True,0.3798,0
+AD-001,1,c_director_example,completed,4.6,True,0.1567,0
+DEMO-001,1,a_current,completed,4.6,True,0.1489,0
+DEMO-001,1,c_director_example,completed,4.85,True,0.1698,0
+AD-006,1,c_director_example,completed,4.6,True,0.2283,0
+AD-001,1,b_fact_locked,completed,4.6,True,0.3427,0
+AD-006,1,b_fact_locked,completed,4.6,True,0.4586,0

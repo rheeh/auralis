@@ -8,9 +8,11 @@ The project emphasizes a complete production loop, clear state management, and r
 
 ## Live Demo
 
-[▶ Start the Auralis static demo](https://rheeh.github.io/auralis/)
+[▶ Try the Night Delivery director demo](https://rheeh.github.io/auralis/#/demo)
 
-The demo uses the real Vue pages and production components from this repository, with the actual `test4` project, *Undercurrents Before Morning Reading*, as its content. The source text, parsed characters, audio-drama script, voice bindings, and existing generated audio are preloaded, so the complete workflow can be explored without configuring a backend, model provider, or API key.
+An original urban suspense scene with approximately 46 seconds of real audio. Edit the script, compare directed and neutral takes using the same voice, audition six voices, place sound effects around dialogue, and export a stereo WAV. The 22 synthesized takes are preloaded; playback, mixing, and export need no backend or API key. Changed text explicitly requires new synthesis.
+
+Open `/#/demo` in the local frontend, or run `scripts/seed_director_demo.py` to import the assets into a separate production project. Prompt evaluation is restricted to `qwen3.8-27b` and `kimi-k3`; [the experiment report](evals/audio_drama_v2/REPORT.md) documents actual results and limitations. See [the delivery record](docs/demo-2026-09-05.md) for reproduction and validation.
 
 ## Core Capabilities
 

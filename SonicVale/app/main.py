@@ -63,7 +63,9 @@ app = FastAPI(
 # 允许的前端地址
 origins = [
     "http://localhost:5173",  # Vue 开发服务器
-    "http://127.0.0.1:5173"   # 有些浏览器可能会用这个
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",  # 5173 被其他本地项目占用时的 Demo 服务
+    "http://127.0.0.1:5174",
 ]
 
 app.add_middleware(

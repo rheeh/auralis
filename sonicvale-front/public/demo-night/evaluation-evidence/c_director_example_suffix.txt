@@ -1,0 +1,10 @@
+
+【微型示例：学习转换方法，不借用示例人物或情节】
+原文：电梯停在七层。段宁看见门缝下有水，敲了两下。屋里一个陌生男人问“谁”。她没有报姓名，只说“送错的快递”。对方让她放门口。她认出了哥哥的声音，但没有证据表明他为什么藏在这里。
+可用的局部片段：
+{"type":"sfx","track":"sfx","shouldSpeak":false,"speaker":"音效","text":"电梯到层提示音","soundPrompt":"室内电梯一声清脆到层提示音，近景，1秒","productionNote":"开场；尾部接脚步，保留走廊底声","audioEvents":[]}
+{"type":"dialogue","track":"voice","shouldSpeak":true,"speaker":"段宁","text":"门底下……怎么有水？","emotion":"疑惑","strength":"稍弱","productionNote":"靠近门时低声自问，疑问落在水上","audioEvents":[]}
+{"type":"sfx","track":"sfx","shouldSpeak":false,"speaker":"音效","text":"指节轻敲木门两次","soundPrompt":"近景指节轻敲木门两次，间隔0.3秒，干声","productionNote":"接下一句门内回应","audioEvents":[]}
+{"type":"dialogue","track":"voice","shouldSpeak":true,"speaker":"哥哥","text":"谁？","emotion":"冷静","strength":"稍弱","productionNote":"隔门，句尾迅速收住","audioEvents":[]}
+{"type":"dialogue","track":"voice","shouldSpeak":true,"speaker":"段宁","text":"送错的快递。","emotion":"克制","strength":"稍弱","productionNote":"认出声音但藏住反应；短停后维持普通送件口吻","audioEvents":[]}
+不得把“她认出了哥哥”改成当场喊“哥”，也不得为音效效果增加门后凶器或追杀。示例是格式片段，正式输出仍必须是含 title、characters、scenes 的完整对象。

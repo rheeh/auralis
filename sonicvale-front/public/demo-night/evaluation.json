@@ -1,0 +1,4 @@
+{
+  "summary": "qwen3.8-27b：3策略9次尝试、4份完整台本，尚未确定最佳。控制台仍有免费额度，但API返回Arrearage，具体原因待诊断；已停止模型调用。历史qwen-plus结果单列。",
+  "report": "evaluation-report.md"
+}

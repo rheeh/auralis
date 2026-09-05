@@ -1,0 +1,29 @@
+[
+  {
+    "variant": "a_current",
+    "completed": 1,
+    "mean_weighted_score": null,
+    "fact_gate_passed": null,
+    "mean_narration_ratio": 0.0,
+    "raw_tts_contamination": 0,
+    "generation_seconds_mean": 45.5
+  },
+  {
+    "variant": "b_fact_locked",
+    "completed": 0,
+    "mean_weighted_score": null,
+    "fact_gate_passed": null,
+    "mean_narration_ratio": null,
+    "raw_tts_contamination": 0,
+    "generation_seconds_mean": null
+  },
+  {
+    "variant": "c_director_example",
+    "completed": 0,
+    "mean_weighted_score": null,
+    "fact_gate_passed": null,
+    "mean_narration_ratio": null,
+    "raw_tts_contamination": 0,
+    "generation_seconds_mean": null
+  }
+]

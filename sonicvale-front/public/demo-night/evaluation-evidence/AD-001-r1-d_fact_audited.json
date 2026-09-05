@@ -1,0 +1,449 @@
+{
+  "sample_id": "AD-001",
+  "title": "末班车前的旧伞",
+  "repetition": 1,
+  "variant": "d_fact_audited",
+  "status": "failed",
+  "started_at": "2026-09-05T04:24:45.298739+00:00",
+  "system_prompt_sha256": "795ef980701f21efcaccf2793446b5bd364c4f31c040bf932179f670454d3e28",
+  "user_prompt_sha256": "0af3133b0d46adc2dde55d26afa8fe89d459a59606b8c39ce1c2f07a27f24d87",
+  "generation": {
+    "raw_response": "{\n  \"title\": \"蓝格伞\",\n  \"logline\": \"雨夜客运站，一把断骨的蓝格伞，一张未撕的车票，和一句三年后才敢出口的真相。\",\n  \"characters\": [\n    {\n      \"name\": \"许棠\",\n      \"role\": \"被旧事伤害、即将离城的设计师\",\n      \"voice_traits\": [\"克制\", \"锋利\", \"不轻易原谅\"]\n    },\n    {\n      \"name\": \"周砚\",\n      \"role\": \"当年沉默、如今试图解释的旧同事\",\n      \"voice_traits\": [\"内疚\", \"迟疑\", \"避免为自己辩护\"]\n    }\n  ],\n  \"scenes\": [\n    {\n      \"title\": \"最后一班检票前\",\n      \"location\": \"城南客运站候车厅（雨夜）\",\n      \"mood\": \"潮湿、滞重、将断未断\",\n      \"lines\": [\n        {\n          \"type\": \"narration\",\n          \"track\": \"narration\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"旁白\",\n          \"text\": \"夜里十一点四十。城南客运站顶棚有道裂缝，雨水正一滴、一滴，砸在塑料长椅边缘。\",\n          \"productionNote\": \"语速缓，字字清晰；‘一滴、一滴’微顿，模拟水声节奏\"\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"持续低频雨滴声：水滴撞击硬质塑料椅面，间隔1.8秒，带轻微回响\",\n          \"productionNote\": \"入点即起，-28dB铺底，全程不中断\"\n        },\n        {\n          \"type\": \"bgm\",\n          \"track\": \"bgm\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"极简钢琴单音循环，C小调，每4秒一个音，泛音略长\",\n          \"productionNote\": \"淡入于第二句旁白末尾，-24dB，仅作情绪基底，不抢台词\"\n        },\n        {\n          \"type\": \"narration\",\n          \"track\": \"narration\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"旁白\",\n          \"text\": \"广播女声反复播报：‘开往青浦方向的末班车，还有五分钟检票。请乘客携带好随身物品。’\",\n          \"productionNote\": \"广播音效质感：略带电流杂音、中高频削波，音量略高于环境声\"\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"老旧广播系统启动杂音 + 女声播报（可合成，内容同上），-16dB瞬时峰值\",\n          \"productionNote\": \"紧接旁白结束，0.3秒延迟入点，持续5秒后自然衰减\"\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"许棠\",\n          \"text\": \"……嗯。\",\n          \"emotion\": \"克制\",\n          \"strength\": \"中等\",\n          \"productionNote\": \"气声收尾，不抬音调；说完后有0.8秒静默，只留雨滴声\"\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"湿鞋踩碎水洼声：左脚、右脚各一次，布面鞋吸水闷响\",\n          \"productionNote\": \"入点在许棠停顿末尾，两声间隔0.6秒\"\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"周砚\",\n          \"text\": \"许棠。\",\n          \"emotion\": \"紧张\",\n          \"strength\": \"稍弱\",\n          \"productionNote\": \"气息微促，尾音轻颤，像怕惊走什么\"\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"许棠\",\n          \"text\": \"……你来了。\",\n          \"emotion\": \"平静\",\n          \"strength\": \"中等\",\n          \"productionNote\": \"无起伏，目光未抬；‘了’字略拖，但不软\"\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"纸箱轻放声：硬纸板底部摩擦塑料椅面，短促涩响\",\n          \"productionNote\": \"发生在许棠话落0.4秒后\"\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"周砚\",\n          \"text\": \"换到靠窗的位置了。你以前会晕车。\",\n          \"emotion\": \"内疚\",\n          \"strength\": \"较强\",\n          \"productionNote\": \"语速慢，‘晕车’二字略轻，像触碰旧伤\"\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"许棠\",\n          \"text\": \"你还记得我晕车，倒不记得自己欠我一句话。\",\n          \"emotion\": \"悲愤\",\n          \"strength\": \"强烈\",\n          \"productionNote\": \"‘欠我一句话’五字逐字加重，但音量不升，是刃出鞘的冷光\"\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"金属伞骨轻微刮擦声：手指收紧握柄，锈蚀处发出细响\",\n          \"productionNote\": \"紧贴许棠台词末尾入点，持续1.2秒\"\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"周砚\",\n          \"text\": \"那次……不是因为不信你。\",\n          \"emotion\": \"低落\",\n          \"strength\": \"较强\",\n          \"productionNote\": \"停顿明显，‘不是’后吸气半秒；‘你’字气声收束\"\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"周砚\",\n          \"text\": \"主管拿我爸的手术名额……压在我头上。\",\n          \"emotion\": \"委屈\",\n          \"strength\": \"强烈\",\n          \"productionNote\": \"‘压在我头上’四字喉音下沉，像真的被重物抵住\"\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"许棠\",\n          \"text\": \"……所以你选了沉默。\",\n          \"emotion\": \"冷静\",\n          \"strength\": \"中等\",\n          \"productionNote\": \"陈述句，无疑问调；‘沉默’二字唇齿音清晰，如盖印\"\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"周砚\",\n          \"text\": \"我以为解释……只是想让自己好受一点。\",\n          \"emotion\": \"悲伤\",\n          \"strength\": \"较强\",\n          \"productionNote\": \"‘好受’二字几乎无声，被雨声吞掉半截\"\n        }\n      ]\n    },\n    {\n      \"title\": \"伞与车票\",\n      \"location\": \"城南客运站检票口外（雨声渐密）\",\n      \"mood\": \"余震未歇，但裂痕已松\",\n      \"lines\": [\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"广播急促催促声：‘末班车检票即将截止！重复，末班车检票即将截止！’\",\n          \"productionNote\": \"突然切入，-14dB，带失真感，持续3秒后戛然而止\"\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"许棠\",\n          \"text\": \"……车票我收着。\",\n          \"emotion\": \"克制\",\n          \"strength\": \"中等\",\n          \"productionNote\": \"边说边动作——布料摩擦声同步发生\"\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"牛仔裤口袋布料摩擦声 + 纸票插入声：短促、干涩\",\n          \"productionNote\": \"与台词‘收着’同步，0.2秒延迟退场\"\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"许棠\",\n          \"text\": \"这把伞是你的。修好了，再来找我。\",\n          \"emotion\": \"坚定\",\n          \"strength\": \"较强\",\n          \"productionNote\": \"‘修好了’三字平稳有力；‘再来找我’放缓，但无温度起伏，是门缝而非邀请\"\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"纸箱开启声：胶带撕裂 + 硬纸板掀开，伴随伞柄被抽出的轻微‘咔’声\",\n          \"productionNote\": \"始于‘这把伞’，持续至‘你的’说完\"\n        },\n        {\n          \"type\": \"dialogue\",\n          \"track\": \"voice\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"周砚\",\n          \"text\": \"……好。\",\n          \"emotion\": \"欣慰\",\n          \"strength\": \"微弱\",\n          \"productionNote\": \"单音节，气息微扬又迅速压下，像不敢确认\"\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"远处列车进站低频轰鸣由远及近，持续8秒后转为规律震动\",\n          \"productionNote\": \"始于周砚‘好’字尾音，-30dB铺底，不掩盖人声\"\n        },\n        {\n          \"type\": \"narration\",\n          \"track\": \"narration\",\n          \"shouldSpeak\": true,\n          \"speaker\": \"旁白\",\n          \"text\": \"她转身走向检票口。蓝格伞的伞尖垂向地面，断掉的伞骨在雨里微微晃动。\",\n          \"productionNote\": \"‘断掉的伞骨’六字略沉，其余保持平直；末句后留2秒雨声独白\"\n        },\n        {\n          \"type\": \"sfx\",\n          \"track\": \"sfx\",\n          \"shouldSpeak\": false,\n          \"soundPrompt\": \"雨势突然加大：密集雨点砸顶棚铁皮，混入风声\",\n          \"productionNote\": \"于旁白最后一字‘动’落定后0.5秒爆发，-22dB，持续至剧终\"\n        }\n      ]\n    }\n  ]\n}",
+    "finish_reason": "stop",
+    "seconds": 57.011,
+    "usage": {
+      "completion_tokens": 2515,
+      "prompt_tokens": 2432,
+      "total_tokens": 4947,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": {
+        "audio_tokens": null,
+        "cached_tokens": 512
+      }
+    },
+    "response_model": "qwen-plus"
+  },
+  "raw_metrics": {
+    "scene_count": 2,
+    "line_counts": {
+      "dialogue": 12,
+      "narration": 3,
+      "sfx": 10,
+      "bgm": 1
+    },
+    "spoken_chars": 247,
+    "narration_ratio": 0.4534,
+    "consecutive_narrations": 1,
+    "long_narrations": 0,
+    "tts_contamination": 0,
+    "unvoiced_spoken_lines": 0,
+    "empty_sound_prompts": 0,
+    "max_spoken_line_chars": 41,
+    "actor_notes": 15,
+    "audio_event_count": 0,
+    "opening_sound_scenes": 1
+  },
+  "script": {
+    "title": "蓝格伞",
+    "logline": "雨夜客运站，一把断骨的蓝格伞，一张未撕的车票，和一句三年后才敢出口的真相。",
+    "characters": [
+      {
+        "name": "许棠",
+        "role": "被旧事伤害、即将离城的设计师",
+        "voice_traits": [
+          "克制",
+          "锋利",
+          "不轻易原谅"
+        ]
+      },
+      {
+        "name": "周砚",
+        "role": "当年沉默、如今试图解释的旧同事",
+        "voice_traits": [
+          "内疚",
+          "迟疑",
+          "避免为自己辩护"
+        ]
+      }
+    ],
+    "scenes": [
+      {
+        "title": "最后一班检票前",
+        "location": "城南客运站候车厅（雨夜）",
+        "mood": "潮湿、滞重、将断未断",
+        "lines": [
+          {
+            "type": "narration",
+            "track": "narration",
+            "shouldSpeak": true,
+            "speaker": "旁白",
+            "text": "夜里十一点四十。城南客运站顶棚有道裂缝，雨水正一滴、一滴，砸在塑料长椅边缘。",
+            "emotion": "平静",
+            "strength": "中等",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "语速缓，字字清晰；‘一滴、一滴’微顿，模拟水声节奏",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "持续低频雨滴声：水滴撞击硬质塑料椅面，间隔1.8秒，带轻微回响",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "持续低频雨滴声：水滴撞击硬质塑料椅面，间隔1.8秒，带轻微回响",
+            "productionNote": "入点即起，-28dB铺底，全程不中断",
+            "audioEvents": []
+          },
+          {
+            "type": "bgm",
+            "track": "bgm",
+            "shouldSpeak": false,
+            "speaker": "BGM",
+            "text": "极简钢琴单音循环，C小调，每4秒一个音，泛音略长",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "极简钢琴单音循环，C小调，每4秒一个音，泛音略长",
+            "productionNote": "淡入于第二句旁白末尾，-24dB，仅作情绪基底，不抢台词",
+            "audioEvents": []
+          },
+          {
+            "type": "narration",
+            "track": "narration",
+            "shouldSpeak": true,
+            "speaker": "旁白",
+            "text": "广播女声反复播报：‘开往青浦方向的末班车，还有五分钟检票。请乘客携带好随身物品。’",
+            "emotion": "平静",
+            "strength": "中等",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "广播音效质感：略带电流杂音、中高频削波，音量略高于环境声",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "老旧广播系统启动杂音 + 女声播报（可合成，内容同上），-16dB瞬时峰值",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "老旧广播系统启动杂音 + 女声播报（可合成，内容同上），-16dB瞬时峰值",
+            "productionNote": "紧接旁白结束，0.3秒延迟入点，持续5秒后自然衰减",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "许棠",
+            "text": "……嗯。",
+            "emotion": "克制",
+            "strength": "中等",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "气声收尾，不抬音调；说完后有0.8秒静默，只留雨滴声",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "湿鞋踩碎水洼声：左脚、右脚各一次，布面鞋吸水闷响",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "湿鞋踩碎水洼声：左脚、右脚各一次，布面鞋吸水闷响",
+            "productionNote": "入点在许棠停顿末尾，两声间隔0.6秒",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "周砚",
+            "text": "许棠。",
+            "emotion": "紧张",
+            "strength": "稍弱",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "气息微促，尾音轻颤，像怕惊走什么",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "许棠",
+            "text": "……你来了。",
+            "emotion": "平静",
+            "strength": "中等",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "无起伏，目光未抬；‘了’字略拖，但不软",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "纸箱轻放声：硬纸板底部摩擦塑料椅面，短促涩响",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "纸箱轻放声：硬纸板底部摩擦塑料椅面，短促涩响",
+            "productionNote": "发生在许棠话落0.4秒后",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "周砚",
+            "text": "换到靠窗的位置了。你以前会晕车。",
+            "emotion": "内疚",
+            "strength": "较强",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "语速慢，‘晕车’二字略轻，像触碰旧伤",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "许棠",
+            "text": "你还记得我晕车，倒不记得自己欠我一句话。",
+            "emotion": "悲愤",
+            "strength": "强烈",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "‘欠我一句话’五字逐字加重，但音量不升，是刃出鞘的冷光",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "金属伞骨轻微刮擦声：手指收紧握柄，锈蚀处发出细响",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "金属伞骨轻微刮擦声：手指收紧握柄，锈蚀处发出细响",
+            "productionNote": "紧贴许棠台词末尾入点，持续1.2秒",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "周砚",
+            "text": "那次……不是因为不信你。",
+            "emotion": "低落",
+            "strength": "较强",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "停顿明显，‘不是’后吸气半秒；‘你’字气声收束",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "周砚",
+            "text": "主管拿我爸的手术名额……压在我头上。",
+            "emotion": "委屈",
+            "strength": "强烈",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "‘压在我头上’四字喉音下沉，像真的被重物抵住",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "许棠",
+            "text": "……所以你选了沉默。",
+            "emotion": "冷静",
+            "strength": "中等",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "陈述句，无疑问调；‘沉默’二字唇齿音清晰，如盖印",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "周砚",
+            "text": "我以为解释……只是想让自己好受一点。",
+            "emotion": "悲伤",
+            "strength": "较强",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "‘好受’二字几乎无声，被雨声吞掉半截",
+            "audioEvents": []
+          }
+        ]
+      },
+      {
+        "title": "伞与车票",
+        "location": "城南客运站检票口外（雨声渐密）",
+        "mood": "余震未歇，但裂痕已松",
+        "lines": [
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "广播急促催促声：‘末班车检票即将截止！重复，末班车检票即将截止！’",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "广播急促催促声：‘末班车检票即将截止！重复，末班车检票即将截止！’",
+            "productionNote": "突然切入，-14dB，带失真感，持续3秒后戛然而止",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "许棠",
+            "text": "……车票我收着。",
+            "emotion": "克制",
+            "strength": "中等",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "边说边动作——布料摩擦声同步发生",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "牛仔裤口袋布料摩擦声 + 纸票插入声：短促、干涩",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "牛仔裤口袋布料摩擦声 + 纸票插入声：短促、干涩",
+            "productionNote": "与台词‘收着’同步，0.2秒延迟退场",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "许棠",
+            "text": "这把伞是你的。修好了，再来找我。",
+            "emotion": "坚定",
+            "strength": "较强",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "‘修好了’三字平稳有力；‘再来找我’放缓，但无温度起伏，是门缝而非邀请",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "纸箱开启声：胶带撕裂 + 硬纸板掀开，伴随伞柄被抽出的轻微‘咔’声",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "纸箱开启声：胶带撕裂 + 硬纸板掀开，伴随伞柄被抽出的轻微‘咔’声",
+            "productionNote": "始于‘这把伞’，持续至‘你的’说完",
+            "audioEvents": []
+          },
+          {
+            "type": "dialogue",
+            "track": "voice",
+            "shouldSpeak": true,
+            "speaker": "周砚",
+            "text": "……好。",
+            "emotion": "欣慰",
+            "strength": "微弱",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "单音节，气息微扬又迅速压下，像不敢确认",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "远处列车进站低频轰鸣由远及近，持续8秒后转为规律震动",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "远处列车进站低频轰鸣由远及近，持续8秒后转为规律震动",
+            "productionNote": "始于周砚‘好’字尾音，-30dB铺底，不掩盖人声",
+            "audioEvents": []
+          },
+          {
+            "type": "narration",
+            "track": "narration",
+            "shouldSpeak": true,
+            "speaker": "旁白",
+            "text": "她转身走向检票口。蓝格伞的伞尖垂向地面，断掉的伞骨在雨里微微晃动。",
+            "emotion": "平静",
+            "strength": "中等",
+            "voiceProfile": null,
+            "soundPrompt": null,
+            "productionNote": "‘断掉的伞骨’六字略沉，其余保持平直；末句后留2秒雨声独白",
+            "audioEvents": []
+          },
+          {
+            "type": "sfx",
+            "track": "sfx",
+            "shouldSpeak": false,
+            "speaker": "音效",
+            "text": "雨势突然加大：密集雨点砸顶棚铁皮，混入风声",
+            "emotion": null,
+            "strength": null,
+            "voiceProfile": null,
+            "soundPrompt": "雨势突然加大：密集雨点砸顶棚铁皮，混入风声",
+            "productionNote": "于旁白最后一字‘动’落定后0.5秒爆发，-22dB，持续至剧终",
+            "audioEvents": []
+          }
+        ]
+      }
+    ]
+  },
+  "normalized_metrics": {
+    "scene_count": 2,
+    "line_counts": {
+      "dialogue": 12,
+      "narration": 3,
+      "sfx": 10,
+      "bgm": 1
+    },
+    "spoken_chars": 247,
+    "narration_ratio": 0.4534,
+    "consecutive_narrations": 1,
+    "long_narrations": 0,
+    "tts_contamination": 0,
+    "unvoiced_spoken_lines": 0,
+    "empty_sound_prompts": 0,
+    "max_spoken_line_chars": 41,
+    "actor_notes": 15,
+    "audio_event_count": 0,
+    "opening_sound_scenes": 1
+  },
+  "error": {
+    "type": "BadRequestError",
+    "status_code": 400,
+    "provider_code": "Arrearage"
+  }
+}

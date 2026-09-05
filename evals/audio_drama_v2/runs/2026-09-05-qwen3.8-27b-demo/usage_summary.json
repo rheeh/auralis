@@ -1,0 +1,9 @@
+{
+  "prompt_tokens": 9202,
+  "completion_tokens": 9388,
+  "total_tokens": 18590,
+  "successful_writer_responses": 4,
+  "model_judge_calls": 0,
+  "qwen3_8_probe_tokens": 18,
+  "failed_calls_usage": "unavailable"
+}

@@ -1,0 +1,22 @@
+[
+  {
+    "model": "qwen3.8-27b",
+    "max_tokens": 16,
+    "status": "available",
+    "response_model": "qwen3.8-27b",
+    "text": "OK",
+    "usage": {
+      "prompt_tokens": 16,
+      "completion_tokens": 2,
+      "total_tokens": 18
+    }
+  },
+  {
+    "model": "kimi-k3",
+    "max_tokens": 16,
+    "status": "failed",
+    "http_status": 400,
+    "provider_code": "Arrearage",
+    "usage": null
+  }
+]

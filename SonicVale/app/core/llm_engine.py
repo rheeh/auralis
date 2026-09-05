@@ -5,7 +5,7 @@ import re
 import time
 from typing import Any
 
-from openai import OpenAI
+from openai import APIConnectionError, OpenAI
 
 from app.core.prompts import get_auto_fix_json_prompt
 
@@ -31,7 +31,10 @@ class LLMEngine:
         # 使用新版 OpenAI 客户端
         self.client = OpenAI(
             api_key=api_key,
-            base_url=self.base_url
+            base_url=self.base_url,
+            # One retry policy owns the request count. Otherwise SDK retries
+            # multiply each outer attempt, including provider quota failures.
+            max_retries=0,
         )
 
     def _extract_result_tag(self, text: str) -> str:
@@ -75,25 +78,61 @@ class LLMEngine:
                     **request_params,
                 )
                 return response.choices[0].message.content
-            except Exception:
-                if attempt < retries - 1:
+            except Exception as exc:
+                if self._retryable_error(exc) and attempt < retries - 1:
                     sleep_time = delay * (2 ** attempt) + random.random()
                     time.sleep(sleep_time)
                 else:
                     raise
 
     @staticmethod
-    def _structured_output_unsupported(exc: Exception) -> bool:
+    def _error_text(exc: Exception) -> str:
+        parts = [str(exc), str(getattr(exc, "code", "") or "")]
+        body = getattr(exc, "body", None)
+        if isinstance(body, (dict, list)):
+            parts.append(json.dumps(body, ensure_ascii=False, default=str))
+        elif isinstance(body, str):
+            parts.append(body)
+        return " ".join(parts).lower()
+
+    @classmethod
+    def _permanent_provider_failure(cls, exc: Exception) -> bool:
+        # A provider can report depleted credit/free-tier access as 400 or 429.
+        # Neither retrying nor dropping response_format can make that payable
+        # request succeed under the user's existing account constraints.
+        message = cls._error_text(exc)
+        return any(term in message for term in (
+            "arrearage", "allocationquota.freetieronly", "freetieronly", "free_tier_only",
+            "insufficient_quota", "quota_exhausted", "insufficientbalance", "insufficient_balance",
+            "billing_hard_limit", "billing_not_active", "payment_required",
+            "invalid_api_key", "invalidapikey", "unauthorized", "authentication",
+            "permission_denied", "access_denied", "accessdenied",
+            "余额不足", "免费额度已用尽", "免费额度用尽",
+        ))
+
+    @classmethod
+    def _retryable_error(cls, exc: Exception) -> bool:
+        if cls._permanent_provider_failure(exc):
+            return False
         status_code = getattr(exc, "status_code", None)
-        message = str(exc).lower()
+        if isinstance(status_code, int):
+            return status_code == 429 or 500 <= status_code <= 599
+        return isinstance(exc, (APIConnectionError, ConnectionError, TimeoutError))
+
+    @classmethod
+    def _structured_output_unsupported(cls, exc: Exception) -> bool:
+        if cls._permanent_provider_failure(exc):
+            return False
+        status_code = getattr(exc, "status_code", None)
+        message = cls._error_text(exc)
         format_terms = ("response_format", "json_schema", "json schema", "structured output")
         unsupported_terms = (
-            "unsupported", "not support", "unknown", "unrecognized", "invalid parameter",
+            "unsupported", "not support", "doesn't support", "unknown", "unrecognized", "invalid parameter",
             "invalid value", "extra inputs", "not permitted", "not allowed",
         )
         return status_code in {400, 404, 422} and (
             any(term in message for term in format_terms)
-            or any(term in message for term in unsupported_terms)
+            and any(term in message for term in unsupported_terms)
         )
 
     def generate_text_test(self, prompt: str, system_prompt: str | None = None) -> str:
