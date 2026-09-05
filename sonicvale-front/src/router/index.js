@@ -1,6 +1,7 @@
 import { createRouter, createWebHashHistory  } from 'vue-router'
 
 const routes = [
+  { path: '/sound-library', name: 'SoundLibrary', component: () => import('../pages/SoundLibrary.vue') },
   { path: '/demo', name: 'DemoStudio', component: () => import('../pages/DemoStudio.vue') },
   {
     path: '/',

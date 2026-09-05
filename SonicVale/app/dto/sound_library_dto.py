@@ -10,6 +10,13 @@ class SoundLibraryImportDTO(BaseModel):
     tags: list[str] = Field(default_factory=list)
 
 
+class SoundRecommendationDTO(BaseModel):
+    chapter_id: int = Field(gt=0)
+    line_id: int = Field(gt=0)
+    model: Literal["qwen3.8-27b", "kimi-k3"] = "qwen3.8-27b"
+    refresh: bool = False
+
+
 class SoundLibraryInsertDTO(BaseModel):
     chapter_id: int = Field(gt=0)
     anchor_line_id: int | None = Field(default=None, gt=0)

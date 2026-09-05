@@ -9,7 +9,7 @@
       <div><p class="eyebrow">逐句制作</p><h2>{{ scriptOnly ? '审阅与编辑台本' : '选择声音与逐句试听' }}</h2></div>
       <div class="head-actions">
         <el-button @click="$emit('open-timeline',selectedLineId)">声音编排</el-button>
-        <el-button :icon="Headset" @click="soundLibraryOpen = true">快捷加音效</el-button>
+        <el-button :icon="Headset" @click="openSoundLibrary()">快捷加音效</el-button>
         <el-button :icon="Refresh" :loading="loading" @click="loadAll">刷新</el-button>
         <el-button :icon="MagicStick" :loading="autoBinding" @click="autoBind">AI 自动配音色</el-button>
         <el-button type="primary" :icon="Headset" :disabled="!voiceReady || !canGenerateAll" :loading="generating" @click="generateAudio">
@@ -34,7 +34,8 @@
             <div class="line-main">
               <div class="line-meta"><strong>{{ isSpeakable(line) ? roleName(line.role_id) : trackLabel(line) }}</strong><el-tag size="small" effect="plain">{{ trackLabel(line) }}</el-tag><span v-if="activeVariant(line)" class="active-version">当前采用 {{ activeVariant(line).label }}</span><span v-if="isSpeakable(line)" class="line-expand-state">{{ expandedLineIds.has(line.id)?'收起':'展开' }}</span></div>
               <el-button text size="small" @click.stop="$emit('open-timeline',line.id)">定位到音轨</el-button>
-              <el-button text size="small" :icon="Headset" @click.stop="soundAnchorId = line.id; soundLibraryOpen = true">在这句附近加音效</el-button>
+              <el-button v-if="!isSpeakable(line)" text type="primary" size="small" @click.stop="openSoundLibrary(line.id, 'recommendations')">AI 推荐音效</el-button>
+              <el-button text size="small" :icon="Headset" @click.stop="openSoundLibrary(line.id)">{{ isSpeakable(line) ? '在这句附近加音效' : '去音效库挑选' }}</el-button>
               <p>{{ line.text_content }}</p>
               <div v-if="isSpeakable(line)" class="line-annotations">
                 <el-tag size="small" :type="line.emotion_id?undefined:'warning'" effect="plain">情绪 · {{ emotionName(line.emotion_id) }}</el-tag>
@@ -100,8 +101,8 @@
     </div>
     <el-empty v-else description="台本写入后会在这里逐句制作" />
 
-    <el-drawer v-model="soundLibraryOpen" title="音效快捷加入" size="min(900px, 95vw)" append-to-body>
-      <SoundLibraryPanel :chapter-id="chapterId" :lines="lines" :material-lines="lines.filter(line => !isSpeakable(line))" :target-line-id="soundAnchorId" @inserted="onSoundInserted" @bound="onSoundInserted" />
+    <el-drawer v-model="soundLibraryOpen" title="挑选场景音效" size="min(900px, 95vw)" append-to-body destroy-on-close>
+      <SoundLibraryPanel :chapter-id="chapterId" :lines="lines" :material-lines="lines.filter(line => !isSpeakable(line))" :target-line-id="soundAnchorId" :initial-view="soundLibraryView" @inserted="onSoundInserted" @bound="onSoundInserted" />
     </el-drawer>
 
     <footer v-if="playableLines.length" class="master-player">
@@ -140,6 +141,8 @@ function configurationFor(line){return productionConfiguration.value.find(item=>
 function instructionLabel(mode){return {native:'支持表演指令',structured:'支持结构化指令',mapped:'仅映射语速等参数',none:'不支持表演指令'}[mode]||'能力未确认'}
 const roles=ref([]),voices=ref([]),providers=ref([]),lines=ref([])
 const soundLibraryOpen = ref(false), soundAnchorId = ref(null)
+const soundLibraryView = ref('library')
+function openSoundLibrary(lineId = null, view = 'library') { soundAnchorId.value = lineId; soundLibraryView.value = view; soundLibraryOpen.value = true }
 async function onSoundInserted() { audioVersion.value = Date.now(); await loadAll() }
 const emotions=ref([]),strengths=ref([])
 const roleVoiceMap=reactive({}),audioSummary=reactive({total:0,completed:0,counts:{},tasks:[]}),promptMap=reactive({}),editMap=reactive({})

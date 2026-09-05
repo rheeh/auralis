@@ -1,13 +1,17 @@
 <template>
-  <section ref="panelRoot" class="library-panel">
-    <div class="quick-scenes">
+  <section ref="panelRoot" class="library-panel" @play.capture="pauseOtherPreviews">
+    <el-radio-group v-if="chapterId" v-model="activeView" aria-label="音效选择方式">
+      <el-radio-button value="recommendations">AI 推荐音效</el-radio-button>
+      <el-radio-button value="library">音效库 · 自己挑选</el-radio-button>
+    </el-radio-group>
+    <div v-if="activeView === 'library'" class="quick-scenes">
       <div><strong>给这一幕加点声音</strong><span>悬疑 / 都市常用素材 · 先试听，再加入</span></div>
       <div class="scene-shortcuts">
         <el-button v-for="scene in scenePresets" :key="scene.label" size="small" :type="keyword === scene.keyword ? 'primary' : 'default'" plain @click="applyScenePreset(scene)">{{ scene.label }}</el-button>
         <el-button size="small" text @click="resetFilters">全部素材</el-button>
       </div>
     </div>
-    <div class="library-toolbar">
+    <div v-if="activeView === 'library'" class="library-toolbar">
       <el-segmented v-model="sourceFilter" :options="sourceOptions" />
       <el-select v-model="categoryFilter" class="category-filter" aria-label="素材分类">
         <el-option label="全部分类" value="all" />
@@ -61,7 +65,7 @@
     </div>
 
     <div v-if="materialLines.length && (!chapterId || actionMode === 'bind')" class="bind-target">
-      <span>绑定目标</span>
+      <span>替换目标</span>
       <el-select v-model="selectedLineId" filterable placeholder="选择当前章节的音效或 BGM 台词">
         <el-option
           v-for="line in materialLines"
@@ -72,10 +76,12 @@
       </el-select>
       <small>素材会复制进项目，素材库原件不会被修改。</small>
     </div>
-    <el-alert v-else-if="!chapterId" type="info" :closable="false" show-icon title="选择章节后，即可把素材快捷加入台本。" />
+    <el-alert v-else-if="!chapterId" type="info" :closable="false" show-icon title="在项目工作台选择音效行，即可把这里的素材加入台本。" />
     <el-alert v-if="lastInsertion" type="success" show-icon :title="lastInsertion" @close="lastInsertion = ''" />
 
-    <div v-loading="loading" class="asset-table-wrap">
+    <SoundRecommendations v-if="chapterId && activeView === 'recommendations'" :chapter-id="chapterId" :line-id="actionMode === 'bind' ? selectedLineId : anchorLineId" :action-mode="actionMode" :busy-id="bindingId" @browse="activeView = 'library'" @select="applyRecommendation" />
+
+    <div v-if="activeView === 'library'" v-loading="loading" class="asset-table-wrap">
       <div v-if="filteredAssets.length" class="asset-list">
         <article v-for="asset in filteredAssets" :key="asset.id" class="asset-row">
           <div class="asset-main">
@@ -99,12 +105,13 @@
           <audio controls preload="none" :src="audioUrl(asset)" :aria-label="`试听${asset.name}`" @play="pauseOtherPreviews" />
           <div class="asset-actions">
             <el-button
+              v-if="chapterId || materialLines.length"
               type="primary"
               :icon="Link"
               :disabled="Boolean(bindingId) || (chapterId && actionMode === 'insert' ? (anchorLines.length > 0 && !anchorLineId) : !selectedLineId)"
               :loading="bindingId === asset.id"
               @click="chapterId && actionMode === 'insert' ? insertAsset(asset) : bindAsset(asset)"
-            >{{ chapterId && actionMode === 'insert' ? '＋ 加入' : '绑定' }}</el-button>
+            >{{ chapterId && actionMode === 'insert' ? '＋ 加入' : '选用并替换' }}</el-button>
             <el-tooltip v-if="asset.source_type === 'user'" content="删除我的素材">
               <el-button
                 type="danger"
@@ -149,6 +156,7 @@
 </template>
 
 <script setup>
+import SoundRecommendations from './SoundRecommendations.vue'
 import CuePlacementSelect from './production/CuePlacementSelect.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { Delete, Link, Refresh, Search, Upload } from '@element-plus/icons-vue'
@@ -168,8 +176,10 @@ const props = defineProps({
   lines: { type: Array, default: () => [] },
   materialLines: { type: Array, default: () => [] },
   targetLineId: { type: Number, default: null },
+  initialView: { type: String, default: 'library' },
 })
 const emit = defineEmits(['bound', 'inserted'])
+const activeView = ref(props.initialView)
 
 const assets = ref([])
 const loading = ref(false)
@@ -234,7 +244,7 @@ const filteredAssets = computed(() => {
 })
 
 watch(() => props.targetLineId, (value) => {
-  if (value && props.materialLines.some((line) => line.id === value)) selectedLineId.value = value
+  if (value && props.materialLines.some((line) => line.id === value)) { selectedLineId.value = value; actionMode.value = 'bind' }
   if (value && anchorLines.value.some((line) => line.id === value)) anchorLineId.value = value
 }, { immediate: true })
 
@@ -251,6 +261,17 @@ watch(() => props.materialLines, (value) => {
 }, { deep: true })
 
 onMounted(loadAssets)
+
+watch(activeView, () => panelRoot.value?.querySelectorAll('audio').forEach(audio => audio.pause()))
+
+async function applyRecommendation(choice) {
+  if (bindingId.value) return
+  if (actionMode.value === 'bind') return bindAsset(choice.asset)
+  insertForm.value.placement = choice.placement
+  insertForm.value.volume_db = choice.volume_db
+  mixPreset.value = 'custom'
+  return insertAsset(choice.asset)
+}
 
 function applyScenePreset(scene) {
   keyword.value = scene.keyword
@@ -317,7 +338,7 @@ async function loadAssets() {
   loading.value = true
   try {
     const response = await getSoundLibraryAssets()
-    assets.value = response?.code === 200 ? response.data : []
+    assets.value = response?.code === 200 && Array.isArray(response.data) ? response.data : []
   } catch (error) {
     ElMessage.error(apiError(error, '素材库加载失败'))
   } finally {

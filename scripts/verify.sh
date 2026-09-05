@@ -256,7 +256,7 @@ with tempfile.TemporaryDirectory() as tmp:
     repo = FakeRepo(line)
     service = LineService(repo, None, None, None)
     target = service.attach_audio_asset(7, source)
-    if not target.endswith("id_7_asset.mp3") or not os.path.exists(target):
+    if not os.path.basename(target).startswith("id_7_asset_") or not target.endswith(".mp3") or not os.path.exists(target):
         raise SystemExit(f"asset attach target invalid: {target}")
     if repo.updated.get("status") != "done" or repo.updated.get("is_done") != 1:
         raise SystemExit(f"asset attach update invalid: {repo.updated}")

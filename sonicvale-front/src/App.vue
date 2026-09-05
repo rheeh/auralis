@@ -103,6 +103,7 @@ import {
   DataLine,
   Document,
   Microphone,
+  Headset,
   Moon,
   Operation,
   Setting,
@@ -110,6 +111,7 @@ import {
   Tickets,
 } from '@element-plus/icons-vue'
 import { getProjectDetail } from './api/project'
+import { IS_STATIC_DEMO } from './api/config'
 
 const route = useRoute()
 const sidebarCompact = ref(false)
@@ -120,6 +122,7 @@ const primaryNav = [
   { path: '/demo', label: '体验 Demo', icon: Microphone, match: ['/demo'] },
   { path: '/projects', label: '项目', icon: Tickets, match: ['/projects', '/home'] },
   { path: '/voices', label: '音色', icon: Microphone, match: ['/voices'] },
+  ...(!IS_STATIC_DEMO ? [{ path: '/sound-library', label: '音效库', icon: Headset, match: ['/sound-library', '/media'] }] : []),
   { path: '/queue', label: '任务', icon: DataLine, match: ['/queue'] },
 ]
 
@@ -138,6 +141,7 @@ const routeInfo = {
   Studio: ['创作', 'AI 改编', '从原文到角色与台本，逐步确认并写入作品。'],
   StudioSession: ['创作', '继续改编', '恢复上次会话，继续确认角色和台本。'],
   VoiceManager: ['资源', '音色库', '管理可跨作品复用的角色音色。'],
+  SoundLibrary: ['资源', '音效库', '试听内置素材，导入自己的声音，在小说情节中选用。'],
   Queue: ['生产', '任务队列', '查看生成进度，处理失败与等待任务。'],
   ProjectOverview: ['项目', '制作总览', '聚焦当前缺口和下一步制作动作。'],
   ProjectDubbingDetail: ['制作', '台本与配音', '编辑章节、台词、声线与音频结果。'],

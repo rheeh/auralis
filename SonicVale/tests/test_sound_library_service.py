@@ -15,6 +15,11 @@ from app.dto.timeline_dto import TimelineClipUpdateDTO
 from app.models.po import ChapterPO, LinePO, ProjectPO, SoundLibraryAssetPO, TimelineClipPO
 from app.services.sound_library_service import SoundLibraryService
 from app.services.timeline_service import TimelineService
+from app.services.line_service import LineService
+from app.repositories.line_repository import LineRepository
+from app.repositories.role_repository import RoleRepository
+from app.repositories.tts_provider_repository import TTSProviderRepository
+from app.repositories.llm_provider_repository import LLMProviderRepository
 
 
 class SoundLibraryServiceTest(unittest.TestCase):
@@ -52,6 +57,51 @@ class SoundLibraryServiceTest(unittest.TestCase):
             [asset["name"] for asset in self.service.list_assets(source_type="builtin", keyword="火焰")],
             ["火焰燃烧"],
         )
+
+    def test_compressed_metadata_does_not_load_native_mpeg_decoder(self):
+        mp3 = next(Path(self.service.builtin_root).rglob('*.mp3'))
+        with patch('app.core.audio_metadata.sf.info', side_effect=AssertionError('MP3 must be isolated')):
+            duration, rate, channels = self.service._audio_info(mp3)
+        self.assertGreater(duration, 0)
+        self.assertGreater(rate, 0)
+        self.assertIn(channels, (1, 2))
+
+    def test_reselecting_sound_keeps_prior_audio_file(self):
+        _, chapter, _, asset = self._chapter()
+        original = self._wav('original-effect.wav')
+        line = LinePO(chapter_id=chapter.id, line_order=4, track='sfx', line_type='sfx', audio_path=original)
+        self.session.add(line)
+        self.session.commit()
+        service = LineService(LineRepository(self.session), RoleRepository(self.session), TTSProviderRepository(self.session), LLMProviderRepository(self.session))
+        original_bytes = Path(original).read_bytes()
+        first = service.attach_audio_asset(line.id, asset['path'])
+        first_bytes = Path(first).read_bytes()
+        second = service.attach_audio_asset(line.id, asset['path'])
+        self.assertNotEqual(first, second)
+        self.assertEqual(Path(first).read_bytes(), first_bytes)
+        self.assertEqual(Path(original).read_bytes(), original_bytes)
+        self.assertEqual(self.session.get(LinePO, line.id).audio_path, second)
+
+    def test_binding_sound_updates_only_target_clip_and_keeps_manual_mix(self):
+        project, chapter, lines, asset = self._chapter()
+        effect = LinePO(chapter_id=chapter.id, line_order=4, track='sfx', line_type='sfx', audio_path=self._wav('previous.wav'))
+        self.session.add(effect)
+        self.session.commit()
+        timeline = TimelineService(self.session)
+        built = timeline.build_chapter_timeline(project.id, chapter.id)
+        target = next(t for t in built['tracks'] if t['track_type'] == 'sfx')['clips'][0]
+        timeline.update_clip(project.id, chapter.id, target['id'], TimelineClipUpdateDTO(start_ms=230, volume_db=-18, fade_in_ms=20, fade_out_ms=40))
+        before = timeline.get_chapter_timeline(project.id, chapter.id)
+        voice_before = next(t for t in before['tracks'] if t['track_type'] == 'voice')['clips']
+        service = LineService(LineRepository(self.session), RoleRepository(self.session), TTSProviderRepository(self.session), LLMProviderRepository(self.session))
+        result = self.service.bind_asset(asset['id'], effect.id, service)
+        after = timeline.get_chapter_timeline(project.id, chapter.id)
+        self.assertTrue(result['timeline_updated'])
+        self.assertEqual(after['status'], 'ready')
+        self.assertEqual(next(t for t in after['tracks'] if t['track_type'] == 'voice')['clips'], voice_before)
+        replaced = next(t for t in after['tracks'] if t['track_type'] == 'sfx')['clips'][0]
+        self.assertNotEqual(replaced['asset_id'], target['asset_id'])
+        self.assertEqual((replaced['start_ms'], replaced['volume_db'], replaced['fade_in_ms'], replaced['fade_out_ms']), (230, -18, 20, 40))
 
     def test_user_import_is_copied_deduplicated_and_deletable(self):
         source = self._wav()

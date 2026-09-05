@@ -6,15 +6,14 @@ import mimetypes
 import os
 import re
 import shutil
-import subprocess
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-import soundfile as sf
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.audio_metadata import probe_audio
 from app.core.config import getConfigPath
 from app.dto.sound_library_dto import SoundLibraryInsertDTO
 from app.models.po import ChapterPO, LinePO, SoundLibraryAssetPO, TimelineClipPO, TimelineTrackPO
@@ -31,6 +30,22 @@ class SoundLibraryService:
         self.db = db
         self.builtin_root = Path(builtin_root) if builtin_root else self._find_builtin_root()
         self._builtin_by_id: dict[str, dict[str, Any]] | None = None
+
+    def bind_asset(self, asset_id: str, line_id: int, line_service) -> dict:
+        line = self.db.get(LinePO, line_id)
+        if not line or (line.track or line.line_type) not in {"sfx", "bgm"}:
+            raise ValueError("请选择音效或 BGM 台词")
+        chapter = self.db.get(ChapterPO, line.chapter_id)
+        if not chapter:
+            raise ValueError("音效所属章节不存在")
+        source = self.resolve_path(asset_id)
+        if self._audio_info(source)[0] <= 0:
+            raise ValueError("音效长度不可用")
+        timeline = TimelineService(self.db)
+        previously_ready = timeline.get_chapter_timeline(chapter.project_id, chapter.id)["status"] == "ready"
+        target = line_service.attach_audio_asset(line_id, str(source))
+        updated = timeline.refresh_material_audio(line, previously_ready=previously_ready)
+        return {"line_id": line_id, "audio_path": target, "timeline_updated": updated}
 
     def list_assets(
         self,
@@ -313,27 +328,7 @@ class SoundLibraryService:
                 return candidate.resolve()
         return next(candidate for candidate in candidates if candidate is not None).resolve()
 
-    @staticmethod
-    def _audio_info(path: Path) -> tuple[int, int | None, int | None]:
-        try:
-            info = sf.info(str(path))
-            duration_ms = round((info.frames / info.samplerate) * 1000) if info.samplerate else 0
-            return duration_ms, int(info.samplerate or 0) or None, int(info.channels or 0) or None
-        except (RuntimeError, ValueError):
-            ffprobe = shutil.which("ffprobe")
-            if not ffprobe:
-                raise ValueError(f"无法解析音频文件: {path.name}")
-            try:
-                result = subprocess.run(
-                    [ffprobe, "-v", "error", "-show_entries", "format=duration", "-of", "json", str(path)],
-                    capture_output=True,
-                    text=True,
-                    check=True,
-                )
-                duration = float(json.loads(result.stdout).get("format", {}).get("duration") or 0)
-                return round(duration * 1000), None, None
-            except (subprocess.CalledProcessError, ValueError, json.JSONDecodeError) as exc:
-                raise ValueError(f"无法解析音频文件: {path.name}") from exc
+    _audio_info = staticmethod(probe_audio)
 
     @staticmethod
     def _checksum(path: Path) -> str:

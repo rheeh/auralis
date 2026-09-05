@@ -2,18 +2,17 @@
 
 from __future__ import annotations
 
+from app.core.audio_metadata import probe_audio
 from app.services.audio_selection import selected_audio_path
 
 import hashlib
 import json
 import mimetypes
 import os
-import shutil
-import subprocess
+from pathlib import Path
 from collections import defaultdict
 from typing import Any
 
-import soundfile as sf
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
@@ -39,6 +38,34 @@ TRACK_NAMES = {
 class TimelineService:
     def __init__(self, db: Session):
         self.db = db
+
+    def refresh_material_audio(self, line: LinePO, *, previously_ready: bool) -> bool:
+        """Replace just this sound's source, retaining placement and all other edits."""
+        if self._track_type(line) not in {"sfx", "bgm"}:
+            raise ValueError("仅音效和 BGM 可原位更换素材")
+        chapter = self.db.get(ChapterPO, line.chapter_id)
+        clips = self.db.query(TimelineClipPO).filter(TimelineClipPO.line_id == line.id).all()
+        if not chapter or not clips:
+            return False
+        asset = self._register_line_assets(chapter.project_id, chapter.id, line, self._track_type(line))
+        if not asset or not asset.duration_ms:
+            raise ValueError("新音效时长不可用")
+        for clip in clips:
+            clip.asset_id = asset.id
+            clip.duration_ms = min(clip.duration_ms, asset.duration_ms)
+            clip.fade_in_ms = min(clip.fade_in_ms, clip.duration_ms)
+            clip.fade_out_ms = min(clip.fade_out_ms, clip.duration_ms - clip.fade_in_ms)
+            clip.revision += 1
+        if previously_ready:
+            lines = self.db.query(LinePO).filter(LinePO.chapter_id == chapter.id).all()
+            fingerprint = self._source_fingerprint(lines)
+            for track in self.db.query(TimelineTrackPO).filter(TimelineTrackPO.chapter_id == chapter.id).all():
+                track.source_fingerprint = fingerprint
+                track.status = "ready"
+                track.last_error = None
+                track.revision += 1
+        self.db.commit()
+        return True
 
     def get_chapter_timeline(self, project_id: int, chapter_id: int) -> dict[str, Any]:
         chapter = self._get_chapter(project_id, chapter_id)
@@ -585,22 +612,9 @@ class TimelineService:
     @staticmethod
     def _probe_audio(path: str) -> tuple[int, int | None, int | None]:
         try:
-            info = sf.info(path)
-            return max(1, round(info.frames / info.samplerate * 1000)), info.samplerate, info.channels
-        except Exception:
-            ffprobe = shutil.which("ffprobe")
-            if not ffprobe:
-                return 0, None, None
-            try:
-                result = subprocess.run(
-                    [ffprobe, "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", path],
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                )
-                return max(1, round(float(result.stdout.strip()) * 1000)), None, None
-            except (OSError, ValueError, subprocess.CalledProcessError):
-                return 0, None, None
+            return probe_audio(Path(path))
+        except (OSError, ValueError):
+            return 0, None, None
 
     @staticmethod
     def _clip_payload(clip: TimelineClipPO, asset: AudioAssetPO | None, line: LinePO | None) -> dict[str, Any]:

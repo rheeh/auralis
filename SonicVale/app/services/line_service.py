@@ -410,7 +410,9 @@ class LineService:
             target_dir = os.path.join(getConfigPath(), "assets", str(po.chapter_id), "audio")
         os.makedirs(target_dir, exist_ok=True)
 
-        target_path = os.path.join(target_dir, f"id_{po.id}_asset{ext}")
+        # Each selection gets its own copy; reselecting must not overwrite a
+        # previously used file that a take or existing render still references.
+        target_path = os.path.join(target_dir, f"id_{po.id}_asset_{uuid4().hex[:12]}{ext}")
         if os.path.abspath(source_path) != os.path.abspath(target_path):
             shutil.copy2(source_path, target_path)
 

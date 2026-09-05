@@ -34,6 +34,7 @@
       >渲染成片</el-button>
       <el-button @click="openDubbingProject">返回对应台词</el-button>
       <el-button v-if="!exportOnly" :icon="Bell" :disabled="!chapterId" @click="openSoundLibrary()">快捷加音效</el-button>
+      <el-button v-if="!exportOnly" :disabled="!chapterLines.length" @click="openSoundLibrary(selectedLineId || materialLines[0]?.id, 'recommendations')">AI 推荐音效</el-button>
     </section>
 
     <section v-if="renderResult" class="render-result">
@@ -53,6 +54,7 @@
         :lines="chapterLines"
         :material-lines="materialLines"
         :target-line-id="soundTargetLineId"
+        :initial-view="soundLibraryView"
         @inserted="loadTimeline"
         @bound="loadTimeline"
       />
@@ -82,6 +84,7 @@
         </div>
       </el-form>
       <template #footer>
+        <el-button type="primary" plain @click="openSoundLibrary(clipForm?.line_id, 'recommendations')">AI 推荐音效</el-button>
         <el-button :icon="Bell" @click="openSoundLibrary(clipForm?.line_id)">在这句附近加音效</el-button>
         <el-button @click="openDubbingProject(clipForm?.line_id)">查看对应台词</el-button>
         <el-button @click="clipEditorVisible = false">取消</el-button>
@@ -123,6 +126,7 @@ const clipInteraction = ref(null)
 const suppressClipClick = ref(false)
 const soundLibraryVisible = ref(false)
 const soundTargetLineId = ref(null)
+const soundLibraryView = ref('library')
 const chapterLines = ref([])
 const materialLines = computed(() => chapterLines.value.filter((line) => ['sfx', 'bgm'].includes(line.track || line.line_type)))
 
@@ -179,7 +183,8 @@ async function loadTimeline() {
   }
 }
 
-function openSoundLibrary(lineId = null) {
+function openSoundLibrary(lineId = null, view = 'library') {
+  soundLibraryView.value = view
   soundTargetLineId.value = lineId || soundTargetLineId.value || chapterLines.value[0]?.id || null
   clipEditorVisible.value = false
   soundLibraryVisible.value = true

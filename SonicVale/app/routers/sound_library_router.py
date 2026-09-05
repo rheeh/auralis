@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.response import Res
 from app.db.database import get_db
-from app.dto.sound_library_dto import SoundLibraryImportDTO, SoundLibraryInsertDTO
+from app.dto.sound_library_dto import SoundLibraryImportDTO, SoundLibraryInsertDTO, SoundRecommendationDTO
 from app.models.po import LinePO
 from app.repositories.line_repository import LineRepository
 from app.repositories.llm_provider_repository import LLMProviderRepository
@@ -15,9 +15,21 @@ from app.repositories.role_repository import RoleRepository
 from app.repositories.tts_provider_repository import TTSProviderRepository
 from app.services.line_service import LineService
 from app.services.sound_library_service import MAX_AUDIO_BYTES, SoundLibraryService, SUPPORTED_EXTENSIONS
+from app.services.sound_recommendation_service import SoundRecommendationService
+from app.services.workflow_llm_service import WorkflowLLMError
 
 
 router = APIRouter(prefix="/sound-library", tags=["Sound Library"])
+
+
+@router.post("/recommendations", response_model=Res[dict])
+def recommend_sounds(dto: SoundRecommendationDTO, db: Session = Depends(get_db)):
+    try:
+        return Res(data=SoundRecommendationService(db).recommend(dto), message="推荐已就绪，试听后选择")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except WorkflowLLMError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 def get_sound_library_service(db: Session = Depends(get_db)) -> SoundLibraryService:
@@ -121,8 +133,7 @@ def bind_asset(
     if (line.track or line.line_type) not in {"sfx", "bgm"}:
         raise HTTPException(status_code=409, detail="素材库音频只能绑定到音效或 BGM 轨道")
     try:
-        target_path = line_service.attach_audio_asset(line_id, str(service.resolve_path(asset_id)))
-        return Res(data={"line_id": line_id, "audio_path": target_path}, message="素材已绑定")
+        return Res(data=service.bind_asset(asset_id, line_id, line_service), message="素材已绑定")
     except (ValueError, FileNotFoundError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

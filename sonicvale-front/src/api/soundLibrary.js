@@ -4,6 +4,10 @@ export function getSoundLibraryAssets(params = {}) {
   return request.get('/sound-library/assets', { params })
 }
 
+export function recommendSounds(payload) {
+  return request.post('/sound-library/recommendations', payload, { timeout: 90000 })
+}
+
 export function importSoundLibraryPath(payload) {
   return request.post('/sound-library/assets/import-path', payload)
 }
