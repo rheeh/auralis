@@ -5,7 +5,8 @@ from unittest.mock import patch
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text, inspect
+from starlette.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -53,6 +54,7 @@ class ProjectDeletionTest(unittest.TestCase):
             (self.root/str(pid)/'audio.wav').write_bytes(b'preserved original')
         self.service = ProjectService(ProjectRepository(self.db))
         app = FastAPI()
+        app.add_middleware(CORSMiddleware, allow_origins=['http://127.0.0.1:5173'], allow_methods=['*'])
         app.include_router(router)
         app.dependency_overrides[get_db] = lambda: self.db
         self.client = TestClient(app)
@@ -105,3 +107,30 @@ class ProjectDeletionTest(unittest.TestCase):
         with patch('app.services.project_service.getConfigPath',return_value=str(self.root/'legacy-config')):
             self.assertTrue(self.service.delete_project(1))
         self.assertTrue((self.root/'1/audio.wav').exists())  # An unconfigured old path is never guessed.
+
+    def test_removed_knowledge_tables_are_cleaned_without_affecting_other_projects(self):
+        self.db.execute(text('CREATE TABLE article_sources (id INTEGER PRIMARY KEY, project_id INTEGER NOT NULL, session_id TEXT REFERENCES chat_sessions(id))'))
+        self.db.execute(text('CREATE TABLE knowledge_review_answers (id INTEGER PRIMARY KEY, session_id TEXT NOT NULL REFERENCES chat_sessions(id))'))
+        self.db.add(ChatSessionPO(id='keep',project_id=2))
+        self.db.flush()
+        self.db.execute(text("INSERT INTO article_sources VALUES (1,1,'s'),(2,1,NULL),(3,2,'keep')"))
+        self.db.execute(text("INSERT INTO knowledge_review_answers VALUES (1,'s'),(2,'keep')"))
+        self.db.commit()
+        response = self.client.delete('/projects/1', headers={'Origin':'http://127.0.0.1:5173'})
+        self.assertEqual(response.json()['code'],200)
+        self.assertEqual(response.headers['access-control-allow-origin'],'http://127.0.0.1:5173')
+        self.assertEqual(self.db.execute(text('SELECT id FROM article_sources')).scalars().all(),[3])
+        self.assertEqual(self.db.execute(text('SELECT id FROM knowledge_review_answers')).scalars().all(),[2])
+        self.assertTrue((self.root/'2/audio.wav').exists())
+
+    def test_unknown_reference_returns_readable_error_and_preserves_data(self):
+        self.db.execute(text('CREATE TABLE future_reference (session_id TEXT REFERENCES chat_sessions(id))'))
+        self.db.execute(text("INSERT INTO future_reference VALUES ('s')"))
+        self.db.commit()
+        response = self.client.delete('/projects/1',headers={'Origin':'http://127.0.0.1:5173'})
+        self.assertEqual(response.status_code,409)
+        self.assertIn('已保留',response.json()['detail'])
+        self.assertEqual(response.headers['access-control-allow-origin'],'http://127.0.0.1:5173')
+        self.assertIsNotNone(self.db.get(AudioTaskPO,'a'))
+        self.assertTrue((self.root/'1/audio.wav').exists())
+        self.assertFalse(inspect(self.db.connection()).has_table('article_sources'))

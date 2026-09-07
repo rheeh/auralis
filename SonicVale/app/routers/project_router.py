@@ -11,6 +11,7 @@ from typing import List
 import numpy as np
 import soundfile as sf
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.config import getConfigPath
 from app.core.response import Res
@@ -319,6 +320,9 @@ def delete_project(project_id: int, service: ProjectService = Depends(get_servic
     except OSError as exc:
         logging.exception("项目文件清理失败: %s", project_id)
         raise HTTPException(status_code=500, detail="项目目录无法清理，项目记录已保留，请检查文件权限后重试") from exc
+    except SQLAlchemyError as exc:
+        logging.exception("项目关联数据清理失败: %s", project_id)
+        raise HTTPException(status_code=409, detail="项目仍有关联数据无法清理，删除已撤销，项目及文件已保留。请检查后端日志。") from exc
 
 
 # 直接导入整本小说内容，然后解析，创建章节

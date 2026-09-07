@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 from uuid import uuid4
 
-from sqlalchemy import Sequence, delete, select, or_, update
+from sqlalchemy import Sequence, delete, select, or_, update, inspect, Table, MetaData
 
 from app.core.config import getConfigPath
 from app.entity.project_entity import ProjectEntity
@@ -136,6 +136,7 @@ class ProjectService:
         line_ids = select(LinePO.id).where(LinePO.chapter_id.in_(chapter_ids))
         asset_ids = select(AudioAssetPO.id).where(AudioAssetPO.project_id == project_id)
         try:
+            self._delete_legacy_knowledge_data(db, project_id, session_ids)
             db.execute(delete(AudioTaskPO).where(or_(AudioTaskPO.project_id == project_id, AudioTaskPO.line_id.in_(line_ids), AudioTaskPO.session_id.in_(session_ids))))
             db.execute(delete(WorkflowEventPO).where(or_(WorkflowEventPO.project_id == project_id, WorkflowEventPO.session_id.in_(session_ids))))
             db.execute(delete(AdaptationDraftRevisionPO).where(or_(AdaptationDraftRevisionPO.session_id.in_(session_ids), AdaptationDraftRevisionPO.run_id.in_(run_ids))))
@@ -168,6 +169,24 @@ class ProjectService:
             except OSError:
                 logging.warning("项目已删除，待清理的文件副本保留在 %s", quarantine)
         return True
+
+    @staticmethod
+    def _delete_legacy_knowledge_data(db, project_id, session_ids):
+        # Removed knowledge-audio features left these tables in upgraded databases.
+        # Reflect only the known legacy tables, without recreating them on fresh installs.
+        connection = db.connection()
+        inspector = inspect(connection)
+        for name in ("knowledge_review_answers", "article_sources"):
+            if not inspector.has_table(name):
+                continue
+            table = Table(name, MetaData(), autoload_with=connection)
+            conditions = []
+            if "project_id" in table.c:
+                conditions.append(table.c.project_id == project_id)
+            if "session_id" in table.c:
+                conditions.append(table.c.session_id.in_(session_ids))
+            if conditions:
+                db.execute(delete(table).where(or_(*conditions)))
 
 
     def search_projects(self, keyword: str) -> Sequence[ProjectEntity]:
