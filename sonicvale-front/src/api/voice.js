@@ -98,3 +98,7 @@ export function copyVoice(source_voice_id, new_name, target_dir = null) {
     target_dir
   })
 }
+
+export function cloneVoice(data) {
+  return request.post('/voices/clone', data, { timeout: 100000 })
+}

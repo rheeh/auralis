@@ -6,14 +6,7 @@
         <el-avatar :size="64" :src="avatarUrl(role)">{{ role.name?.slice(0,1) }}</el-avatar>
         <div class="copy"><strong>{{ role.name }}</strong><small>{{ role.identity || '身份待补充' }}</small><p>{{ role.speech_style || '未设置表达特点' }}</p></div>
         <div class="voice-editor">
-          <el-select :model-value="voiceIdForRole(role)" filterable placeholder="选择音色" @update:model-value="changeVoice(role,$event)">
-            <el-option-group v-for="group in voiceGroups" :key="group.id" :label="group.label">
-              <el-option v-for="voice in group.voices" :key="voice.id" :label="voice.name" :value="voice.id" :disabled="voiceUsedByOtherRole(voice.id,role)">
-                <span>{{ voice.name }}</span>
-                <button class="option-preview" type="button" :disabled="!voice.reference_path" :title="voice.reference_path?'试听音色':'暂无试听样音'" @mousedown.stop @click.stop="togglePreview(voice)"><el-icon><component :is="previewingId===voice.id?VideoPause:VideoPlay" /></el-icon></button>
-              </el-option>
-            </el-option-group>
-          </el-select>
+          <ModelVoicePicker :model-value="voiceIdForRole(role)" :providers="providers" :voices="voices" :previewing-id="previewingId" :is-voice-disabled="id=>voiceUsedByOtherRole(id,role)" :label="`为${role.name}选择音色`" @update:model-value="changeVoice(role,$event)" @preview="togglePreview" />
           <button v-if="voiceById(voiceIdForRole(role))?.reference_path" class="selected-preview" type="button" @click="togglePreview(voiceById(voiceIdForRole(role)))"><el-icon><component :is="previewingId===voiceIdForRole(role)?VideoPause:VideoPlay" /></el-icon>{{ previewingId===voiceIdForRole(role)?'停止试听':`试听 ${voiceName(voiceIdForRole(role))}` }}</button>
           <span v-else>{{ voiceName(voiceIdForRole(role)) }}</span>
         </div>
@@ -23,6 +16,7 @@
 </template>
 
 <script setup>
+import ModelVoicePicker from '../ModelVoicePicker.vue'
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { VideoPause, VideoPlay } from '@element-plus/icons-vue'
@@ -51,7 +45,6 @@ onBeforeUnmount(()=>{voicePlayer.pause();voicePlayer.removeAttribute('src')})
 function avatarUrl(role){return getRoleAvatarUrl(props.sessionId,role.avatar_path)}
 function voiceById(id){return voices.value.find(item=>item.id===id)||null}
 function voiceName(id){return voices.value.find(item=>item.id===id)?.name||'未绑定音色'}
-const voiceGroups=computed(()=>providers.value.map(provider=>({id:provider.id,label:`${provider.name} · ${provider.model||provider.provider_type||'TTS'}`,voices:voices.value.filter(voice=>voice.tts_provider_id===provider.id)})).filter(group=>group.voices.length))
 function projectRole(role){return projectRoles.value.find(item=>item.name===role.name)||null}
 function voiceIdForRole(role){const persisted=projectRole(role);return(persisted&&selectedVoiceMap[persisted.id])||role.default_voice_id||null}
 function voiceUsedByOtherRole(voiceId,role){return projectRoles.value.some(item=>item.name!==role.name&&selectedVoiceMap[item.id]===voiceId)}

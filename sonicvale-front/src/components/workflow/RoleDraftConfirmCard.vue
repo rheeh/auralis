@@ -24,14 +24,7 @@
           <p>{{ role.speech_style || role.voice_type || '暂无表达特点' }}</p>
         </span>
         <div class="voice-picker">
-          <el-select v-model="role.default_voice_id" filterable clearable placeholder="按模型来源选择音色">
-            <el-option-group v-for="group in voiceGroups" :key="group.id" :label="group.label">
-              <el-option v-for="voice in group.voices" :key="voice.id" :label="voice.name" :value="voice.id" :disabled="voiceUsedByOtherRole(voice.id, role.draft_id)">
-                <span>{{ voice.name }}</span>
-                <button class="option-preview" type="button" :disabled="!voice.reference_path" :title="!voice.reference_path?'该音色暂无样音':previewingId===voice.id?'停止试听':'试听音色'" @mousedown.stop @click.stop="toggleVoicePreview(voice)"><el-icon><component :is="previewingId===voice.id?VideoPause:VideoPlay" /></el-icon></button>
-              </el-option>
-            </el-option-group>
-          </el-select>
+          <ModelVoicePicker v-model="role.default_voice_id" :providers="providers" :voices="voices" :previewing-id="previewingId" :is-voice-disabled="id=>voiceUsedByOtherRole(id,role.draft_id)" :label="`为${role.name}选择音色`" clearable @preview="toggleVoicePreview" />
           <button v-if="selectedVoice(role)?.reference_path" class="selected-preview" type="button" @click="toggleVoicePreview(selectedVoice(role))"><el-icon><component :is="previewingId===role.default_voice_id?VideoPause:VideoPlay" /></el-icon>{{ previewingId===role.default_voice_id?'停止试听':`试听「${selectedVoice(role).name}」` }}</button>
           <small v-else-if="selectedVoice(role)" class="no-preview">该音色暂无试听样音</small>
         </div>
@@ -46,6 +39,8 @@
 </template>
 
 <script setup>
+import ModelVoicePicker from '../ModelVoicePicker.vue'
+import { providerOptions } from '../../utils/voiceGroups'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { MagicStick, VideoPause, VideoPlay } from '@element-plus/icons-vue'
@@ -69,11 +64,7 @@ watch(editableRoles, value => emit('update:roles', JSON.parse(JSON.stringify(val
 const selectedCount = computed(() => editableRoles.value.filter((item) => item.selected !== false).length)
 const selectedRoles = computed(() => editableRoles.value.filter((item) => item.selected !== false))
 const canConfirm = computed(() => selectedCount.value > 0 && selectedRoles.value.every(role => role.default_voice_id))
-const voiceGroups = computed(() => providers.value.map(provider => ({
-  id: provider.id,
-  label: `${provider.name} · ${provider.model || provider.provider_type || 'TTS'}`,
-  voices: voices.value.filter(voice => voice.tts_provider_id === provider.id),
-})).filter(group => group.voices.length))
+
 
 onMounted(loadVoices)
 onBeforeUnmount(() => { voicePlayer.pause();voicePlayer.removeAttribute('src');previewingId.value=null })
@@ -101,9 +92,10 @@ function scoreVoice(role, voice) {
   return ['男','女','少年','青年','儿童','中年','老年','温柔','冷淡','活泼','沉稳','旁白'].reduce((score,key)=>score+(hint.includes(key)&&tags.includes(key)?2:0),0)
 }
 function autoBind() {
-  const unused = [...voices.value]
+  const eligible = providers.value.filter(p => providerOptions(p).quota_status !== 'unavailable').map(p => p.id)
+  const unused = voices.value.filter(v => eligible.includes(v.tts_provider_id))
   selectedRoles.value.forEach(role => {
-    unused.sort((a,b)=>scoreVoice(role,b)-scoreVoice(role,a))
+    unused.sort((a,b)=>scoreVoice(role,b)-scoreVoice(role,a) || (providerOptions(providers.value.find(p=>p.id===a.tts_provider_id)).selection_priority ?? 50)-(providerOptions(providers.value.find(p=>p.id===b.tts_provider_id)).selection_priority ?? 50))
     const voice = unused.shift()
     role.default_voice_id = voice?.id || null
   })

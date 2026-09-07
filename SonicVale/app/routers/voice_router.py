@@ -1,5 +1,9 @@
 from typing import List
 
+import requests
+from app.dto.voice_dto import VoiceCloneDTO
+from app.services.voice_clone_service import VoiceCloneService
+
 import mimetypes
 import os
 
@@ -42,6 +46,17 @@ def get_voice_service(db: Session = Depends(get_db)) -> VoiceService:
 def get_tts_provider_service(db: Session = Depends(get_db)) -> TTSProviderService:
     repository = TTSProviderRepository(db)
     return TTSProviderService(repository)
+
+
+@router.post("/clone", response_model=Res[VoiceResponseDTO])
+def clone_voice(dto: VoiceCloneDTO, db: Session = Depends(get_db)):
+    try:
+        voice = VoiceCloneService(db).create(dto)
+        return Res(data=VoiceResponseDTO(**voice.__dict__), message="复刻音色已加入当前模型")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except requests.RequestException as exc:
+        raise HTTPException(status_code=502, detail="阿里云音色复刻连接失败；未自动重试") from exc
 
 
 # ====== 静态路由放在动态路由之前，避免路径冲突 ======

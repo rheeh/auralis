@@ -1,3 +1,4 @@
+import curatedQwenVoices from '../data/curatedQwenVoices.json'
 export const QWEN_DRAMA_MODEL = 'qwen-audio-3.0-tts-plus'
 
 // Historical Demo recordings retain their original model/voice identity.
@@ -20,7 +21,9 @@ export const QWEN_AUDIO_VOICES = {
 }
 
 export function qwenDramaVoices(model) {
-  return QWEN_AUDIO_VOICES[String(model || '').toLowerCase()] || QWEN_DRAMA_VOICES
+  const current=String(model || '').toLowerCase()
+  const system=QWEN_AUDIO_VOICES[current]
+  return system ? [...system, ...curatedQwenVoices.map(v=>({...v,voice:`${current}-${v.voiceSuffix}`}))] : QWEN_DRAMA_VOICES
 }
 
 export function isQwenDramaModel(model) {

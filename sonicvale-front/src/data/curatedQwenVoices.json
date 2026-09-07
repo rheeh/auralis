@@ -1,0 +1,62 @@
+[
+  {
+    "voiceSuffix": "longcanzhuyue",
+    "label": "龙璨竹月 · 平实质朴音",
+    "role": "女,26岁,平实质朴音,日常对话",
+    "kind": "官方基础音色"
+  },
+  {
+    "voiceSuffix": "longrongzhihe",
+    "label": "龙蓉芷荷 · 电台质感音",
+    "role": "女,24岁,电台质感音,日常对话",
+    "kind": "官方基础音色"
+  },
+  {
+    "voiceSuffix": "longfengyueyao",
+    "label": "龙风月瑶 · 直爽利落音",
+    "role": "女,28岁,直爽利落音,日常对话",
+    "kind": "官方基础音色"
+  },
+  {
+    "voiceSuffix": "longtongxuxian",
+    "label": "龙彤旭弦 · 活泼灵动音",
+    "role": "女,24岁,活泼灵动音,日常对话",
+    "kind": "官方基础音色"
+  },
+  {
+    "voiceSuffix": "longyingsongliu",
+    "label": "龙莹松柳 · 爽朗利落音",
+    "role": "男,32岁,爽朗利落音,日常对话",
+    "kind": "官方基础音色"
+  },
+  {
+    "voiceSuffix": "longnixiulian",
+    "label": "龙霓岫涟 · 内敛含蓄音",
+    "role": "男,25岁,内敛含蓄音,日常对话",
+    "kind": "官方基础音色"
+  },
+  {
+    "voiceSuffix": "longxinruixuan",
+    "label": "龙昕蕊璇 · 自然亲和音",
+    "role": "男,24岁,自然亲和音,日常对话",
+    "kind": "官方基础音色"
+  },
+  {
+    "voiceSuffix": "longrongtaolian",
+    "label": "龙蓉桃涟 · 冷静沉稳音",
+    "role": "男,34岁,冷静沉稳音,有声阅读",
+    "kind": "官方基础音色"
+  },
+  {
+    "voiceSuffix": "longlingzhixing",
+    "label": "龙岭芷杏 · 浑厚沉稳音",
+    "role": "男,68岁,浑厚沉稳音,有声阅读",
+    "kind": "官方基础音色"
+  },
+  {
+    "voiceSuffix": "longxiaohehui",
+    "label": "龙霄鹤晖 · 低沉压抑音",
+    "role": "男,24岁,低沉压抑音,日常对话",
+    "kind": "官方基础音色"
+  }
+]

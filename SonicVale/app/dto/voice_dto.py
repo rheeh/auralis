@@ -78,3 +78,12 @@ class VoiceCopyDTO(BaseModel):
     source_voice_id: int
     new_name: str
     target_dir: Optional[str] = None  # 为空则使用原音色同目录
+
+
+class VoiceCloneDTO(BaseModel):
+    tts_provider_id: int = Field(gt=0)
+    name: str = Field(min_length=1, max_length=100)
+    audio_url: str = Field(min_length=10, max_length=2048)
+    language: str = Field(default='zh', pattern='^(zh|en|de|fr|ja|ko|es|it|ru|pt)$')
+    license_note: str = Field(min_length=3, max_length=1000)
+    rights_confirmed: bool = False

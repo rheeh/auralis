@@ -13,6 +13,7 @@
           覆盖重生成
         </el-button>
         <el-button v-if="!isQwenDrama" plain @click="$router.push({ path: '/config', query: { ttsPreset: 'qwen-drama' } })">配置 Qwen 广播剧配音</el-button>
+        <el-button v-if="canClone" type="primary" plain @click="cloneVisible=true">从参考录音复刻</el-button>
         <el-button type="primary" :disabled="!selectedTTS" @click="openDialog()">新增音色</el-button>
         <el-button type="success" plain :disabled="!selectedTTS || selectedCount === 0" @click="handleExportSelected">导出音色库（选中）</el-button>
         <el-popconfirm
@@ -106,7 +107,7 @@
         <template #default="{ row }">
           <div class="tags-wrap">
             <el-tag
-              v-for="(tag, index) in (row.description ? row.description.split(',') : [])"
+              v-for="(tag, index) in (row.description ? row.description.split(',').filter(tag => !/(?:qwen_voice|cosyvoice_voice|edge_voice):/.test(tag)) : [])"
               :key="index"
               type="info"
               effect="plain"
@@ -180,6 +181,19 @@
 
       </el-table>
     </div>
+
+    <el-dialog v-model="cloneVisible" title="从参考录音复刻音色" width="560px" :close-on-click-modal="!cloning">
+      <p>将参考录音链接提交到阿里云，创建属于 {{ selectedModel }} 的专属音色；已有角色和配音不会改变。</p>
+      <el-form label-position="top">
+        <el-form-item label="音色名称"><el-input v-model="cloneForm.name" maxlength="100" /></el-form-item>
+        <el-form-item label="公开音频链接（HTTPS）"><el-input v-model="cloneForm.audio_url" placeholder="https://…/voice.wav" /></el-form-item>
+        <p class="clone-help">推荐 10–20 秒、单人干净录音，无音乐；支持 WAV / MP3 / M4A。链接需无需登录即可访问。</p>
+        <el-form-item label="参考录音语言"><el-select v-model="cloneForm.language"><el-option label="中文" value="zh" /><el-option label="英文" value="en" /></el-select></el-form-item>
+        <el-form-item label="授权来源"><el-input v-model="cloneForm.license_note" placeholder="自己的录音，或允许声音复刻的授权/来源链接" /></el-form-item>
+        <el-checkbox v-model="cloneForm.rights_confirmed">我有权将此录音用于声音复刻</el-checkbox>
+      </el-form>
+      <template #footer><el-button :disabled="cloning" @click="cloneVisible=false">取消</el-button><el-button type="primary" :loading="cloning" :disabled="!cloneForm.rights_confirmed || !cloneForm.name.trim() || !cloneForm.audio_url || !cloneForm.license_note.trim()" @click="submitClone">创建并加入音色库</el-button></template>
+    </el-dialog>
 
     <!-- 弹窗：新增/编辑 -->
     <el-dialog :title="form.id ? '编辑音色' : '新增音色'" v-model="dialogVisible" width="720px">
@@ -306,12 +320,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, nextTick, computed } from 'vue'
+import { ref, reactive, onMounted, watch, nextTick, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Headset } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
-import { createVoice, fetchVoicesByTTS, updateVoice, deleteVoice, exportVoices, importVoices, processVoiceAudio, copyVoice, seedEdgeVoicePresets, seedCosyVoicePresets, getVoiceAudioUrl } from '../api/voice'
+import { cloneVoice, createVoice, fetchVoicesByTTS, updateVoice, deleteVoice, exportVoices, importVoices, processVoiceAudio, copyVoice, seedEdgeVoicePresets, seedCosyVoicePresets, getVoiceAudioUrl } from '../api/voice'
 import { fetchTTSProviders } from '../api/provider'
+import { providerOptions } from '../utils/voiceGroups'
 import WaveCellPro from '../components/WaveCellPro.vue'
 import { isQwenDramaModel, qwenDramaVoices, ttsCapability } from '../utils/ttsCapabilities'
 
@@ -352,6 +367,19 @@ const voiceHelperText = computed(() => {
   if (isEdgeProvider.value) return 'Edge-TTS 不需要参考文件。可生成免费常见声线，声音指导只映射语速、音高与音量。'
   return '选择对应引擎的系统音色或参考音频；具体表演能力取决于模型和音色。'
 })
+
+const cloneVisible=ref(false),cloning=ref(false)
+const cloneForm=reactive({name:'',audio_url:'',language:'zh',license_note:'',rights_confirmed:false})
+const canClone=computed(()=>['qwen-audio-3.0-tts-plus','qwen-audio-3.0-tts-flash','cosyvoice-v1'].includes(selectedModel.value))
+async function submitClone(){
+  cloning.value=true
+  try{
+    const response=await cloneVoice({...cloneForm,name:cloneForm.name.trim(),tts_provider_id:selectedTTS.value})
+    if(response?.code!==200)throw new Error(response?.message||'复刻失败')
+    cloneVisible.value=false;await loadVoices();ElMessage.success('专属音色已创建，可在角色选音色时使用')
+  }catch(error){ElMessage.error(error?.response?.data?.detail||error?.message||'复刻失败')}
+  finally{cloning.value=false}
+}
 
 const filterTags = ref([])
 const searchName = ref('')
@@ -415,7 +443,9 @@ function hasPreview(row) {
 }
 
 function referenceLabel(row) {
+  if ((row?.description || '').includes('官方基础音色')) return row.reference_path?.includes('official-base-') ? '官方基础音色（官方试听）' : row.reference_path ? '官方基础音色（本地生成试听）' : '官方基础音色'
   if (!row.reference_path && bundledPreview(row)) return '系统音色（Demo 预录试听）'
+  if ((row?.description || '').includes('复刻音色')) return row.reference_path ? '复刻音色（已生成试听）' : '复刻音色（已在阿里云创建）'
   if (isSystemVoice(row)) return row.reference_path ? '系统音色（已生成试听）' : '系统音色（无需参考音频）'
   return row.reference_path || '（未设置）'
 }
@@ -519,8 +549,8 @@ const cellStyle = () => ({ padding: '10px 12px' })
 
 // 加载 TTS
 const loadTTS = async () => {
-  ttsProviders.value = await fetchTTSProviders()
-  const def = ttsProviders.value.find(t => t.id === 1) || ttsProviders.value[0]
+  ttsProviders.value = (await fetchTTSProviders() || []).sort((a,b)=>(providerOptions(a).selection_priority ?? 50)-(providerOptions(b).selection_priority ?? 50))
+  const def = ttsProviders.value.find(t => t.status !== 0) || ttsProviders.value[0]
   if (def) {
     selectedTTS.value = def.id
     await loadVoices()
@@ -588,7 +618,7 @@ async function importQwenDramaVoices() {
       }
       const response = await createVoice({
         tts_provider_id: providerId, name, reference_path: null,
-        description: `系统音色,${selectedModel.value},原生表演指令,${preset.role},qwen_voice:${preset.voice}`,
+        description: `${preset.kind || '系统音色'},${selectedModel.value},原生表演指令,${preset.role},qwen_voice:${preset.voice}`,
         is_multi_emotion: 0,
       })
       if (response.code !== 200) throw new Error(response.message || '导入失败')
