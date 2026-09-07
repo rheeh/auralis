@@ -310,33 +310,16 @@ def update_project(project_id: int, dto: ProjectCreateDTO, service: ProjectServi
 @router.delete("/{project_id}", response_model=Res,
                summary="删除项目",
                description="根据项目ID删除项目,并且级联删除项目下所有章节以及内容")
-def delete_project(project_id: int, service: ProjectService = Depends(get_service), chapter_service: ChapterService = Depends(get_chapter_service),role_service: RoleService = Depends(get_role_service)):
+def delete_project(project_id: int, service: ProjectService = Depends(get_service)):
+    try:
+        success = service.delete_project(project_id)
+        return Res(data=None, code=200 if success else 404, message="删除成功" if success else "项目不存在")
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except OSError as exc:
+        logging.exception("项目文件清理失败: %s", project_id)
+        raise HTTPException(status_code=500, detail="项目目录无法清理，项目记录已保留，请检查文件权限后重试") from exc
 
-    # 级联删除项目所有相关内容，比如项目下所有章节以及内容
-    entities = chapter_service.get_all_chapters(project_id)
-    for entity in entities:
-        chapter_service.delete_chapter(entity.id)
-    #     删除project目录
-    project = service.get_project(project_id)
-    if not project:
-        return Res(data=None, code=404, message="项目不存在")
-
-    project_path = os.path.join(project.project_root_path, str(project_id))
-    if os.path.exists(project_path):
-        shutil.rmtree(project_path)  # 删除整个文件夹及其所有内容
-        logging.info("已删除目录及内容: %s", project_path)
-    else:
-        logging.info("目录不存在: %s", project_path)
-
-    # 还要删除角色库中projet下的所有角色
-    roles = role_service.get_all_roles(project_id)
-    for role in roles:
-        role_service.delete_role(role.id)
-    success = service.delete_project(project_id)
-    if success:
-        return Res(data=None, code=200, message="删除成功")
-    else:
-        return Res(data=None, code=400, message="删除失败或项目不存在")
 
 # 直接导入整本小说内容，然后解析，创建章节
 @router.post("/{project_id}/import")

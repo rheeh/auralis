@@ -11,7 +11,7 @@ not require attribution.
 
 ## Contents
 
-- `rubberduck-sfx100-v2/`: 23 selected effects from the 100 CC0 SFX #2 pack.
+- `rubberduck-sfx100-v2/`: 63 selected effects from the 100 CC0 SFX #2 pack.
 - `supplemental/`: 9 ambience and Foley files from individually verified CC0
   OpenGameArt submissions.
 - `catalog.json`: categories, source records, tags, and relative file paths.

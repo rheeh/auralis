@@ -3,11 +3,20 @@ import json
 import shutil
 import subprocess
 from pathlib import Path
+from functools import lru_cache
 
 import soundfile as sf
 
 
 def probe_audio(path: Path) -> tuple[int, int | None, int | None]:
+    path = path.resolve()
+    stat = path.stat()
+    return _probe_cached(str(path), stat.st_size, stat.st_mtime_ns)
+
+
+@lru_cache(maxsize=2048)
+def _probe_cached(filename: str, size: int, modified_ns: int) -> tuple[int, int | None, int | None]:
+    path = Path(filename)
     # Concurrent MP3 probing can crash libsndfile's MPEG initialization on
     # macOS. Probe compressed formats in a child process, isolating codecs.
     if path.suffix.lower() in {".wav", ".flac"}:

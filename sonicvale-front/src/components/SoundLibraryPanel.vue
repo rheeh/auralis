@@ -20,7 +20,7 @@
       <el-input v-model="keyword" clearable placeholder="搜索名称或标签" class="library-search">
         <template #prefix><el-icon><Search /></el-icon></template>
       </el-input>
-      <span class="asset-count">{{ filteredAssets.length }} 个素材</span>
+      <span class="asset-count">{{ loading ? '正在加载素材…' : `${filteredAssets.length} 个素材` }}</span>
       <el-tooltip content="刷新素材库">
         <el-button :icon="Refresh" circle :loading="loading" aria-label="刷新素材库" @click="loadAssets" />
       </el-tooltip>
@@ -81,7 +81,9 @@
 
     <SoundRecommendations v-if="chapterId && activeView === 'recommendations'" :chapter-id="chapterId" :line-id="actionMode === 'bind' ? selectedLineId : anchorLineId" :action-mode="actionMode" :busy-id="bindingId" @browse="activeView = 'library'" @select="applyRecommendation" />
 
-    <div v-if="activeView === 'library'" v-loading="loading" class="asset-table-wrap">
+    <el-alert v-if="loadError" :title="loadError" type="error" :closable="false" show-icon />
+    <div v-if="activeView === 'library'" v-loading="loading" class="asset-table-wrap" aria-live="polite">
+      <el-skeleton v-if="loading && !assets.length" :rows="5" animated />
       <div v-if="filteredAssets.length" class="asset-list">
         <article v-for="asset in filteredAssets" :key="asset.id" class="asset-row">
           <div class="asset-main">
@@ -125,7 +127,7 @@
           </div>
         </article>
       </div>
-      <el-empty v-else description="没有符合条件的素材" />
+      <el-empty v-else-if="!loading && !loadError" description="没有符合条件的素材" />
     </div>
 
     <input ref="fileInput" class="hidden-input" type="file" accept="audio/*,.wav,.mp3,.m4a,.ogg,.flac" @change="onBrowserFile" />
@@ -183,6 +185,7 @@ const activeView = ref(props.initialView)
 
 const assets = ref([])
 const loading = ref(false)
+const loadError = ref('')
 const bindingId = ref('')
 const sourceFilter = ref('all')
 const categoryFilter = ref('all')
@@ -336,11 +339,13 @@ async function insertAsset(asset) {
 
 async function loadAssets() {
   loading.value = true
+  loadError.value = ''
   try {
     const response = await getSoundLibraryAssets()
+    if (response?.code !== 200 || !Array.isArray(response.data)) throw new Error(response?.message || '音效库暂时不可用')
     assets.value = response?.code === 200 && Array.isArray(response.data) ? response.data : []
   } catch (error) {
-    ElMessage.error(apiError(error, '素材库加载失败'))
+    loadError.value = apiError(error, '素材库加载失败，请检查后端是否启动，再点击刷新素材库。')
   } finally {
     loading.value = false
   }

@@ -61,6 +61,7 @@ class LLMEngine:
         remove_custom_response_format: bool = False,
         retries: int = 3,
         delay: float = 1.0,
+        timeout: float = 3000,
     ) -> str:
         model = (self.model_name or "").strip().lower()
         if model == "qwen-plus" or model.startswith("qwen-plus-"):
@@ -77,7 +78,7 @@ class LLMEngine:
                     model=self.model_name,
                     messages=self._messages(prompt, system_prompt),
                     stream=False,
-                    timeout=3000,
+                    timeout=timeout,
                     **request_params,
                 )
                 return response.choices[0].message.content
@@ -150,6 +151,7 @@ class LLMEngine:
         retries: int = 3,
         delay: float = 1.0,
         system_prompt: str | None = None,
+        timeout: float = 3000,
     ) -> str:
         """非流式文本生成，兼容原有单 user prompt 调用。"""
         return self._completion(
@@ -157,6 +159,7 @@ class LLMEngine:
             system_prompt=system_prompt,
             retries=retries,
             delay=delay,
+            timeout=timeout,
         )
 
     def generate_json(

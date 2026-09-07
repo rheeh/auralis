@@ -62,6 +62,7 @@ class SoundRecommendationTest(unittest.TestCase):
         self.assertNotIn('not-a-real-key', self.llm.generate_text.call_args.args[0])
         self.assertEqual(result['recommendations'][0]['asset']['id'], self.asset['id'])
         self.assertEqual(self.llm.generate_text.call_args.kwargs['retries'], 1)
+        self.assertEqual(self.llm.generate_text.call_args.kwargs['timeout'], 150)
         self.assertEqual(self.make_engine.call_args.args[0].llm_model, 'qwen3.8-27b')
         self.db.expire_all()
         self.assertEqual(self.db.get(LinePO, self.line.id).audio_path, '/unchanged.wav')

@@ -37,12 +37,13 @@
       <el-button v-if="!exportOnly" :disabled="!chapterLines.length" @click="openSoundLibrary(selectedLineId || materialLines[0]?.id, 'recommendations')">AI 推荐音效</el-button>
     </section>
 
+    <SceneIllustration v-if="renderResult && visualScenes.length" :scenes="visualScenes" :seconds="renderTime" @seek="seekScene" />
     <section v-if="renderResult" class="render-result">
       <div>
         <strong>时间线成片</strong>
         <span>{{ formatDuration(renderResult.duration_ms) }} · {{ renderResult.rendered_clip_count }} 个有效片段</span>
       </div>
-      <audio controls preload="metadata" :src="renderAudioUrl" />
+      <audio ref="renderPlayer" aria-label="播放时间线成片" controls preload="metadata" :src="renderAudioUrl" @timeupdate="renderTime = $event.target.currentTime" @seeking="renderTime = $event.target.currentTime" @loadedmetadata="renderTime = $event.target.currentTime" />
       <el-button :icon="Download" @click="downloadRender">下载 WAV</el-button>
     </section>
 
@@ -100,6 +101,8 @@ import { ElMessage } from 'element-plus'
 import { Bell, Check, Download, Film, Headset, Microphone, Refresh, VideoPlay } from '@element-plus/icons-vue'
 import { getLinesByChapter } from '../../api/line'
 import TimelineTracks from './TimelineTracks.vue'
+import SceneIllustration from './SceneIllustration.vue'
+import { nativeSceneSchedule } from '../../demo/sceneImages'
 import SoundLibraryPanel from '../SoundLibraryPanel.vue'
 import {
   buildChapterTimeline,
@@ -119,6 +122,9 @@ const building = ref(false)
 const rendering = ref(false)
 const renderResult = ref(null)
 const renderAudioUrl = ref('')
+const renderPlayer = ref(null), renderTime = ref(0)
+const visualScenes = computed(() => nativeSceneSchedule(timeline.value.tracks || []))
+function seekScene(seconds) { if (renderPlayer.value) { renderPlayer.value.currentTime = seconds; renderTime.value = seconds } }
 const clipEditorVisible = ref(false)
 const clipForm = ref(null)
 const savingClip = ref(false)

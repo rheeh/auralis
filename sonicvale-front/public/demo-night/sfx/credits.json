@@ -54,5 +54,325 @@
     "author": "Auralis",
     "license": "CC0-1.0",
     "source": "Original procedural Foley, scripts/build_demo_effects.py"
+  },
+  {
+    "id": "sfx100v2_air_03",
+    "label": "空气流动 03",
+    "file": "sfx/expanded/sfx100v2_air_03.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_door_04",
+    "label": "门响 04",
+    "file": "sfx/expanded/sfx100v2_door_04.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_door_05",
+    "label": "门响 05",
+    "file": "sfx/expanded/sfx100v2_door_05.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_footstep_wet_02",
+    "label": "湿地脚步 02",
+    "file": "sfx/expanded/sfx100v2_footstep_wet_02.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_footstep_wet_03",
+    "label": "湿地脚步 03",
+    "file": "sfx/expanded/sfx100v2_footstep_wet_03.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_footstep_wood_03",
+    "label": "木地板脚步 03",
+    "file": "sfx/expanded/sfx100v2_footstep_wood_03.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_footstep_wood_04",
+    "label": "木地板脚步 04",
+    "file": "sfx/expanded/sfx100v2_footstep_wood_04.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_glass_02",
+    "label": "玻璃声 02",
+    "file": "sfx/expanded/sfx100v2_glass_02.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_glass_03",
+    "label": "玻璃声 03",
+    "file": "sfx/expanded/sfx100v2_glass_03.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_glass_04",
+    "label": "玻璃声 04",
+    "file": "sfx/expanded/sfx100v2_glass_04.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_glass_05",
+    "label": "玻璃声 05",
+    "file": "sfx/expanded/sfx100v2_glass_05.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_glass_06",
+    "label": "玻璃声 06",
+    "file": "sfx/expanded/sfx100v2_glass_06.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_hit_02",
+    "label": "撞击 02",
+    "file": "sfx/expanded/sfx100v2_hit_02.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_hit_03",
+    "label": "撞击 03",
+    "file": "sfx/expanded/sfx100v2_hit_03.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_items_01",
+    "label": "物件动作 01",
+    "file": "sfx/expanded/sfx100v2_items_01.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_items_02",
+    "label": "物件动作 02",
+    "file": "sfx/expanded/sfx100v2_items_02.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_loop_construction_site",
+    "label": "施工现场",
+    "file": "sfx/expanded/sfx100v2_loop_construction_site.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_loop_machine_01",
+    "label": "机械运转 01",
+    "file": "sfx/expanded/sfx100v2_loop_machine_01.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_loop_machine_02",
+    "label": "机械运转 02",
+    "file": "sfx/expanded/sfx100v2_loop_machine_02.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_loop_machine_03",
+    "label": "机械运转 03",
+    "file": "sfx/expanded/sfx100v2_loop_machine_03.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_loop_machine_04",
+    "label": "机械运转 04",
+    "file": "sfx/expanded/sfx100v2_loop_machine_04.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_loop_water_03",
+    "label": "流水循环 03",
+    "file": "sfx/expanded/sfx100v2_loop_water_03.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_metal_01",
+    "label": "金属声 01",
+    "file": "sfx/expanded/sfx100v2_metal_01.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_metal_02",
+    "label": "金属声 02",
+    "file": "sfx/expanded/sfx100v2_metal_02.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_metal_03",
+    "label": "金属声 03",
+    "file": "sfx/expanded/sfx100v2_metal_03.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_metal_04",
+    "label": "金属声 04",
+    "file": "sfx/expanded/sfx100v2_metal_04.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_metal_05",
+    "label": "金属声 05",
+    "file": "sfx/expanded/sfx100v2_metal_05.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_metal_06",
+    "label": "金属声 06",
+    "file": "sfx/expanded/sfx100v2_metal_06.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_metal_hit_01",
+    "label": "金属撞击 01",
+    "file": "sfx/expanded/sfx100v2_metal_hit_01.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_metal_hit_02",
+    "label": "金属撞击 02",
+    "file": "sfx/expanded/sfx100v2_metal_hit_02.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_stones_01",
+    "label": "石块声 01",
+    "file": "sfx/expanded/sfx100v2_stones_01.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_stones_02",
+    "label": "石块声 02",
+    "file": "sfx/expanded/sfx100v2_stones_02.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_stones_03",
+    "label": "石块声 03",
+    "file": "sfx/expanded/sfx100v2_stones_03.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_switch_02",
+    "label": "开关 02",
+    "file": "sfx/expanded/sfx100v2_switch_02.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_wood_01",
+    "label": "木材声 01",
+    "file": "sfx/expanded/sfx100v2_wood_01.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_wood_02",
+    "label": "木材声 02",
+    "file": "sfx/expanded/sfx100v2_wood_02.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_wood_03",
+    "label": "木材声 03",
+    "file": "sfx/expanded/sfx100v2_wood_03.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_wood_04",
+    "label": "木材声 04",
+    "file": "sfx/expanded/sfx100v2_wood_04.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_wood_hit_02",
+    "label": "木材撞击 02",
+    "file": "sfx/expanded/sfx100v2_wood_hit_02.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "sfx100v2_wood_hit_03",
+    "label": "木材撞击 03",
+    "file": "sfx/expanded/sfx100v2_wood_hit_03.ogg",
+    "author": "rubberduck",
+    "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
+    "license": "CC0-1.0"
   }
 ]

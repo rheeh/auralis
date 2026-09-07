@@ -444,11 +444,12 @@ async function handleDelete(id) {
     background: 'rgba(0, 0, 0, 0.28)',
   })
   try {
-    await deleteProject(id)
+    const response = await deleteProject(id)
+    if (response?.code !== 200) throw new Error(response?.message || '删除失败')
     projects.value = projects.value.filter((p) => p.id !== id)
     ElMessage.success('删除成功')
-  } catch {
-    ElMessage.error('删除失败')
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.detail || error?.message || '删除失败，请重试')
   } finally {
     loading.close()
   }

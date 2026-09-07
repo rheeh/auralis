@@ -90,7 +90,7 @@ with TestClient(app) as client:
 
     library = client.get("/sound-library/assets", params={"source_type": "builtin"}).json()
     builtin_assets = library.get("data", [])
-    if library.get("code") != 200 or len(builtin_assets) != 32:
+    if library.get("code") != 200 or len(builtin_assets) != 72:
         raise SystemExit(f"builtin sound library invalid: {library}")
     builtin_id = builtin_assets[0]["id"]
     builtin_audio = client.get(f"/sound-library/assets/{builtin_id}/audio")
@@ -349,7 +349,7 @@ if rg -q "estimateSeconds|text_content.length" src/components/production/Chapter
   exit 1
 fi
 echo "Frontend timeline API integration ok"
-node --experimental-default-type=module --test tests/audioMixer.test.mjs src/workspace/navigation.test.mjs
+node --experimental-default-type=module --test tests/audioMixer.test.mjs src/workspace/navigation.test.mjs src/demo/sceneImages.test.mjs
 node --check electron/main.js
 node --check electron/preload.js
 node --check electron/logger.js

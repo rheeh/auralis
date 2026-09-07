@@ -2,8 +2,11 @@ from __future__ import annotations
 import os
 import re
 import logging
+import shutil
+from pathlib import Path
+from uuid import uuid4
 
-from sqlalchemy import Sequence, delete, select
+from sqlalchemy import Sequence, delete, select, or_, update
 
 from app.core.config import getConfigPath
 from app.entity.project_entity import ProjectEntity
@@ -11,6 +14,12 @@ from app.models.po import (
     AdaptationDraftRevisionPO,
     AdaptationRunPO,
     AudioTaskPO,
+    AudioAssetPO,
+    ChapterPO,
+    LinePO,
+    RolePO,
+    TimelineClipPO,
+    TimelineTrackPO,
     ChatMessagePO,
     ChatSessionPO,
     ProjectPO,
@@ -103,11 +112,19 @@ class ProjectService:
         return True
 
     def delete_project(self, project_id: int) -> bool:
-        """删除项目
-        - 可以添加业务校验，例如项目下有章节是否允许删除
-        - 后续需要级联删除所有章节内容
-        """
+        """Delete the complete dependency graph atomically, then remove files."""
         db = self.repository.db
+        project = self.repository.get_by_id(project_id)
+        if not project:
+            return False
+        if db.scalar(select(AudioTaskPO.id).where(AudioTaskPO.project_id == project_id, AudioTaskPO.status.in_(["running", "processing"])).limit(1)):
+            raise ValueError("项目仍在生成音频，请等待当前任务结束后再删除")
+        root = Path(project.project_root_path or Path(getConfigPath()) / "projects").expanduser().resolve()
+        folder = root / str(project_id)
+        if folder.is_symlink():
+            raise ValueError("项目目录是符号链接，请先检查项目存储位置")
+        quarantine = root / f".deleting-{project_id}-{uuid4().hex}"
+        moved = False
         session_ids = list(db.execute(
             select(ChatSessionPO.id).where(ChatSessionPO.project_id == project_id)
         ).scalars())
@@ -115,22 +132,42 @@ class ProjectService:
             select(AdaptationRunPO.id).where(AdaptationRunPO.project_id == project_id)
         ).scalars())
 
-        # 工作流表没有完整的数据库级外键级联，删除项目时必须按依赖顺序清理。
-        db.execute(delete(AudioTaskPO).where(AudioTaskPO.project_id == project_id))
-        db.execute(delete(WorkflowEventPO).where(WorkflowEventPO.project_id == project_id))
-        if session_ids:
-            db.execute(delete(AdaptationDraftRevisionPO).where(AdaptationDraftRevisionPO.session_id.in_(session_ids)))
+        chapter_ids = select(ChapterPO.id).where(ChapterPO.project_id == project_id)
+        line_ids = select(LinePO.id).where(LinePO.chapter_id.in_(chapter_ids))
+        asset_ids = select(AudioAssetPO.id).where(AudioAssetPO.project_id == project_id)
+        try:
+            db.execute(delete(AudioTaskPO).where(or_(AudioTaskPO.project_id == project_id, AudioTaskPO.line_id.in_(line_ids), AudioTaskPO.session_id.in_(session_ids))))
+            db.execute(delete(WorkflowEventPO).where(or_(WorkflowEventPO.project_id == project_id, WorkflowEventPO.session_id.in_(session_ids))))
+            db.execute(delete(AdaptationDraftRevisionPO).where(or_(AdaptationDraftRevisionPO.session_id.in_(session_ids), AdaptationDraftRevisionPO.run_id.in_(run_ids))))
             db.execute(delete(ChatMessagePO).where(ChatMessagePO.session_id.in_(session_ids)))
             db.execute(delete(ChatSessionPO).where(ChatSessionPO.id.in_(session_ids)))
-        if run_ids:
-            db.execute(delete(AdaptationDraftRevisionPO).where(AdaptationDraftRevisionPO.run_id.in_(run_ids)))
-        TimelineService.clear_project_timeline(db, project_id)
-        db.execute(delete(SourceDocumentPO).where(SourceDocumentPO.project_id == project_id))
-        db.execute(delete(AdaptationRunPO).where(AdaptationRunPO.project_id == project_id))
-        db.commit()
-
-        res = self.repository.delete(project_id)
-        return res
+            db.execute(delete(TimelineClipPO).where(TimelineClipPO.project_id == project_id))
+            # Derived audio assets reference source takes; detach before bulk deletion.
+            db.execute(update(AudioAssetPO).where(AudioAssetPO.id.in_(asset_ids)).values(source_asset_id=None))
+            db.execute(delete(AudioAssetPO).where(AudioAssetPO.project_id == project_id))
+            db.execute(delete(TimelineTrackPO).where(TimelineTrackPO.project_id == project_id))
+            db.execute(delete(LinePO).where(LinePO.chapter_id.in_(chapter_ids)))
+            db.execute(delete(ChapterPO).where(ChapterPO.project_id == project_id))
+            db.execute(delete(RolePO).where(RolePO.project_id == project_id))
+            db.execute(delete(SourceDocumentPO).where(SourceDocumentPO.project_id == project_id))
+            db.execute(delete(AdaptationRunPO).where(AdaptationRunPO.project_id == project_id))
+            db.execute(delete(ProjectPO).where(ProjectPO.id == project_id))
+            db.flush()
+            if folder.exists():
+                folder.rename(quarantine)
+                moved = True
+            db.commit()
+        except Exception:
+            db.rollback()
+            if moved:
+                quarantine.rename(folder)
+            raise
+        if moved:
+            try:
+                shutil.rmtree(quarantine)
+            except OSError:
+                logging.warning("项目已删除，待清理的文件副本保留在 %s", quarantine)
+        return True
 
 
     def search_projects(self, keyword: str) -> Sequence[ProjectEntity]:

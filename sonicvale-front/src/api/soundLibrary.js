@@ -5,7 +5,7 @@ export function getSoundLibraryAssets(params = {}) {
 }
 
 export function recommendSounds(payload) {
-  return request.post('/sound-library/recommendations', payload, { timeout: 90000 })
+  return request.post('/sound-library/recommendations', payload, { timeout: 180000 })
 }
 
 export function importSoundLibraryPath(payload) {

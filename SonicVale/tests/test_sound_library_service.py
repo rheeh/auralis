@@ -46,7 +46,7 @@ class SoundLibraryServiceTest(unittest.TestCase):
 
     def test_builtin_catalog_is_complete_and_filterable(self):
         assets = self.service.list_assets(source_type="builtin")
-        self.assertEqual(len(assets), 32)
+        self.assertEqual(len(assets), 72)
         self.assertTrue(all(asset["license"] == "CC0-1.0" for asset in assets))
         self.assertTrue(all(asset["duration_ms"] > 0 for asset in assets))
         self.assertTrue(all(os.path.isfile(asset["path"]) for asset in assets))

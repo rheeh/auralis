@@ -101,7 +101,7 @@
     </div>
     <el-empty v-else description="台本写入后会在这里逐句制作" />
 
-    <el-drawer v-model="soundLibraryOpen" title="挑选场景音效" size="min(900px, 95vw)" append-to-body destroy-on-close>
+    <el-drawer v-model="soundLibraryOpen" title="挑选场景音效" size="90%" class="sound-library-drawer" append-to-body destroy-on-close>
       <SoundLibraryPanel :chapter-id="chapterId" :lines="lines" :material-lines="lines.filter(line => !isSpeakable(line))" :target-line-id="soundAnchorId" :initial-view="soundLibraryView" @inserted="onSoundInserted" @bound="onSoundInserted" />
     </el-drawer>
 
@@ -230,4 +230,8 @@ function schedulePoll(){clearTimeout(pollTimer);if((audioSummary.tasks||[]).some
 @media(max-width:760px){.line-annotations{flex-wrap:wrap}.line-annotations>span{flex-basis:100%}.line-tools{align-items:stretch;flex-direction:column}.source-audio-label{align-items:flex-start;flex-direction:column}.variant-item{grid-template-columns:1fr auto}.variant-item audio{grid-column:1/-1}}
 
 .effective-voice{display:flex;flex-wrap:wrap;gap:6px 12px;margin:8px 0;font-size:11px}.effective-voice span,.effective-voice small{color:var(--el-text-color-secondary)}
+</style>
+
+<style>
+.sound-library-drawer { max-width: 900px; }
 </style>

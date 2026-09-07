@@ -84,7 +84,7 @@ class SoundRecommendationService:
         try:
             # One completion, no automatic retries or fallback to another model.
             engine = WorkflowLLMService(self.db).make_engine(SimpleNamespace(llm_provider_id=provider.id, llm_model=dto.model))
-            content = engine.generate_text(prompt, system_prompt=SYSTEM_PROMPT, retries=1)
+            content = engine.generate_text(prompt, system_prompt=SYSTEM_PROMPT, retries=1, timeout=150)
         except Exception as exc:
             detail = str(exc).lower()
             if any(word in detail for word in ("arrearage", "quota", "insufficient", "balance")):
