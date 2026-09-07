@@ -3,6 +3,8 @@
     <template #reference><button class="picker-trigger" type="button" :aria-label="label" :aria-expanded="visible">{{ selected?.name || '按模型选择音色' }}<span>⌄</span></button></template>
     <section class="voice-browser" :aria-label="label">
       <el-input v-model="query" clearable placeholder="搜索音色、性别、风格或模型" aria-label="搜索角色音色" />
+      <div class="style-filters" role="group" aria-label="按音色用途筛选"><button v-for="style in voiceStyles" :key="style.id" type="button" :aria-pressed="styleFilter===style.id" @click="styleFilter=style.id">{{ style.label }}</button></div>
+      <p class="style-hint">对白类优先；分类依据音色描述，实际表演请试听。</p>
       <div class="model-groups">
         <details v-for="group in groups" :key="group.id" :open="isOpen(group)" @toggle="remember(group.id,$event)">
           <summary><strong>{{ group.label }}</strong><span>{{ group.voices.length }} 个音色</span></summary>
@@ -20,11 +22,11 @@
 </template>
 <script setup>
 import { computed, ref, reactive } from 'vue'
-import { groupVoices } from '../utils/voiceGroups'
+import { groupVoices, voiceStyles } from '../utils/voiceGroups'
 const props=defineProps({modelValue:Number,providers:{type:Array,default:()=>[]},voices:{type:Array,default:()=>[]},previewingId:Number,isVoiceDisabled:{type:Function,default:()=>false},clearable:Boolean,label:{type:String,default:'按模型选择角色音色'}})
 const emit=defineEmits(['update:modelValue','preview'])
-const visible=ref(false),query=ref(''),opened=reactive({})
-const groups=computed(()=>groupVoices(props.providers,props.voices,query.value))
+const visible=ref(false),query=ref(''),styleFilter=ref('all'),opened=reactive({})
+const groups=computed(()=>groupVoices(props.providers,props.voices,query.value,styleFilter.value))
 const selected=computed(()=>props.voices.find(v=>v.id===props.modelValue))
 function isOpen(group){return query.value.trim()?true:(opened[group.id]??false)}
 function remember(id,event){if(!query.value.trim())opened[id]=event.target.open}
@@ -32,6 +34,7 @@ function choose(id){emit('update:modelValue',id);visible.value=false}
 function displayTags(voice){return (voice.description||'').split(',').filter(t=>!t.includes(':')&&!/qwen|cosyvoice|sambert|edge/i.test(t)).slice(0,5).join(' · ')}
 </script>
 <style scoped>
+.style-filters{display:flex;flex-wrap:wrap;gap:5px}.style-filters button{padding:5px 8px;border:1px solid var(--el-border-color);border-radius:14px;background:var(--el-bg-color);color:var(--el-text-color-regular);cursor:pointer;font-size:12px}.style-filters button[aria-pressed=true]{background:var(--el-color-primary-light-9);border-color:var(--el-color-primary);color:var(--el-color-primary)}.style-hint{margin:0;color:var(--el-text-color-secondary);font-size:12px}
 .picker-trigger{display:flex;justify-content:space-between;gap:10px;align-items:center;width:100%;min-height:34px;padding:6px 12px;border:1px solid var(--el-border-color);border-radius:6px;background:var(--el-bg-color);color:var(--el-text-color-primary);font:inherit;text-align:left;cursor:pointer}.voice-browser{display:grid;gap:10px}.model-groups{max-height:380px;overflow:auto}.model-groups details{border-bottom:1px solid var(--el-border-color-lighter)}summary{display:flex;align-items:center;gap:7px;padding:12px 2px;cursor:pointer;list-style:none}summary:before{content:'▸'}details[open]>summary:before{content:'▾'}summary strong{font-size:12px;overflow-wrap:anywhere}summary span{margin-left:auto;white-space:nowrap;color:var(--el-text-color-secondary);font-size:12px}.model-note{margin:0 0 7px;font-size:12px;color:var(--el-text-color-secondary)}.voice-choice{display:flex;align-items:center;border-radius:6px;margin:3px 0}.voice-choice:hover,.voice-choice.selected{background:var(--el-fill-color-light)}.choose-voice{flex:1;display:grid;gap:4px;text-align:left;padding:10px;border:0;background:none;color:var(--el-text-color-primary);cursor:pointer}.choose-voice small{color:var(--el-text-color-secondary)}.preview-voice{border:0;background:none;color:var(--el-color-primary);padding:10px;cursor:pointer}button:disabled{opacity:.4;cursor:not-allowed}footer{display:flex;justify-content:flex-end;align-items:center;gap:12px}footer a{font-size:12px;color:var(--el-color-primary)}
 </style>
 <style>.model-voice-popover{max-width:calc(100vw - 32px);box-sizing:border-box}</style>
