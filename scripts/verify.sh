@@ -349,7 +349,7 @@ if rg -q "estimateSeconds|text_content.length" src/components/production/Chapter
   exit 1
 fi
 echo "Frontend timeline API integration ok"
-node --experimental-default-type=module --test tests/audioMixer.test.mjs src/workspace/navigation.test.mjs src/demo/sceneImages.test.mjs src/utils/voiceGroups.test.mjs
+node --experimental-default-type=module --test tests/audioMixer.test.mjs src/workspace/navigation.test.mjs src/demo/sceneImages.test.mjs src/utils/voiceGroups.test.mjs src/utils/timelineEditing.test.mjs
 node --check electron/main.js
 node --check electron/preload.js
 node --check electron/logger.js

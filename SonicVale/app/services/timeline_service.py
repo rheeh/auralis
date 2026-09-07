@@ -52,7 +52,8 @@ class TimelineService:
             raise ValueError("新音效时长不可用")
         for clip in clips:
             clip.asset_id = asset.id
-            clip.duration_ms = min(clip.duration_ms, asset.duration_ms)
+            if not clip.is_user_edited:
+                clip.duration_ms = min(clip.duration_ms, asset.duration_ms)
             clip.fade_in_ms = min(clip.fade_in_ms, clip.duration_ms)
             clip.fade_out_ms = min(clip.fade_out_ms, clip.duration_ms - clip.fade_in_ms)
             clip.revision += 1
@@ -226,7 +227,8 @@ class TimelineService:
                     clip = manual_clips[line.id]
                     self._refresh_manual_clip(clip, asset, track, old_durations.get(clip.id))
                     built_clips.append(clip)
-                    cursors = max(cursors, clip.start_ms + clip.duration_ms)
+                    if track_type in {"voice", "narration"}:
+                        cursors = max(cursors, clip.start_ms + clip.duration_ms)
                     continue
                 clip = TimelineClipPO(
                     project_id=project_id,
@@ -237,7 +239,7 @@ class TimelineService:
                     track_type=track_type,
                     start_ms=cursors,
                     duration_ms=asset.duration_ms,
-                    volume_db=0.0,
+                    volume_db=-18.0 if track_type == "bgm" else -6.0 if track_type == "sfx" else 0.0,
                     fade_in_ms=0,
                     fade_out_ms=0,
                     is_muted=False,
@@ -246,7 +248,8 @@ class TimelineService:
                 )
                 self.db.add(clip)
                 built_clips.append(clip)
-                cursors += asset.duration_ms
+                if track_type in {"voice", "narration"}:
+                    cursors += asset.duration_ms
             # Quick-added ambience and foley overlay their anchor instead of
             # pushing the whole chapter forward by their source-file duration.
             for line in lines:
@@ -289,8 +292,10 @@ class TimelineService:
     def _refresh_manual_clip(clip, asset, track, old_duration):
         # A gain/move edit does not imply a trim. Untrimmed takes follow the new
         # source duration; explicit trims remain bounded by available audio.
-        clip.duration_ms = (asset.duration_ms if clip.duration_ms == old_duration
-                            else min(clip.duration_ms, asset.duration_ms))
+        if clip.duration_ms == old_duration:
+            clip.duration_ms = asset.duration_ms
+        elif track.track_type not in {"bgm", "sfx"}:
+            clip.duration_ms = min(clip.duration_ms, asset.duration_ms)
         clip.asset_id = asset.id
         clip.track_id = track.id
         clip.track_type = track.track_type
@@ -366,7 +371,10 @@ class TimelineService:
         duration_ms = int(values.get("duration_ms", clip.duration_ms))
         fade_in_ms = int(values.get("fade_in_ms", clip.fade_in_ms))
         fade_out_ms = int(values.get("fade_out_ms", clip.fade_out_ms))
-        if duration_ms > asset.duration_ms:
+        start_ms = int(values.get("start_ms", clip.start_ms))
+        if start_ms + duration_ms > 4 * 60 * 60 * 1000:
+            raise ValueError("时间线总时长不能超过 4 小时")
+        if duration_ms > asset.duration_ms and clip.track_type not in {"bgm", "sfx"}:
             raise ValueError(f"片段长度不能超过源音频时长 {asset.duration_ms} ms")
         if fade_in_ms + fade_out_ms > duration_ms:
             raise ValueError("淡入和淡出总时长不能超过片段长度")
@@ -489,7 +497,7 @@ class TimelineService:
                 "active_version": line.active_audio_version_id,
                 "active_variant": line.active_audio_variant_id,
             })
-        return hashlib.sha256(json.dumps(source, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
+        return hashlib.sha256(json.dumps({"layout": "overlay_v2", "lines": source}, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
 
     def _get_chapter(self, project_id: int, chapter_id: int) -> ChapterPO:
         chapter = (
@@ -675,6 +683,7 @@ class TimelineService:
             "fade_out_ms": clip.fade_out_ms,
             "is_muted": bool(clip.is_muted),
             "is_user_edited": bool(clip.is_user_edited),
+            "is_looping": bool(asset and clip.track_type in {"bgm", "sfx"} and clip.duration_ms > asset.duration_ms),
             "revision": clip.revision,
             "line": {
                 "id": line.id,

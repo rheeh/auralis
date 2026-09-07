@@ -195,6 +195,32 @@ class TimelineRenderServiceTest(unittest.TestCase):
         self.assertEqual(len(result["missing_lines"]), 1)
         self.assertEqual(result["rendered_clip_count"], 3)
 
+    def test_background_and_effect_overlay_speech_and_loop_without_changing_source(self):
+        music_path = self._tone("short-music.wav", 0.2, 0.2)
+        before = open(music_path, "rb").read()
+        music = LinePO(chapter_id=self.chapter.id, line_order=1, track="bgm", audio_path=music_path)
+        effect = LinePO(chapter_id=self.chapter.id, line_order=2, track="sfx", audio_path=self._tone("effect.wav", 0.1, 0.2))
+        voice = LinePO(chapter_id=self.chapter.id, line_order=3, track="voice", audio_path=self._tone("spoken.wav", 0.1, 1.0))
+        self.session.add_all([music, effect, voice]); self.session.commit()
+        timeline = TimelineService(self.session)
+        timeline.build_chapter_timeline(self.project.id, self.chapter.id)
+        clips = {clip.track_type: clip for clip in self.session.query(TimelineClipPO).all()}
+        self.assertEqual({clip.start_ms for clip in clips.values()}, {0})
+        timeline.update_clip(self.project.id, self.chapter.id, clips["bgm"].id, TimelineClipUpdateDTO(duration_ms=1200, volume_db=-6))
+        # Refresh must retain the extended background without delaying speech.
+        timeline.build_chapter_timeline(self.project.id, self.chapter.id, force=True)
+        self.assertEqual(self.session.query(TimelineClipPO).filter_by(line_id=voice.id).one().start_ms, 0)
+        self.assertEqual(clips["bgm"].duration_ms, 1200)
+        result = TimelineRenderService(self.session).render_chapter(self.project.id, self.chapter.id)
+        audio, rate = sf.read(result["audio_path"], dtype="float32", always_2d=True)
+        self.assertAlmostEqual(len(audio) / rate, 1.2, delta=0.02)
+        # Beyond the source's 0.2 seconds, looping music still overlaps speech.
+        self.assertAlmostEqual(float(audio[round(0.75 * rate), 0]), 0.2, delta=0.015)
+        self.assertAlmostEqual(float(audio[round(1.1 * rate), 0]), 0.1, delta=0.015)
+        self.assertEqual(open(music_path, "rb").read(), before)
+        manifest = json.loads(open(result["manifest_path"]).read())
+        self.assertTrue(next(clip for clip in manifest["clips"] if clip["track_type"] == "bgm")["is_looping"])
+
     def test_empty_partial_timeline_cannot_render(self):
         self.session.add(LinePO(chapter_id=self.chapter.id, line_order=1, track="voice", text_content="暂无音频"))
         self.session.commit()
@@ -209,8 +235,8 @@ class TimelineRenderServiceTest(unittest.TestCase):
             service.update_clip(
                 self.project.id,
                 self.chapter.id,
-                clips["sfx"].id,
-                TimelineClipUpdateDTO(duration_ms=900),
+                clips["voice"].id,
+                TimelineClipUpdateDTO(duration_ms=1200),
             )
         with self.assertRaisesRegex(ValueError, "总时长不能超过"):
             service.update_clip(

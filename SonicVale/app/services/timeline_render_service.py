@@ -154,7 +154,7 @@ class TimelineRenderService:
                 raise ValueError(f"片段 #{clip.id} 缺少音频资产")
             if not os.path.isfile(asset.path):
                 raise FileNotFoundError(f"片段 #{clip.id} 的音频文件不存在: {asset.path}")
-            if clip.duration_ms <= 0 or clip.duration_ms > asset.duration_ms:
+            if asset.duration_ms <= 0 or clip.duration_ms <= 0 or (clip.duration_ms > asset.duration_ms and clip.track_type not in {"bgm", "sfx"}):
                 raise ValueError(f"片段 #{clip.id} 的时长超出源音频范围")
             if clip.fade_in_ms < 0 or clip.fade_out_ms < 0 or clip.fade_in_ms + clip.fade_out_ms > clip.duration_ms:
                 raise ValueError(f"片段 #{clip.id} 的淡入淡出设置无效")
@@ -167,6 +167,8 @@ class TimelineRenderService:
         outputs = []
         for index, clip in enumerate(clips):
             asset = assets[clip.asset_id]
+            if clip.track_type in {"bgm", "sfx"} and clip.duration_ms > asset.duration_ms:
+                command.extend(["-stream_loop", "-1"])
             command.extend(["-i", asset.path])
             duration = clip.duration_ms / 1000
             chain = [
@@ -271,6 +273,7 @@ class TimelineRenderService:
             "asset_id": clip.asset_id,
             "asset_path": asset.path,
             "asset_checksum": asset.checksum,
+            "is_looping": clip.track_type in {"bgm", "sfx"} and clip.duration_ms > asset.duration_ms,
             "start_ms": clip.start_ms,
             "duration_ms": clip.duration_ms,
             "volume_db": clip.volume_db,

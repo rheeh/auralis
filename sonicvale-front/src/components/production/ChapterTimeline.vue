@@ -20,6 +20,7 @@
 
     <section class="timeline-toolbar">
       <el-segmented v-if="!exportOnly" v-model="zoom" :options="zoomOptions" />
+      <el-switch v-if="!exportOnly" v-model="snapEnabled" active-text="边缘吸附" />
       <el-tag effect="plain">{{ timeline.clip_count || 0 }} 条真实片段</el-tag>
       <el-tag type="success" effect="plain">{{ completedCount }} 条已生成</el-tag>
       <el-tag type="info" effect="plain">{{ formatDuration(timeline.duration_ms) }}</el-tag>
@@ -51,7 +52,8 @@
       <el-button :icon="Download" @click="downloadRender">下载 WAV</el-button>
     </section>
 
-    <TimelineTracks v-if="!exportOnly" :tracks="displayTracks" :duration-ms="timeline.duration_ms" :pixels-per-second="pixelsPerSecond" :selected-line-id="selectedLineId" editable @select="handleClipClick" @interact="startClipInteraction" />
+    <p v-if="!exportOnly" class="overview-note">拖动片段移动位置，拖动左右边界调整长度；背景音乐和音效超出原长会循环。吸附时显示竖线，按住 Alt 可临时关闭；点击片段可快捷对齐。</p>
+    <TimelineTracks v-if="!exportOnly" :snap-marker-ms="snapMarkerMs" :tracks="displayTracks" :duration-ms="displayDurationMs" :pixels-per-second="pixelsPerSecond" :selected-line-id="selectedLineId" editable @select="handleClipClick" @interact="startClipInteraction" />
 
     <el-dialog v-model="soundLibraryVisible" title="给场景加入音效" width="min(1120px, 94vw)" destroy-on-close>
       <SoundLibraryPanel
@@ -67,6 +69,15 @@
 
     <el-dialog v-model="clipEditorVisible" title="编辑时间线片段" width="min(520px, 92vw)" destroy-on-close>
       <el-form v-if="clipForm" label-position="top">
+        <p class="overview-note">源音频 {{ formatDuration(clipForm.source_duration_ms) }}<span v-if="isMaterialClip(clipForm)"> · 延长超出原长时循环播放</span></p>
+        <div class="alignment-tools">
+          <el-select v-model="alignmentTargetId" filterable aria-label="对齐参考片段" placeholder="选择要对齐的另一段音轨">
+            <el-option v-for="clip in alignmentTargets" :key="clip.id" :value="clip.id" :label="`${trackDefinitions.find(track => track.key === clip.track_type)?.label} · 第${clip.line?.line_order || '?'}行 · ${(clip.line?.text_content || '').slice(0,30)}`" />
+          </el-select>
+          <div><el-button size="small" :disabled="!alignmentTargetId" @click="applyAlignment('start')">起点对齐</el-button><el-button size="small" :disabled="!alignmentTargetId" @click="applyAlignment('end')">终点对齐</el-button><el-button size="small" :disabled="!alignmentTargetId" @click="applyAlignment('after')">接在后面</el-button><el-button v-if="isMaterialClip(clipForm)" size="small" :disabled="!alignmentTargetId" @click="applyAlignment('span')">覆盖参考片段</el-button></div>
+          <div v-if="isMaterialClip(clipForm)"><el-button size="small" @click="coverSpeech">铺满人声</el-button><el-button size="small" @click="extendMaterial(5000)">延长 5 秒</el-button><el-button size="small" @click="extendMaterial(10000)">延长 10 秒</el-button><el-button size="small" @click="setClipDuration(clipForm.source_duration_ms)">恢复原长</el-button></div>
+          <small>快捷调整后，点击「保存片段」生效。</small>
+        </div>
         <div class="clip-form-grid">
           <el-form-item label="开始时间（毫秒）">
             <el-input-number v-model="clipForm.start_ms" :min="0" :step="100" controls-position="right" />
@@ -100,6 +111,7 @@
 </template>
 
 <script setup>
+import { alignClip, dragClip, durationLimit, isMaterialClip, MAX_TIMELINE_MS } from '../../utils/timelineEditing'
 import { computed, nextTick, ref, toRef, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Bell, Check, Download, Film, Headset, Microphone, Refresh, VideoPlay } from '@element-plus/icons-vue'
@@ -117,6 +129,10 @@ import {
   updateTimelineClip,
 } from '../../api/timeline'
 
+const snapEnabled = ref(true), snapMarkerMs = ref(null), alignmentTargetId = ref(null)
+const allClips = computed(() => (timeline.value.tracks || []).flatMap(track => track.clips || []))
+const displayDurationMs = computed(() => Math.max(timeline.value.duration_ms || 0, ...allClips.value.map(clip => clip.start_ms + clip.duration_ms)) + (clipInteraction.value ? 5000 : 0))
+const alignmentTargets = computed(() => allClips.value.filter(clip => clip.id !== clipForm.value?.id))
 const props=defineProps({projectId:{type:Number,required:true},chapterId:{type:Number,required:true},exportOnly:Boolean,selectedLineId:[Number,String]})
 const emit=defineEmits(['focus-line'])
 const projectId=toRef(props,'projectId'),chapterId=toRef(props,'chapterId')
@@ -228,13 +244,36 @@ function openClipEditor(clip) {
     line_id: clip.line_id,
     start_ms: Number(clip.start_ms || 0),
     duration_ms: Number(clip.duration_ms || 1),
-    max_duration_ms: Number(clip.asset?.duration_ms || clip.duration_ms || 1),
+    track_type: clip.track_type,
+    source_duration_ms: Number(clip.asset?.duration_ms || clip.duration_ms || 1),
+    max_duration_ms: durationLimit(clip),
     volume_db: Number(clip.volume_db || 0),
     fade_in_ms: Number(clip.fade_in_ms || 0),
     fade_out_ms: Number(clip.fade_out_ms || 0),
     is_muted: Boolean(clip.is_muted),
   }
+  alignmentTargetId.value = null
   clipEditorVisible.value = true
+}
+
+function applyAlignment(mode) {
+  const target = alignmentTargets.value.find(clip => clip.id === alignmentTargetId.value)
+  if (!target) return
+  try { Object.assign(clipForm.value, alignClip(clipForm.value, target, mode)) }
+  catch (error) { ElMessage.warning(error.message) }
+}
+function setClipDuration(value) {
+  const form = clipForm.value
+  form.duration_ms = Math.min(Math.max(1, value), form.max_duration_ms, MAX_TIMELINE_MS - form.start_ms)
+  form.fade_in_ms = Math.min(form.fade_in_ms, form.duration_ms)
+  form.fade_out_ms = Math.min(form.fade_out_ms, form.duration_ms - form.fade_in_ms)
+}
+function extendMaterial(ms) { setClipDuration(clipForm.value.duration_ms + ms) }
+function coverSpeech() {
+  const speech = allClips.value.filter(clip => ['voice', 'narration'].includes(clip.track_type) && !clip.is_muted)
+  if (!speech.length) return ElMessage.warning('还没有可用的人声音轨')
+  clipForm.value.start_ms = Math.min(...speech.map(clip => clip.start_ms))
+  setClipDuration(Math.max(...speech.map(clip => clip.start_ms + clip.duration_ms)) - clipForm.value.start_ms)
 }
 
 function handleClipClick(clip) {
@@ -247,6 +286,7 @@ function handleClipClick(clip) {
 
 function startClipInteraction(event, clip, mode) {
   if (event.button !== 0 || savingClip.value || building.value || rendering.value) return
+  event.preventDefault()
   const target = event.currentTarget
   target.setPointerCapture?.(event.pointerId)
   clipInteraction.value = {
@@ -256,6 +296,9 @@ function startClipInteraction(event, clip, mode) {
     originX: event.clientX,
     originStartMs: Number(clip.start_ms || 0),
     originDurationMs: Number(clip.duration_ms || 1),
+    origin: {...clip},
+    surface: target.closest('.timeline-surface'),
+    originScroll: target.closest('.timeline-surface')?.scrollLeft || 0,
     moved: false,
   }
   target.addEventListener('pointermove', updateClipInteraction)
@@ -266,22 +309,18 @@ function startClipInteraction(event, clip, mode) {
 function updateClipInteraction(event) {
   const interaction = clipInteraction.value
   if (!interaction || event.pointerId !== interaction.pointerId) return
-  const deltaMs = snapTimelineMs((event.clientX - interaction.originX) / pixelsPerSecond.value * 1000)
-  if (Math.abs(deltaMs) >= 50) interaction.moved = true
-
-  if (interaction.mode === 'move') {
-    interaction.clip.start_ms = Math.max(0, interaction.originStartMs + deltaMs)
-    return
+  const surface = interaction.surface
+  if (surface) {
+    const bounds = surface.getBoundingClientRect()
+    if (event.clientX > bounds.right - 30) surface.scrollLeft += 24
+    else if (event.clientX < bounds.left + 185) surface.scrollLeft -= 24
   }
-  if (interaction.mode === 'resize-right') {
-    const maxDuration = Number(interaction.clip.asset?.duration_ms || interaction.originDurationMs)
-    interaction.clip.duration_ms = clamp(interaction.originDurationMs + deltaMs, 100, maxDuration)
-    return
-  }
-  const endMs = interaction.originStartMs + interaction.originDurationMs
-  const nextStartMs = clamp(interaction.originStartMs + deltaMs, 0, endMs - 100)
-  interaction.clip.start_ms = nextStartMs
-  interaction.clip.duration_ms = endMs - nextStartMs
+  const deltaMs = (event.clientX - interaction.originX + (surface?.scrollLeft || 0) - interaction.originScroll) / pixelsPerSecond.value * 1000
+  if (Math.abs(event.clientX - interaction.originX) >= 3) interaction.moved = true
+  if (!interaction.moved) return
+  const {guide, ...values} = dragClip(interaction.origin, interaction.mode, deltaMs, allClips.value, snapEnabled.value && !event.altKey, 8 / pixelsPerSecond.value * 1000)
+  Object.assign(interaction.clip, values)
+  snapMarkerMs.value = guide
 }
 
 async function finishClipInteraction(event) {
@@ -289,15 +328,20 @@ async function finishClipInteraction(event) {
   event.currentTarget?.removeEventListener('pointermove', updateClipInteraction)
   event.currentTarget?.removeEventListener('pointercancel', cancelClipInteraction)
   clipInteraction.value = null
+  snapMarkerMs.value = null
   if (!interaction) return
   if (!interaction.moved) return
   suppressClipClick.value = true
+  setTimeout(() => { suppressClipClick.value = false }, 0)
   await persistClipInteraction(interaction.clip)
 }
 
 function cancelClipInteraction(event) {
   event.currentTarget?.removeEventListener('pointermove', updateClipInteraction)
+  event.currentTarget?.removeEventListener('pointerup', finishClipInteraction)
+  if (clipInteraction.value) Object.assign(clipInteraction.value.clip, clipInteraction.value.origin)
   clipInteraction.value = null
+  snapMarkerMs.value = null
 }
 
 async function persistClipInteraction(clip) {
@@ -306,26 +350,20 @@ async function persistClipInteraction(clip) {
     const response = await updateTimelineClip(projectId.value, chapterId.value, clip.id, {
       start_ms: Math.round(Number(clip.start_ms || 0)),
       duration_ms: Math.round(Number(clip.duration_ms || 1)),
+      fade_in_ms: clip.fade_in_ms,
+      fade_out_ms: clip.fade_out_ms,
     })
     if (response.code !== 200) throw new Error(response.message || '保存失败')
     timeline.value = response.data
     renderResult.value = null
     renderAudioUrl.value = ''
-    ElMessage.success('片段位置已保存')
+    ElMessage.success(isMaterialClip(clip) && clip.duration_ms > clip.asset.duration_ms ? '片段已保存，延长部分循环播放' : '片段位置和长度已保存')
   } catch (error) {
     await loadTimeline()
     ElMessage.error(apiError(error, '保存片段位置失败'))
   } finally {
     savingClip.value = false
   }
-}
-
-function snapTimelineMs(value) {
-  return Math.round(value / 100) * 100
-}
-
-function clamp(value, minimum, maximum) {
-  return Math.min(Math.max(value, minimum), maximum)
 }
 
 async function saveClip() {
@@ -336,7 +374,7 @@ async function saveClip() {
   }
   savingClip.value = true
   try {
-    const { id, line_id, max_duration_ms, ...payload } = clipForm.value
+    const { id, line_id, track_type, source_duration_ms, max_duration_ms, ...payload } = clipForm.value
     const response = await updateTimelineClip(projectId.value, chapterId.value, id, payload)
     if (response.code !== 200) throw new Error(response.message || '保存失败')
     timeline.value = response.data
@@ -464,6 +502,10 @@ function openDubbingProject(lineId = props.selectedLineId) {
 .render-result strong, .render-result span { display: block; }
 .render-result span { margin-top: 3px; color: var(--el-text-color-secondary); font-size: 11px; }
 .render-result audio { width: 100%; height: 36px; }
+.alignment-tools { display: grid; gap: 10px; margin: 14px 0; }
+.alignment-tools > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.alignment-tools .el-button { margin-left: 0; }
+.alignment-tools small { color: var(--el-text-color-secondary); }
 .clip-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
 .clip-form-grid .el-input-number { width: 100%; }
 @media (max-width: 900px) { .timeline-header { align-items: flex-start; flex-direction: column; } .filters { width: 100%; } .filters .el-select { flex: 1; width: auto; } .timeline-toolbar { flex-wrap: wrap; } .render-result { grid-template-columns: 1fr auto; } .render-result audio { grid-column: 1 / -1; grid-row: 2; } }

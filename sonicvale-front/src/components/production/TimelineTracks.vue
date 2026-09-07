@@ -7,7 +7,7 @@
             <span v-for="tick in timelineTicks" :key="tick.ms" class="time-tick" :style="tickStyle(tick)">{{ tick.label }}</span>
           </div>
         </div>
-        <article v-for="track in tracks" :key="track.key" class="track-row">
+        <article v-for="track in tracks" :key="track.key" class="track-row" :style="compact ? {} : {minHeight: `${laneLayouts[track.key].count * 100 + 24}px`}">
           <aside class="track-label">
             <el-icon v-if="track.icon"><component :is="track.icon" /></el-icon>
             <strong>{{ track.label }}</strong>
@@ -17,26 +17,27 @@
             </el-tag>
           </aside>
           <div class="timeline-canvas" :style="canvasStyle">
+            <span v-if="snapMarkerMs !== null && !compact" class="snap-guide" :style="{left: `${snapMarkerMs / 1000 * pixelsPerSecond}px`}" />
             <span v-for="tick in timelineTicks" :key="`grid-${track.key}-${tick.ms}`" class="timeline-grid-line" :style="tickStyle(tick)" />
             <div
               v-for="clip in track.clips || []"
               :key="clip.id"
               class="clip"
               :class="{ done: clip.line?.is_done === 1 || clip.line?.status === 'done', muted: clip.is_muted, selected: String(clip.line_id) === String(selectedLineId) }"
-              :style="clipStyle(clip)"
+              :style="clipStyle(clip, track.key)"
               @pointerdown="$emit('interact', $event, clip, 'move')"
               @click="$emit('select',clip)"
               @keydown.enter="$emit('select',clip)"
               @keydown.space.prevent="$emit('select',clip)"
               role="button" tabindex="0" :aria-label="`音轨片段：${clip.line?.text_content || clip.asset?.type || clip.id}`" :data-clip-line-id="clip.line_id"
             >
-              <span v-if="editable && !compact" class="clip-handle clip-handle-left" @pointerdown.stop="$emit('interact', $event, clip, 'resize-left')" />
+              <span v-if="editable && !compact" class="clip-handle clip-handle-left" title="拖动左边界调整开始与长度" aria-label="调整片段左边界" @pointerdown.stop="$emit('interact', $event, clip, 'resize-left')" />
               <strong>{{ clip.line?.scene_title || track.label }}</strong>
               <p>{{ clip.line?.text_content || clip.asset?.type || '音频片段' }}</p>
               <span>
-                {{ formatDuration(clip.start_ms) }} 起 · {{ formatDuration(clip.duration_ms) }} · {{ formatVolume(clip.volume_db) }}
+                {{ formatDuration(clip.start_ms) }} 起 · {{ formatDuration(clip.duration_ms) }} · {{ formatVolume(clip.volume_db) }}{{ clip.duration_ms > clip.asset?.duration_ms ? ' · 循环' : '' }}
               </span>
-              <span v-if="editable && !compact" class="clip-handle clip-handle-right" @pointerdown.stop="$emit('interact', $event, clip, 'resize-right')" />
+              <span v-if="editable && !compact" class="clip-handle clip-handle-right" title="拖动右边界调整长度，音效和背景音乐可循环延长" aria-label="调整片段右边界" @pointerdown.stop="$emit('interact', $event, clip, 'resize-right')" />
             </div>
             <span v-if="!(track.clips?.length)" class="empty-lane">暂无真实音频片段</span>
           </div>
@@ -47,8 +48,10 @@
 </template>
 <script setup>
 import { computed } from 'vue'
-const props=defineProps({tracks:{type:Array,default:()=>[]},durationMs:{type:Number,default:0},pixelsPerSecond:{type:Number,default:80},compact:Boolean,editable:Boolean,selectedLineId:[Number,String]})
+import { packClipLanes } from '../../utils/timelineEditing'
+const props=defineProps({tracks:{type:Array,default:()=>[]},durationMs:{type:Number,default:0},pixelsPerSecond:{type:Number,default:80},compact:Boolean,editable:Boolean,selectedLineId:[Number,String],snapMarkerMs:{type:Number,default:null}})
 defineEmits(['select','interact'])
+const laneLayouts=computed(()=>Object.fromEntries(props.tracks.map(track=>[track.key,packClipLanes(track.clips||[])])))
 const pixelsPerSecond=computed(()=>props.pixelsPerSecond)
 const timelineDurationMs = computed(() => Math.max(Number(props.durationMs || 0), 10000))
 const timelineCanvasWidth = computed(() => `${Math.max(960, timelineDurationMs.value / 1000 * pixelsPerSecond.value + 24)}px`)
@@ -77,11 +80,11 @@ function tickStyle(tick) {
   return { left: `${tick.ms / 1000 * pixelsPerSecond.value}px` }
 }
 
-function clipStyle(clip) {
+function clipStyle(clip, trackKey) {
   const left = Math.max(0, Number(clip.start_ms || 0)) / 1000 * pixelsPerSecond.value
   const width = Math.max(8, Number(clip.duration_ms || 0) / 1000 * pixelsPerSecond.value)
   if (props.compact) return { left: `${Number(clip.start_ms||0)/Math.max(1,props.durationMs)*100}%`, width: `${Number(clip.duration_ms||0)/Math.max(1,props.durationMs)*100}%` }
-  return { left: `${left}px`, width: `${width}px` }
+  return { left: `${left}px`, width: `${width}px`, top: `${14 + (laneLayouts.value[trackKey]?.lanes[clip.id] || 0) * 100}px` }
 }
 
 
@@ -101,9 +104,13 @@ function statusLabel(status){return {ready:'已就绪',stale:'需刷新',missing
 .timeline-ruler .timeline-canvas { min-height: 42px; }
 .time-tick { position: absolute; top: 9px; z-index: 2; color: var(--el-text-color-secondary); font-size: 11px; transform: translateX(-50%); }
 .timeline-grid-line { position: absolute; top: 0; bottom: 0; border-left: 1px dashed color-mix(in srgb, var(--el-border-color) 70%, transparent); pointer-events: none; }
-.clip { position: absolute; top: 14px; display: grid; align-content: start; gap: 5px; min-height: 76px; padding: 10px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--el-color-primary) 36%, var(--el-border-color)); border-radius: 8px; background: color-mix(in srgb, var(--el-color-primary-light-9) 82%, var(--el-bg-color)); cursor: pointer; }
+.clip { position: absolute; top: 14px; display: grid; align-content: start; gap: 5px; height: 88px; min-height: 0; padding: 10px; touch-action: none; user-select: none; overflow: hidden; border: 1px solid color-mix(in srgb, var(--el-color-primary) 36%, var(--el-border-color)); border-radius: 8px; background: color-mix(in srgb, var(--el-color-primary-light-9) 82%, var(--el-bg-color)); cursor: pointer; }
+.clip strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.clip > span:not(.clip-handle) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.snap-guide { position: absolute; top: 0; bottom: 0; z-index: 5; width: 2px; background: var(--el-color-primary); pointer-events: none; }
 .clip:active { cursor: grabbing; }
-.clip-handle { position: absolute; top: 0; bottom: 0; z-index: 3; width: 8px; cursor: ew-resize; }
+.clip-handle { position: absolute; top: 0; bottom: 0; z-index: 3; width: 10px; cursor: ew-resize; touch-action: none; background: color-mix(in srgb, var(--el-color-primary) 15%, transparent); }
+.clip-handle:hover { background: color-mix(in srgb, var(--el-color-primary) 50%, transparent); }
 .clip-handle-left { left: 0; }
 .clip-handle-right { right: 0; }
 .clip.done { border-color: color-mix(in srgb, var(--el-color-success) 45%, var(--el-border-color)); background: color-mix(in srgb, var(--el-color-success-light-9) 80%, var(--el-bg-color)); }
