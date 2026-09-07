@@ -35,7 +35,7 @@
               <strong>{{ clip.line?.scene_title || track.label }}</strong>
               <p>{{ clip.line?.text_content || clip.asset?.type || '音频片段' }}</p>
               <span>
-                {{ formatDuration(clip.start_ms) }} 起 · {{ formatDuration(clip.duration_ms) }} · {{ formatVolume(clip.volume_db) }}{{ clip.duration_ms > clip.asset?.duration_ms ? ' · 循环' : '' }}
+                {{ formatDuration(clip.start_ms) }} 起 · {{ formatDuration(clip.duration_ms) }} · {{ formatVolume(clip.volume_db) }}{{ (clip.playback_rate || 1) !== 1 ? ` · ${clip.playback_rate}×` : '' }}{{ clip.duration_ms > playableSourceDuration(clip) ? ' · 循环' : '' }}
               </span>
               <span v-if="editable && !compact" class="clip-handle clip-handle-right" title="拖动右边界调整长度，音效和背景音乐可循环延长" aria-label="调整片段右边界" @pointerdown.stop="$emit('interact', $event, clip, 'resize-right')" />
             </div>
@@ -48,7 +48,7 @@
 </template>
 <script setup>
 import { computed } from 'vue'
-import { packClipLanes } from '../../utils/timelineEditing'
+import { packClipLanes, playableSourceDuration } from '../../utils/timelineEditing'
 const props=defineProps({tracks:{type:Array,default:()=>[]},durationMs:{type:Number,default:0},pixelsPerSecond:{type:Number,default:80},compact:Boolean,editable:Boolean,selectedLineId:[Number,String],snapMarkerMs:{type:Number,default:null}})
 defineEmits(['select','interact'])
 const laneLayouts=computed(()=>Object.fromEntries(props.tracks.map(track=>[track.key,packClipLanes(track.clips||[])])))

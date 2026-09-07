@@ -16,7 +16,7 @@ from sqlalchemy import Engine, inspect, text
 
 
 SCHEMA_MIGRATIONS_TABLE = "schema_migrations"
-CURRENT_SCHEMA_VERSION = 5
+CURRENT_SCHEMA_VERSION = 6
 
 
 def _table_exists(engine: Engine, table_name: str) -> bool:
@@ -143,12 +143,17 @@ def _migration_005_sound_tags(engine: Engine) -> None:
     _add_columns(engine, "lines", {"sound_tags": "JSON"})
 
 
+def _migration_006_clip_playback_rate(engine: Engine) -> None:
+    _add_columns(engine, "timeline_clips", {"playback_rate": "REAL DEFAULT 1.0 NOT NULL"})
+
+
 MIGRATIONS = {
     1: _migration_001_legacy_columns,
     2: _migration_002_timeline_foundation,
     3: _migration_003_timeline_lifecycle,
     4: _migration_004_sound_library,
     5: _migration_005_sound_tags,
+    6: _migration_006_clip_playback_rate,
 }
 
 

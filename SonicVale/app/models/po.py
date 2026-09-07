@@ -417,6 +417,7 @@ class TimelineClipPO(Base):
     track_type = Column(String(32), nullable=False, index=True)
     start_ms = Column(Integer, nullable=False, default=0)
     duration_ms = Column(Integer, nullable=False, default=0)
+    playback_rate = Column(Float, nullable=False, default=1.0)
     volume_db = Column(Float, nullable=False, default=0.0)
     fade_in_ms = Column(Integer, nullable=False, default=0)
     fade_out_ms = Column(Integer, nullable=False, default=0)

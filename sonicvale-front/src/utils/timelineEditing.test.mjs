@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {dragClip, alignClip, packClipLanes} from './timelineEditing.js'
+import {dragClip, alignClip, packClipLanes, changeClipRate, playableSourceDuration} from './timelineEditing.js'
 const material={id:1,track_type:'bgm',start_ms:1000,duration_ms:2000,asset:{duration_ms:2000},fade_in_ms:1000,fade_out_ms:1000}
 test('material boundaries extend beyond source, speech cannot, fades stay valid',()=>{
  assert.equal(dragClip(material,'resize-right',5000,[],false).duration_ms,7000)
@@ -29,4 +29,14 @@ test('reference alignment covers start, end, consecutive and span',()=>{
 test('overlapping clips occupy separate visible lanes, touching edges reuse lane',()=>{
  const result=packClipLanes([{id:1,start_ms:0,duration_ms:1000},{id:2,start_ms:100,duration_ms:500},{id:3,start_ms:1000,duration_ms:50}])
  assert.equal(result.count,2);assert.deepEqual(result.lanes,{1:0,2:1,3:0})
+})
+
+test('speed rescales duration and fades, preserves start and loop count',()=>{
+ const slow=changeClipRate(material,0.5)
+ assert.equal(slow.duration_ms,4000)
+ assert.equal(slow.fade_in_ms,2000)
+ assert.equal(playableSourceDuration({...material,...slow}),4000)
+ assert.equal(changeClipRate({...material,...slow},1).duration_ms,2000)
+ assert.equal(changeClipRate({...material,duration_ms:6000},2).duration_ms,3000)
+ assert.throws(()=>changeClipRate(material,0.25))
 })

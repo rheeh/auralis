@@ -1,5 +1,6 @@
 import json
 import os
+from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -197,7 +198,7 @@ class TimelineRenderServiceTest(unittest.TestCase):
 
     def test_background_and_effect_overlay_speech_and_loop_without_changing_source(self):
         music_path = self._tone("short-music.wav", 0.2, 0.2)
-        before = open(music_path, "rb").read()
+        before = Path(music_path).read_bytes()
         music = LinePO(chapter_id=self.chapter.id, line_order=1, track="bgm", audio_path=music_path)
         effect = LinePO(chapter_id=self.chapter.id, line_order=2, track="sfx", audio_path=self._tone("effect.wav", 0.1, 0.2))
         voice = LinePO(chapter_id=self.chapter.id, line_order=3, track="voice", audio_path=self._tone("spoken.wav", 0.1, 1.0))
@@ -217,9 +218,58 @@ class TimelineRenderServiceTest(unittest.TestCase):
         # Beyond the source's 0.2 seconds, looping music still overlaps speech.
         self.assertAlmostEqual(float(audio[round(0.75 * rate), 0]), 0.2, delta=0.015)
         self.assertAlmostEqual(float(audio[round(1.1 * rate), 0]), 0.1, delta=0.015)
-        self.assertEqual(open(music_path, "rb").read(), before)
-        manifest = json.loads(open(result["manifest_path"]).read())
+        self.assertEqual(Path(music_path).read_bytes(), before)
+        manifest = json.loads(Path(result["manifest_path"]).read_text())
         self.assertTrue(next(clip for clip in manifest["clips"] if clip["track_type"] == "bgm")["is_looping"])
+
+    def test_material_speed_changes_duration_keeps_pitch_and_survives_refresh(self):
+        path = os.path.join(self.temp_dir.name, "door-tone.wav")
+        sf.write(path, 0.15 * np.sin(2 * np.pi * 440 * np.arange(16000) / 16000), 16000)
+        from pathlib import Path
+        original = Path(path).read_bytes()
+        line = LinePO(chapter_id=self.chapter.id, line_order=1, track="sfx", audio_path=path)
+        self.session.add(line); self.session.commit()
+        timeline = TimelineService(self.session)
+        timeline.build_chapter_timeline(self.project.id, self.chapter.id)
+        clip = self.session.query(TimelineClipPO).one()
+        timeline.update_clip(self.project.id, self.chapter.id, clip.id, TimelineClipUpdateDTO(start_ms=150, playback_rate=0.5, volume_db=0))
+        self.assertEqual((clip.start_ms, clip.duration_ms, clip.playback_rate), (150, 2000, 0.5))
+        rebuilt = timeline.build_chapter_timeline(self.project.id, self.chapter.id, force=True)
+        payload = next(c for t in rebuilt["tracks"] for c in t["clips"])
+        self.assertFalse(payload["is_looping"])
+        self.assertEqual((payload["duration_ms"], payload["playback_rate"]), (2000, 0.5))
+        renderer = TimelineRenderService(self.session)
+        result = renderer.render_chapter(self.project.id, self.chapter.id)
+        audio, rate = sf.read(result["audio_path"], always_2d=True)
+        self.assertAlmostEqual(len(audio) / rate, 2.15, delta=0.02)
+        segment = audio[int(0.5 * rate):int(1.5 * rate), 0]
+        frequency = np.fft.rfftfreq(len(segment), 1 / rate)[np.argmax(np.abs(np.fft.rfft(segment)))]
+        self.assertAlmostEqual(frequency, 440, delta=3)
+        self.assertEqual(Path(path).read_bytes(), original)
+        manifest = json.loads(Path(result["manifest_path"]).read_text())
+        self.assertEqual(manifest["clips"][0]["playback_rate"], 0.5)
+        timeline.update_clip(self.project.id, self.chapter.id, clip.id, TimelineClipUpdateDTO(playback_rate=2))
+        self.assertEqual(clip.duration_ms, 500)
+        with self.assertRaisesRegex(ValueError, "旧成片已过期"):
+            renderer.get_latest_render(self.project.id, self.chapter.id)
+        self.assertTrue(Path(path).is_file())
+
+    def test_speed_validation_and_explicit_loop_duration(self):
+        from pydantic import ValidationError
+        for speed in [0, 0.25, 2.1, float("nan"), float("inf")]:
+            with self.assertRaises(ValidationError):
+                TimelineClipUpdateDTO(playback_rate=speed)
+        clips = self._build_three_clip_timeline()
+        timeline = TimelineService(self.session)
+        with self.assertRaisesRegex(ValueError, "人物声"):
+            timeline.update_clip(self.project.id, self.chapter.id, clips["voice"].id, TimelineClipUpdateDTO(playback_rate=0.75))
+        result = timeline.update_clip(self.project.id, self.chapter.id, clips["sfx"].id, TimelineClipUpdateDTO(playback_rate=2, duration_ms=1000, fade_in_ms=0))
+        payload = next(c for t in result["tracks"] for c in t["clips"] if c["id"] == clips["sfx"].id)
+        self.assertEqual(payload["duration_ms"], 1000)
+        self.assertTrue(payload["is_looping"])
+        result = TimelineRenderService(self.session).render_chapter(self.project.id, self.chapter.id)
+        audio, rate = sf.read(result["audio_path"], always_2d=True)
+        self.assertAlmostEqual(float(audio[round(1.25 * rate), 0]), 0.1, delta=0.02)
 
     def test_empty_partial_timeline_cannot_render(self):
         self.session.add(LinePO(chapter_id=self.chapter.id, line_order=1, track="voice", text_content="暂无音频"))

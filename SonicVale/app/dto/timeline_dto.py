@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 class TimelineClipUpdateDTO(BaseModel):
     start_ms: int | None = Field(default=None, ge=0)
     duration_ms: int | None = Field(default=None, ge=1)
+    playback_rate: float | None = Field(default=None, ge=0.5, le=2.0, allow_inf_nan=False)
     volume_db: float | None = Field(default=None, ge=-60, le=12)
     fade_in_ms: int | None = Field(default=None, ge=0)
     fade_out_ms: int | None = Field(default=None, ge=0)

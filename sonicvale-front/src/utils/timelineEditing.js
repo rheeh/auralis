@@ -1,6 +1,16 @@
 export const MAX_TIMELINE_MS = 4 * 60 * 60 * 1000
 export const isMaterialClip = clip => ['bgm', 'sfx'].includes(clip.track_type)
-export const durationLimit = clip => isMaterialClip(clip) ? MAX_TIMELINE_MS : Number(clip.asset?.duration_ms || clip.source_duration_ms || clip.duration_ms || 1)
+export const playableSourceDuration = clip => Math.max(1, Math.round(Number(clip.asset?.duration_ms || clip.source_duration_ms || clip.duration_ms || 1) / (clip.playback_rate || 1)))
+export const durationLimit = clip => isMaterialClip(clip) ? MAX_TIMELINE_MS : playableSourceDuration(clip)
+export function changeClipRate(clip, rate) {
+  if (!Number.isFinite(rate) || rate < 0.5 || rate > 2) throw new Error('倍速范围为 0.5～2 倍')
+  const scale = (clip.playback_rate || 1) / rate
+  const duration = Math.max(1, Math.round(clip.duration_ms * scale))
+  if (clip.start_ms + duration > MAX_TIMELINE_MS) throw new Error('放慢后超出时间线 4 小时上限')
+  const fadeIn = Math.min(duration, Math.round((clip.fade_in_ms || 0) * scale))
+  return {playback_rate: rate, duration_ms: duration, fade_in_ms: fadeIn,
+    fade_out_ms: Math.min(duration - fadeIn, Math.round((clip.fade_out_ms || 0) * scale))}
+}
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 
 // Compare both moving edges with actual clip edges, measured in screen pixels.

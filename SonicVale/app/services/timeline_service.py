@@ -53,7 +53,7 @@ class TimelineService:
         for clip in clips:
             clip.asset_id = asset.id
             if not clip.is_user_edited:
-                clip.duration_ms = min(clip.duration_ms, asset.duration_ms)
+                clip.duration_ms = min(clip.duration_ms, round(asset.duration_ms / (clip.playback_rate or 1)))
             clip.fade_in_ms = min(clip.fade_in_ms, clip.duration_ms)
             clip.fade_out_ms = min(clip.fade_out_ms, clip.duration_ms - clip.fade_in_ms)
             clip.revision += 1
@@ -292,10 +292,11 @@ class TimelineService:
     def _refresh_manual_clip(clip, asset, track, old_duration):
         # A gain/move edit does not imply a trim. Untrimmed takes follow the new
         # source duration; explicit trims remain bounded by available audio.
-        if clip.duration_ms == old_duration:
-            clip.duration_ms = asset.duration_ms
+        rate = clip.playback_rate or 1
+        if old_duration and clip.duration_ms == round(old_duration / rate):
+            clip.duration_ms = max(1, round(asset.duration_ms / rate))
         elif track.track_type not in {"bgm", "sfx"}:
-            clip.duration_ms = min(clip.duration_ms, asset.duration_ms)
+            clip.duration_ms = min(clip.duration_ms, round(asset.duration_ms / (clip.playback_rate or 1)))
         clip.asset_id = asset.id
         clip.track_id = track.id
         clip.track_type = track.track_type
@@ -367,7 +368,17 @@ class TimelineService:
         if asset is None:
             raise ValueError("片段关联的音频资产不存在")
 
-        values = dto.model_dump(exclude_unset=True)
+        values = dto.model_dump(exclude_unset=True, exclude_none=True)
+        rate = float(values.get("playback_rate", clip.playback_rate or 1))
+        old_rate = clip.playback_rate or 1
+        if rate != 1 and clip.track_type not in {"sfx", "bgm"}:
+            raise ValueError("时间线倍速目前用于音效和背景音乐，人物声请在配音工作台处理")
+        if rate != old_rate and "duration_ms" not in values:
+            scale = old_rate / rate
+            values["duration_ms"] = max(1, round(clip.duration_ms * scale))
+            values.setdefault("fade_in_ms", round(clip.fade_in_ms * scale))
+            values.setdefault("fade_out_ms", min(round(clip.fade_out_ms * scale),
+                                               values["duration_ms"] - values["fade_in_ms"]))
         duration_ms = int(values.get("duration_ms", clip.duration_ms))
         fade_in_ms = int(values.get("fade_in_ms", clip.fade_in_ms))
         fade_out_ms = int(values.get("fade_out_ms", clip.fade_out_ms))
@@ -683,7 +694,8 @@ class TimelineService:
             "fade_out_ms": clip.fade_out_ms,
             "is_muted": bool(clip.is_muted),
             "is_user_edited": bool(clip.is_user_edited),
-            "is_looping": bool(asset and clip.track_type in {"bgm", "sfx"} and clip.duration_ms > asset.duration_ms),
+            "playback_rate": clip.playback_rate or 1,
+            "is_looping": bool(asset and clip.track_type in {"bgm", "sfx"} and clip.duration_ms > round(asset.duration_ms / (clip.playback_rate or 1))),
             "revision": clip.revision,
             "line": {
                 "id": line.id,

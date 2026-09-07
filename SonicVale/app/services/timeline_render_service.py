@@ -154,6 +154,9 @@ class TimelineRenderService:
                 raise ValueError(f"片段 #{clip.id} 缺少音频资产")
             if not os.path.isfile(asset.path):
                 raise FileNotFoundError(f"片段 #{clip.id} 的音频文件不存在: {asset.path}")
+            rate = clip.playback_rate or 1
+            if not math.isfinite(rate) or not 0.5 <= rate <= 2 or (rate != 1 and clip.track_type not in {"sfx", "bgm"}):
+                raise ValueError(f"片段 #{clip.id} 的倍速设置无效")
             if asset.duration_ms <= 0 or clip.duration_ms <= 0 or (clip.duration_ms > asset.duration_ms and clip.track_type not in {"bgm", "sfx"}):
                 raise ValueError(f"片段 #{clip.id} 的时长超出源音频范围")
             if clip.fade_in_ms < 0 or clip.fade_out_ms < 0 or clip.fade_in_ms + clip.fade_out_ms > clip.duration_ms:
@@ -167,15 +170,20 @@ class TimelineRenderService:
         outputs = []
         for index, clip in enumerate(clips):
             asset = assets[clip.asset_id]
-            if clip.track_type in {"bgm", "sfx"} and clip.duration_ms > asset.duration_ms:
+            rate = clip.playback_rate or 1
+            if clip.track_type in {"bgm", "sfx"} and clip.duration_ms > round(asset.duration_ms / rate):
                 command.extend(["-stream_loop", "-1"])
             command.extend(["-i", asset.path])
             duration = clip.duration_ms / 1000
-            chain = [
-                f"[{index}:a]atrim=start=0:end={duration:.6f}",
-                "asetpts=PTS-STARTPTS",
+            chain = [f"[{index}:a]asetpts=PTS-STARTPTS"]
+            if rate != 1:
+                chain.append(f"atempo={rate:.6f}")
+            chain.extend([
                 f"aresample={OUTPUT_SAMPLE_RATE}",
-            ]
+                "asetpts=N/SR/TB",
+                f"apad=whole_dur={duration:.6f}",
+                f"atrim=start=0:end={duration:.6f}",
+            ])
             if asset.channels == 1:
                 chain.append("pan=stereo|c0=c0|c1=c0")
             else:
@@ -186,7 +194,7 @@ class TimelineRenderService:
             if clip.fade_out_ms:
                 fade_start = max(0, clip.duration_ms - clip.fade_out_ms) / 1000
                 chain.append(f"afade=t=out:st={fade_start:.6f}:d={clip.fade_out_ms / 1000:.6f}")
-            chain.append(f"adelay={clip.start_ms}:all=1[c{index}]")
+            chain.append(f"adelay={clip.start_ms}:all=1,asetpts=N/SR/TB[c{index}]")
             filters.append(",".join(chain))
             outputs.append(f"[c{index}]")
 
@@ -255,6 +263,7 @@ class TimelineRenderService:
                 "asset_stat": stat,
                 "start_ms": clip.start_ms,
                 "duration_ms": clip.duration_ms,
+                "playback_rate": clip.playback_rate or 1,
                 "volume_db": clip.volume_db,
                 "fade_in_ms": clip.fade_in_ms,
                 "fade_out_ms": clip.fade_out_ms,
@@ -273,9 +282,10 @@ class TimelineRenderService:
             "asset_id": clip.asset_id,
             "asset_path": asset.path,
             "asset_checksum": asset.checksum,
-            "is_looping": clip.track_type in {"bgm", "sfx"} and clip.duration_ms > asset.duration_ms,
+            "is_looping": clip.track_type in {"bgm", "sfx"} and clip.duration_ms > round(asset.duration_ms / (clip.playback_rate or 1)),
             "start_ms": clip.start_ms,
             "duration_ms": clip.duration_ms,
+            "playback_rate": clip.playback_rate or 1,
             "volume_db": clip.volume_db,
             "fade_in_ms": clip.fade_in_ms,
             "fade_out_ms": clip.fade_out_ms,

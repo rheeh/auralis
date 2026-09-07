@@ -87,16 +87,19 @@ class TimelineServiceTest(unittest.TestCase):
             conn.execute(text("CREATE TABLE projects (id INTEGER PRIMARY KEY, name TEXT NOT NULL)"))
             conn.execute(text("CREATE TABLE lines (id INTEGER PRIMARY KEY, chapter_id INTEGER NOT NULL)"))
             conn.execute(text("INSERT INTO projects (id, name) VALUES (7, '旧项目')"))
+            conn.execute(text("CREATE TABLE timeline_clips (id INTEGER PRIMARY KEY, start_ms INTEGER, duration_ms INTEGER)"))
+            conn.execute(text("INSERT INTO timeline_clips VALUES (44, 10, 400)"))
 
         apply_schema_migrations(engine)
 
         with engine.connect() as conn:
             self.assertEqual(conn.execute(text("SELECT name FROM projects WHERE id = 7")).scalar_one(), "旧项目")
-            self.assertEqual(conn.execute(text("SELECT MAX(version) FROM schema_migrations")).scalar_one(), 5)
+            self.assertEqual(conn.execute(text("SELECT MAX(version) FROM schema_migrations")).scalar_one(), 6)
             columns = {row[1] for row in conn.execute(text("PRAGMA table_info(projects)"))}
             self.assertIn("project_root_path", columns)
             line_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(lines)"))}
             self.assertIn("sound_tags", line_columns)
+            self.assertEqual(tuple(conn.execute(text("SELECT start_ms, duration_ms, playback_rate FROM timeline_clips WHERE id=44")).one()), (10, 400, 1.0))
             self.assertEqual(conn.execute(text("SELECT COUNT(*) FROM audio_assets")).scalar_one(), 0)
             self.assertEqual(conn.execute(text("SELECT COUNT(*) FROM sound_library_assets")).scalar_one(), 0)
         engine.dispose()

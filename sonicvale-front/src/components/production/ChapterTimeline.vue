@@ -67,15 +67,22 @@
       />
     </el-dialog>
 
-    <el-dialog v-model="clipEditorVisible" title="编辑时间线片段" width="min(520px, 92vw)" destroy-on-close>
+    <el-dialog v-model="clipEditorVisible" title="编辑时间线片段" width="min(520px, 92vw)" destroy-on-close @close="stopClipPreview">
       <el-form v-if="clipForm" label-position="top">
         <p class="overview-note">源音频 {{ formatDuration(clipForm.source_duration_ms) }}<span v-if="isMaterialClip(clipForm)"> · 延长超出原长时循环播放</span></p>
+        <div v-if="isMaterialClip(clipForm)" class="speed-tools">
+          <el-form-item label="播放倍速"><el-input-number :model-value="clipForm.playback_rate" :min="0.5" :max="2" :step="0.05" :precision="2" controls-position="right" aria-label="音效播放倍速" @change="setPlaybackRate" /></el-form-item>
+          <div><el-button v-for="rate in [0.5,0.75,1,1.25,1.5,2]" :key="rate" size="small" :type="clipForm.playback_rate === rate ? 'primary' : 'default'" @click="setPlaybackRate(rate)">{{ rate }}×</el-button></div>
+          <small>0.5× 为半速，时长约翻倍；保持音调，起点不动。当前单次播放 {{ formatDuration(playableSourceDuration(clipForm)) }}。</small>
+          <audio v-if="clipForm.line_id" ref="clipPreview" controls preload="none" :src="getLineAudioUrl(clipForm.line_id)" aria-label="音效倍速试听" @loadedmetadata="applyPreviewRate" @play="applyPreviewRate" />
+          <small>试听当前素材的倍速效果；片段裁剪、循环和淡入淡出在渲染后生效。</small>
+        </div>
         <div class="alignment-tools">
           <el-select v-model="alignmentTargetId" filterable aria-label="对齐参考片段" placeholder="选择要对齐的另一段音轨">
             <el-option v-for="clip in alignmentTargets" :key="clip.id" :value="clip.id" :label="`${trackDefinitions.find(track => track.key === clip.track_type)?.label} · 第${clip.line?.line_order || '?'}行 · ${(clip.line?.text_content || '').slice(0,30)}`" />
           </el-select>
           <div><el-button size="small" :disabled="!alignmentTargetId" @click="applyAlignment('start')">起点对齐</el-button><el-button size="small" :disabled="!alignmentTargetId" @click="applyAlignment('end')">终点对齐</el-button><el-button size="small" :disabled="!alignmentTargetId" @click="applyAlignment('after')">接在后面</el-button><el-button v-if="isMaterialClip(clipForm)" size="small" :disabled="!alignmentTargetId" @click="applyAlignment('span')">覆盖参考片段</el-button></div>
-          <div v-if="isMaterialClip(clipForm)"><el-button size="small" @click="coverSpeech">铺满人声</el-button><el-button size="small" @click="extendMaterial(5000)">延长 5 秒</el-button><el-button size="small" @click="extendMaterial(10000)">延长 10 秒</el-button><el-button size="small" @click="setClipDuration(clipForm.source_duration_ms)">恢复原长</el-button></div>
+          <div v-if="isMaterialClip(clipForm)"><el-button size="small" @click="coverSpeech">铺满人声</el-button><el-button size="small" @click="extendMaterial(5000)">延长 5 秒</el-button><el-button size="small" @click="extendMaterial(10000)">延长 10 秒</el-button><el-button size="small" @click="setClipDuration(playableSourceDuration(clipForm))">恢复原长</el-button></div>
           <small>快捷调整后，点击「保存片段」生效。</small>
         </div>
         <div class="clip-form-grid">
@@ -111,11 +118,11 @@
 </template>
 
 <script setup>
-import { alignClip, dragClip, durationLimit, isMaterialClip, MAX_TIMELINE_MS } from '../../utils/timelineEditing'
+import { alignClip, changeClipRate, playableSourceDuration, dragClip, durationLimit, isMaterialClip, MAX_TIMELINE_MS } from '../../utils/timelineEditing'
 import { computed, nextTick, ref, toRef, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Bell, Check, Download, Film, Headset, Microphone, Refresh, VideoPlay } from '@element-plus/icons-vue'
-import { getLinesByChapter } from '../../api/line'
+import { getLinesByChapter, getLineAudioUrl } from '../../api/line'
 import TimelineTracks from './TimelineTracks.vue'
 import SceneIllustration from './SceneIllustration.vue'
 import { nativeSceneSchedule } from '../../demo/sceneImages'
@@ -147,6 +154,7 @@ const visualScenes = computed(() => nativeSceneSchedule(timeline.value.tracks ||
 function seekScene(seconds) { if (renderPlayer.value) { renderPlayer.value.currentTime = seconds; renderTime.value = seconds } }
 const clipEditorVisible = ref(false)
 const clipForm = ref(null)
+const clipPreview = ref(null)
 const savingClip = ref(false)
 const clipInteraction = ref(null)
 const suppressClipClick = ref(false)
@@ -245,6 +253,7 @@ function openClipEditor(clip) {
     start_ms: Number(clip.start_ms || 0),
     duration_ms: Number(clip.duration_ms || 1),
     track_type: clip.track_type,
+    playback_rate: clip.playback_rate || 1,
     source_duration_ms: Number(clip.asset?.duration_ms || clip.duration_ms || 1),
     max_duration_ms: durationLimit(clip),
     volume_db: Number(clip.volume_db || 0),
@@ -255,6 +264,20 @@ function openClipEditor(clip) {
   alignmentTargetId.value = null
   clipEditorVisible.value = true
 }
+
+function setPlaybackRate(rate) {
+  if (!rate || !clipForm.value) return
+  try {
+    Object.assign(clipForm.value, changeClipRate(clipForm.value, Number(rate)))
+    applyPreviewRate()
+  } catch (error) { ElMessage.warning(error.message) }
+}
+function applyPreviewRate() {
+  if (!clipPreview.value || !clipForm.value) return
+  clipPreview.value.preservesPitch = true
+  clipPreview.value.playbackRate = clipForm.value.playback_rate || 1
+}
+function stopClipPreview() { clipPreview.value?.pause() }
 
 function applyAlignment(mode) {
   const target = alignmentTargets.value.find(clip => clip.id === alignmentTargetId.value)
@@ -357,7 +380,7 @@ async function persistClipInteraction(clip) {
     timeline.value = response.data
     renderResult.value = null
     renderAudioUrl.value = ''
-    ElMessage.success(isMaterialClip(clip) && clip.duration_ms > clip.asset.duration_ms ? '片段已保存，延长部分循环播放' : '片段位置和长度已保存')
+    ElMessage.success(isMaterialClip(clip) && clip.duration_ms > playableSourceDuration(clip) ? '片段已保存，延长部分循环播放' : '片段位置和长度已保存')
   } catch (error) {
     await loadTimeline()
     ElMessage.error(apiError(error, '保存片段位置失败'))
@@ -502,6 +525,11 @@ function openDubbingProject(lineId = props.selectedLineId) {
 .render-result strong, .render-result span { display: block; }
 .render-result span { margin-top: 3px; color: var(--el-text-color-secondary); font-size: 11px; }
 .render-result audio { width: 100%; height: 36px; }
+.speed-tools { display: grid; gap: 8px; margin-top: 12px; }
+.speed-tools .el-form-item { margin-bottom: 0; }
+.speed-tools audio { width: 100%; height: 34px; }
+.speed-tools small { color: var(--el-text-color-secondary); }
+.speed-tools .el-button { margin: 0 5px 4px 0; }
 .alignment-tools { display: grid; gap: 10px; margin: 14px 0; }
 .alignment-tools > div { display: flex; flex-wrap: wrap; gap: 6px; }
 .alignment-tools .el-button { margin-left: 0; }
