@@ -126,10 +126,21 @@ class TimelineService:
                 ],
             })
 
+        present_line_ids = {clip.line_id for clip in clips}
+        missing_lines = [
+            {"line_id": line.id, "line_order": line.line_order,
+             "track": self._track_type(line), "text_content": line.text_content}
+            for line in sorted(lines.values(), key=lambda item: (item.line_order or 0, item.id))
+            if line.id not in present_line_ids
+        ]
         return {
             "project_id": project_id,
             "chapter_id": chapter_id,
             "chapter_title": chapter.title,
+            "source_fingerprint": source_fingerprint,
+            "line_count": len(lines),
+            "missing_lines": missing_lines,
+            "missing_line_count": len(missing_lines),
             "status": self._aggregate_status(statuses),
             "track_count": len(tracks),
             "clip_count": len(clips),
@@ -172,28 +183,32 @@ class TimelineService:
             )
             for track in tracks
         ])
-        has_manual_clips = any(clip.is_user_edited for clip in existing_clips)
         if existing_clips and current_status == "ready" and not force:
             return self.get_chapter_timeline(project_id, chapter_id)
-        if has_manual_clips and not overwrite_manual:
-            for track in tracks:
-                track.status = "stale"
-                track.last_error = "存在用户编辑片段，自动构建已保护现有调整"
-            self.db.commit()
-            return self.get_chapter_timeline(project_id, chapter_id)
+        # Refresh sources without throwing away the user's mix decisions.
+        manual_clips = {
+            clip.line_id: clip for clip in existing_clips
+            if clip.is_user_edited and not overwrite_manual
+        }
+        old_durations = {
+            clip.id: self.db.get(AudioAssetPO, clip.asset_id).duration_ms
+            for clip in manual_clips.values()
+            if self.db.get(AudioAssetPO, clip.asset_id)
+        }
 
         # Commit the building marker first so a later failure is visible.
         for track in tracks:
             track.status = "building"
-            track.build_mode = "auto"
+            track.build_mode = "manual" if manual_clips else "auto"
             track.last_error = None
             if existing_clips:
                 track.revision += 1
         self.db.commit()
         try:
-            self.db.query(TimelineClipPO).filter(TimelineClipPO.chapter_id == chapter.id).delete(
-                synchronize_session="fetch"
-            )
+            for clip in existing_clips:
+                if clip not in manual_clips.values():
+                    self.db.delete(clip)
+            self.db.flush()
             cursors = 0
             track_by_type = {track.track_type: track for track in tracks}
             missing_tracks: set[str] = set()
@@ -207,6 +222,12 @@ class TimelineService:
                     missing_tracks.add(track_type)
                     continue
                 track = track_by_type[track_type]
+                if line.id in manual_clips:
+                    clip = manual_clips[line.id]
+                    self._refresh_manual_clip(clip, asset, track, old_durations.get(clip.id))
+                    built_clips.append(clip)
+                    cursors = max(cursors, clip.start_ms + clip.duration_ms)
+                    continue
                 clip = TimelineClipPO(
                     project_id=project_id,
                     chapter_id=chapter.id,
@@ -232,13 +253,24 @@ class TimelineService:
                 if not self.sound_library_cue(line):
                     continue
                 track_type = self._track_type(line)
-                clip = self.add_sound_library_clip(
-                    project_id, chapter.id, line, track_by_type[track_type], built_clips
-                )
+                if line.id in manual_clips:
+                    clip = manual_clips[line.id]
+                    asset = self._register_line_assets(project_id, chapter.id, line, track_type)
+                    if asset and asset.duration_ms > 0:
+                        self._refresh_manual_clip(clip, asset, track_by_type[track_type], old_durations.get(clip.id))
+                    else:
+                        clip = None
+                else:
+                    clip = self.add_sound_library_clip(
+                        project_id, chapter.id, line, track_by_type[track_type], built_clips
+                    )
                 if clip is None:
                     missing_tracks.add(track_type)
                 else:
                     built_clips.append(clip)
+            for clip in manual_clips.values():
+                if clip not in built_clips:
+                    self.db.delete(clip)
             for track in tracks:
                 track.source_fingerprint = source_fingerprint
                 track.status = "missing_audio" if track.track_type in missing_tracks else "ready"
@@ -252,6 +284,19 @@ class TimelineService:
             self.db.commit()
             raise
         return self.get_chapter_timeline(project_id, chapter_id)
+
+    @staticmethod
+    def _refresh_manual_clip(clip, asset, track, old_duration):
+        # A gain/move edit does not imply a trim. Untrimmed takes follow the new
+        # source duration; explicit trims remain bounded by available audio.
+        clip.duration_ms = (asset.duration_ms if clip.duration_ms == old_duration
+                            else min(clip.duration_ms, asset.duration_ms))
+        clip.asset_id = asset.id
+        clip.track_id = track.id
+        clip.track_type = track.track_type
+        clip.fade_in_ms = min(clip.fade_in_ms, clip.duration_ms)
+        clip.fade_out_ms = min(clip.fade_out_ms, clip.duration_ms - clip.fade_in_ms)
+        clip.revision += 1
 
     @staticmethod
     def sound_library_cue(line: LinePO) -> dict[str, Any] | None:

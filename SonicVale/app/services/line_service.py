@@ -99,18 +99,56 @@ class LineService:
         return entities
 
     def delete_line(self, line_id: int) -> bool:
-        """删除台词
-        """
-        # 还要把audio_path删除
-        po = self.repository.get_by_id(line_id)
-        if po and po.audio_path:
-            with contextlib.suppress(FileNotFoundError):
-                os.remove(po.audio_path)
-        db = getattr(self.repository, "db", None)
-        if db is not None:
-            TimelineService.clear_line_timeline(db, line_id)
-        res = self.repository.delete(line_id)
-        return res
+        """Remove a script row while retaining its takes and an audit snapshot."""
+        from pathlib import Path
+        from sqlalchemy import delete, update
+        from app.models.po import AudioAssetPO, AudioTaskPO, TimelineClipPO, TimelineTrackPO
+
+        line = self.repository.get_by_id(line_id)
+        if line is None:
+            return False
+        db = self.repository.db
+        tasks = db.query(AudioTaskPO).filter(AudioTaskPO.line_id == line_id).all()
+        if line.status == "processing" or any(task.status in {"queued", "processing"} for task in tasks):
+            raise ValueError("本句正在等待或生成音频，请任务结束后再删除")
+        serialize = lambda row: {column.name: getattr(row, column.name) for column in row.__table__.columns}
+        clips = db.query(TimelineClipPO).filter(TimelineClipPO.chapter_id == line.chapter_id).all()
+        anchored = []
+        for other in self.repository.get_all(line.chapter_id):
+            cue = TimelineService.sound_library_cue(other)
+            if other.id != line_id and cue and cue.get("anchor_line_id") == line_id:
+                anchored.append((other, cue))
+        history = Path(getConfigPath()) / "deleted_lines"
+        history.mkdir(parents=True, exist_ok=True)
+        (history / f"{line_id}-{uuid4().hex}.json").write_text(json.dumps({
+            "line": serialize(line), "tasks": [serialize(task) for task in tasks],
+            "clips": [serialize(clip) for clip in clips if clip.line_id == line_id],
+            "anchored_lines": [serialize(other) for other, _ in anchored],
+        }, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+        try:
+            # Keep attached ambience at its last actual position after its anchor
+            # disappears, instead of silently dropping it on the next rebuild.
+            for other, cue in anchored:
+                placed = next((clip for clip in clips if clip.line_id == other.id), None)
+                updated = dict(cue, anchor_line_id=None, placement="with",
+                               offset_ms=placed.start_ms if placed else 0)
+                other.audio_events = [updated if event == cue else event
+                                      for event in TimelineService._items(other.audio_events)]
+            db.execute(delete(TimelineClipPO).where(TimelineClipPO.line_id == line_id))
+            db.execute(update(AudioAssetPO).where(AudioAssetPO.line_id == line_id).values(line_id=None))
+            db.execute(delete(AudioTaskPO).where(AudioTaskPO.line_id == line_id))
+            db.execute(update(TimelineTrackPO).where(TimelineTrackPO.chapter_id == line.chapter_id)
+                       .values(status="stale", last_error="台词已删除，请刷新时间线"))
+            remaining = [other for other in self.repository.get_all(line.chapter_id) if other.id != line_id]
+            for order, other in enumerate(remaining, 1):
+                other.line_order = order
+            db.delete(line)
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+        return True
+
     # 删除章节下所有台词
     def delete_all_lines(self, chapter_id: int) -> bool:
         """删除章节下所有台词

@@ -172,6 +172,36 @@ class TimelineRenderServiceTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "时间线状态为 stale"):
             service.render_chapter(self.project.id, self.chapter.id)
 
+    def test_partial_render_skips_missing_lines_and_becomes_stale_when_audio_arrives(self):
+        clips = self._build_three_clip_timeline()
+        missing = LinePO(chapter_id=self.chapter.id, line_order=4, track="voice", text_content="待配音")
+        effect = LinePO(chapter_id=self.chapter.id, line_order=5, track="sfx", text_content="待选音效")
+        self.session.add_all([missing, effect]); self.session.commit()
+        timeline = TimelineService(self.session).build_chapter_timeline(self.project.id, self.chapter.id, force=True)
+        self.assertEqual(timeline["status"], "missing_audio")
+        self.assertEqual(timeline["missing_line_count"], 2)
+        service = TimelineRenderService(self.session)
+        result = service.render_chapter(self.project.id, self.chapter.id)
+        self.assertTrue(result["is_partial"])
+        self.assertEqual([line["line_id"] for line in result["missing_lines"]], [missing.id, effect.id])
+        self.assertEqual(service.get_latest_render(self.project.id, self.chapter.id)["rendered_clip_count"], 2)
+        self.assertTrue(service.latest_audio_path(self.project.id, self.chapter.id).is_file())
+        missing.audio_path = self._tone("new-dialogue.wav", 0.2, 0.3)
+        self.session.commit()
+        with self.assertRaisesRegex(ValueError, "stale"):
+            service.get_latest_render(self.project.id, self.chapter.id)
+        TimelineService(self.session).build_chapter_timeline(self.project.id, self.chapter.id, force=True)
+        result = service.render_chapter(self.project.id, self.chapter.id)
+        self.assertEqual(len(result["missing_lines"]), 1)
+        self.assertEqual(result["rendered_clip_count"], 3)
+
+    def test_empty_partial_timeline_cannot_render(self):
+        self.session.add(LinePO(chapter_id=self.chapter.id, line_order=1, track="voice", text_content="暂无音频"))
+        self.session.commit()
+        TimelineService(self.session).build_chapter_timeline(self.project.id, self.chapter.id)
+        with self.assertRaisesRegex(ValueError, "没有可渲染"):
+            TimelineRenderService(self.session).render_chapter(self.project.id, self.chapter.id)
+
     def test_clip_edit_rejects_invalid_duration_and_fades(self):
         clips = self._build_three_clip_timeline()
         service = TimelineService(self.session)

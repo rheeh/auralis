@@ -57,12 +57,15 @@ class TimelineRenderService:
         render_fingerprint = self._render_fingerprint(clips, assets)
         rendered_at = datetime.now(timezone.utc).isoformat()
         manifest = {
-            "schema_version": 1,
+            "schema_version": 2,
             "render_engine": "ffmpeg_timeline_mix_v1",
             "project_id": project_id,
             "chapter_id": chapter_id,
             "chapter_title": chapter.title,
             "timeline_status": timeline["status"],
+            "source_fingerprint": timeline["source_fingerprint"],
+            "is_partial": bool(timeline["missing_lines"]),
+            "missing_lines": timeline["missing_lines"],
             "render_fingerprint": render_fingerprint,
             "rendered_at": rendered_at,
             "duration_ms": duration_ms,
@@ -97,7 +100,9 @@ class TimelineRenderService:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
             raise ValueError("时间线渲染清单已损坏，请重新渲染") from exc
-        if manifest.get("render_fingerprint") != self._render_fingerprint(clips, assets):
+        if (manifest.get("render_fingerprint") != self._render_fingerprint(clips, assets)
+                or (manifest.get("source_fingerprint") and
+                    manifest["source_fingerprint"] != timeline["source_fingerprint"])):
             raise ValueError("时间线已修改，旧成片已过期，请重新渲染")
         return self._result_payload(manifest, output_path, manifest_path)
 
@@ -134,7 +139,7 @@ class TimelineRenderService:
 
     @staticmethod
     def _validate_timeline(timeline: dict[str, Any], clips, assets) -> None:
-        if timeline["status"] != "ready":
+        if timeline["status"] not in {"ready", "missing_audio"}:
             raise ValueError(f"时间线状态为 {timeline['status']}，请先修复并刷新时间线")
         if not clips:
             raise ValueError("时间线没有可渲染片段")
@@ -286,6 +291,8 @@ class TimelineRenderService:
     def _result_payload(manifest: dict[str, Any], output_path: Path, manifest_path: Path) -> dict[str, Any]:
         safe_title = re.sub(r"[\\/:*?\"<>|]+", "_", str(manifest.get("chapter_title") or "chapter")).strip(" ._")
         return {
+            "is_partial": manifest.get("is_partial", False),
+            "missing_lines": manifest.get("missing_lines", []),
             "audio_path": str(output_path),
             "manifest_path": str(manifest_path),
             "file_name": f"{safe_title or 'chapter'}_timeline_mix.wav",

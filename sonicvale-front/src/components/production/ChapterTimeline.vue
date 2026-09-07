@@ -24,7 +24,7 @@
       <el-tag type="success" effect="plain">{{ completedCount }} 条已生成</el-tag>
       <el-tag type="info" effect="plain">{{ formatDuration(timeline.duration_ms) }}</el-tag>
       <el-tag type="success" effect="plain">真实音频时长</el-tag>
-      <el-button :loading="building" type="primary" plain :icon="Refresh" @click="rebuildTimeline">构建/刷新时间线</el-button>
+      <el-button :loading="building" type="primary" plain :icon="Refresh" :disabled="rendering || savingClip" @click="rebuildTimeline(false)">构建/刷新时间线</el-button>
       <el-button
         type="success"
         :icon="VideoPlay"
@@ -37,10 +37,14 @@
       <el-button v-if="!exportOnly" :disabled="!chapterLines.length" @click="openSoundLibrary(selectedLineId || materialLines[0]?.id, 'recommendations')">标签匹配音效</el-button>
     </section>
 
+    <details v-if="timeline.missing_lines?.length" class="missing-lines">
+      <summary>{{ timeline.missing_lines.length }} 条尚未进入时间线 · 渲染时跳过，点击查看</summary>
+      <ul><li v-for="line in timeline.missing_lines" :key="line.line_id"><el-button text size="small" @click="openDubbingProject(line.line_id)">第 {{ line.line_order }} 行 · {{ trackDefinitions.find(track => track.key === line.track)?.label }} · {{ line.text_content }}</el-button></li></ul>
+    </details>
     <SceneIllustration v-if="renderResult && visualScenes.length" :scenes="visualScenes" :seconds="renderTime" @seek="seekScene" />
     <section v-if="renderResult" class="render-result">
       <div>
-        <strong>时间线成片</strong>
+        <strong>{{ renderResult.is_partial ? '阶段成片（部分音频）' : '时间线成片' }}</strong>
         <span>{{ formatDuration(renderResult.duration_ms) }} · {{ renderResult.rendered_clip_count }} 个有效片段</span>
       </div>
       <audio ref="renderPlayer" aria-label="播放时间线成片" controls preload="metadata" :src="renderAudioUrl" @timeupdate="renderTime = $event.target.currentTime" @seeking="renderTime = $event.target.currentTime" @loadedmetadata="renderTime = $event.target.currentTime" />
@@ -150,7 +154,7 @@ const trackDefinitions = [
 ]
 
 const timelineStatus = computed(() => timeline.value.status || 'not_built')
-const canRender = computed(() => timelineStatus.value === 'ready' && Number(timeline.value.clip_count || 0) > 0)
+const canRender = computed(() => !building.value && !savingClip.value && (Number(timeline.value.clip_count || 0) > 0 || chapterLines.value.some(line => line.is_done === 1 || line.status === 'done')))
 const trackByType = computed(() => Object.fromEntries((timeline.value.tracks || []).map((track) => [track.track_type, track])))
 const completedCount = computed(() => (timeline.value.tracks || []).flatMap((track) => track.clips || []).filter((clip) => clip.line?.is_done === 1 || clip.line?.status === 'done').length)
 const pixelsPerSecond = computed(() => ({ compact: 40, normal: 80, wide: 120 }[zoom.value] || 80))
@@ -161,32 +165,34 @@ async function focusSelectedLine(){await nextTick();document.querySelector(`[dat
 
 async function loadTimeline() {
   if (!projectId.value || !chapterId.value) return
-  const [response, linesResponse] = await Promise.all([
-    fetchChapterTimeline(projectId.value, chapterId.value),
-    getLinesByChapter(chapterId.value),
-  ])
-  if (linesResponse.code === 200) chapterLines.value = linesResponse.data || []
-  if (response.code !== 200) {
-    ElMessage.error(response.message || '读取真实时间线失败')
-    return
-  }
-  timeline.value = response.data || { status: 'not_built', tracks: [], clip_count: 0, duration_ms: 0 }
-  renderResult.value = null
-  renderAudioUrl.value = ''
-  if (timeline.value.status === 'not_built') await rebuildTimeline(true)
-  await focusSelectedLine()
-  if (timeline.value.status === 'ready') {
-    const requestedProject = projectId.value, requestedChapter = chapterId.value
-    try {
-      const latest = await fetchLatestTimelineRender(requestedProject, requestedChapter)
-      if (latest.code === 200 && requestedProject === projectId.value && requestedChapter === chapterId.value) {
-        renderResult.value = latest.data
-        renderAudioUrl.value = getTimelineRenderAudioUrl(requestedProject, requestedChapter, Date.now())
-      }
-    } catch (error) {
-      if (![404, 409].includes(error?.response?.status)) ElMessage.warning('已保存成片暂时无法读取，请稍后刷新。')
+  try {
+    const [response, linesResponse] = await Promise.all([
+      fetchChapterTimeline(projectId.value, chapterId.value),
+      getLinesByChapter(chapterId.value),
+    ])
+    if (linesResponse.code === 200) chapterLines.value = linesResponse.data || []
+    if (response.code !== 200) {
+      ElMessage.error(response.message || '读取真实时间线失败')
+      return
     }
-  }
+    timeline.value = response.data || { status: 'not_built', tracks: [], clip_count: 0, duration_ms: 0 }
+    renderResult.value = null
+    renderAudioUrl.value = ''
+    if (timeline.value.status === 'not_built') await rebuildTimeline(true)
+    await focusSelectedLine()
+    if (['ready', 'missing_audio'].includes(timeline.value.status) && timeline.value.clip_count > 0) {
+      const requestedProject = projectId.value, requestedChapter = chapterId.value
+      try {
+        const latest = await fetchLatestTimelineRender(requestedProject, requestedChapter)
+        if (latest.code === 200 && requestedProject === projectId.value && requestedChapter === chapterId.value) {
+          renderResult.value = latest.data
+          renderAudioUrl.value = getTimelineRenderAudioUrl(requestedProject, requestedChapter, Date.now())
+        }
+      } catch (error) {
+        if (![404, 409].includes(error?.response?.status)) ElMessage.warning('已保存成片暂时无法读取，请稍后刷新。')
+      }
+    }
+  } catch (error) { ElMessage.error(apiError(error, '读取时间线失败，请重试')) }
 }
 
 function openSoundLibrary(lineId = null, view = 'library') {
@@ -205,9 +211,12 @@ async function rebuildTimeline(silent = false) {
     timeline.value = response.data
     renderResult.value = null
     renderAudioUrl.value = ''
-    if (!silent) ElMessage.success('真实音频时间线已刷新')
+    if (!['ready', 'missing_audio'].includes(timeline.value.status)) throw new Error('时间线未能刷新，请检查音频后重试')
+    if (!silent) ElMessage.success(timeline.value.missing_line_count ? `已刷新，${timeline.value.missing_line_count} 条缺少音频，可先渲染已有片段` : '时间线已刷新，手动调整已保留')
+    return true
   } catch (error) {
     ElMessage.error(error?.response?.data?.detail || error?.message || '构建真实时间线失败')
+    return false
   } finally {
     building.value = false
   }
@@ -346,11 +355,15 @@ async function renderTimeline() {
   if (!canRender.value || rendering.value) return
   rendering.value = true
   try {
+    // Reconcile newly generated takes before every export, even when this view
+    // was opened before generation completed.
+    if (!await rebuildTimeline(true)) return
+    if (!timeline.value.clip_count) throw new Error('还没有可用音频，请先生成至少一句或加入素材')
     const response = await renderChapterTimeline(projectId.value, chapterId.value)
     if (response.code !== 200) throw new Error(response.message || '渲染失败')
     renderResult.value = response.data
     renderAudioUrl.value = getTimelineRenderAudioUrl(projectId.value, chapterId.value, Date.now())
-    ElMessage.success('时间线混音成片已生成')
+    ElMessage.success(response.data.is_partial ? `阶段成片已生成，已跳过 ${response.data.missing_lines.length} 条缺少音频的内容` : '时间线混音成片已生成')
   } catch (error) {
     ElMessage.error(apiError(error, '时间线渲染失败'))
   } finally {
@@ -405,9 +418,9 @@ function timelineStatusLabel(status) {
 function timelineStatusDescription(status) {
   return {
     not_built: '首次打开会根据当前采用的音频版本自动构建。',
-    stale: '台词、声音或采用版本已变化。先完成需要的配音，再刷新时间线并重新混音。',
+    stale: '台词、声音或采用版本已变化。刷新会保留手动调整；也可直接渲染，系统会先同步已有音频。',
     failed: '构建失败，请检查音频资产后重试。',
-    missing_audio: '部分台词没有可用音频，已生成的片段仍可查看。',
+    missing_audio: '部分内容没有可用音频，可以直接渲染已有片段；缺失内容会跳过，成片标记为阶段成片。',
     building: '正在登记音频资产并计算真实时长。',
   }[status] || '当前没有需要处理的状态。'
 }
@@ -441,6 +454,10 @@ function openDubbingProject(lineId = props.selectedLineId) {
 .eyebrow { margin: 0 0 4px; color: var(--el-text-color-secondary); font-size: 12px; text-transform: uppercase; }
 .filters, .timeline-toolbar { display: flex; gap: 10px; }
 .filters .el-select { width: 220px; }
+.missing-lines { margin-bottom: 14px; color: var(--el-text-color-secondary); font-size: 13px; }
+.missing-lines summary { cursor: pointer; }
+.missing-lines ul { max-height: 220px; overflow: auto; }
+.missing-lines .el-button { white-space: normal; text-align: left; height: auto; }
 .timeline-status-alert { margin-bottom: 14px; }
 .timeline-toolbar { flex-wrap: wrap; justify-content: flex-start; padding: 12px; margin-bottom: 14px; border: 1px solid var(--el-border-color-light); border-radius: 8px; background: var(--el-bg-color); }
 .render-result { display: grid; grid-template-columns: minmax(160px, 240px) minmax(280px, 1fr) auto; gap: 14px; align-items: center; padding: 10px 12px; margin-bottom: 14px; border-left: 3px solid var(--el-color-success); background: var(--el-fill-color-extra-light); }

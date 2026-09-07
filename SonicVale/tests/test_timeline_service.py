@@ -120,10 +120,24 @@ class TimelineServiceTest(unittest.TestCase):
 
         clip = self.session.query(TimelineClipPO).one()
         clip.is_user_edited = True
+        clip.start_ms = 300
+        clip.duration_ms = 700
+        clip.volume_db = -8
+        clip.fade_in_ms = 100
+        clip_id = clip.id
+        line.audio_path = self._wav("replacement.wav", 0.5)
+        added = LinePO(chapter_id=chapter.id, line_order=2, track="voice", audio_path=self._wav("new.wav", 0.8))
+        self.session.add(added)
         self.session.commit()
         protected = service.build_chapter_timeline(project.id, chapter.id, force=True)
-        self.assertEqual(protected["status"], "stale")
-        self.assertEqual(self.session.query(TimelineClipPO).count(), 1)
+        self.assertEqual(protected["status"], "ready")
+        self.assertEqual(self.session.query(TimelineClipPO).count(), 2)
+        self.session.refresh(clip)
+        self.assertEqual((clip.id, clip.start_ms, clip.volume_db, clip.fade_in_ms), (clip_id, 300, -8, 100))
+        self.assertEqual(clip.duration_ms, 500)
+        self.assertEqual(self.session.get(AudioAssetPO, clip.asset_id).path, line.audio_path)
+        self.assertEqual(self.session.query(TimelineClipPO).filter_by(line_id=added.id).one().start_ms, 800)
+        self.assertTrue(os.path.isfile(path))
 
     def test_clear_chapter_removes_tracks_clips_and_assets(self):
         project = ProjectPO(name="Cleanup timeline")

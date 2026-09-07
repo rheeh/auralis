@@ -269,7 +269,10 @@ def update_line(line_id: int, dto: LineCreateDTO, line_service: LineService = De
                summary="删除台词",
                description="根据台词id删除台词信息")
 def delete_line(line_id: int, line_service: LineService = Depends(get_line_service)):
-    success = line_service.delete_line(line_id)
+    try:
+        success = line_service.delete_line(line_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if success:
         return Res(data=None, code=200, message="删除成功")
     else:

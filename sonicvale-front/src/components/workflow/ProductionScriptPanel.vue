@@ -35,6 +35,7 @@
               <div class="line-meta"><strong>{{ isSpeakable(line) ? roleName(line.role_id) : trackLabel(line) }}</strong><el-tag size="small" effect="plain">{{ trackLabel(line) }}</el-tag><span v-if="activeVariant(line)" class="active-version">当前采用 {{ activeVariant(line).label }}</span><span v-if="isSpeakable(line)" class="line-expand-state">{{ expandedLineIds.has(line.id)?'收起':'展开' }}</span></div>
               <el-button text size="small" @click.stop="$emit('open-timeline',line.id)">定位到音轨</el-button>
               <el-button text size="small" :aria-label="`修改第${line.line_order}行类型`" @click.stop="openTypeEditor(line)">修改类型 / 角色</el-button>
+              <el-button text type="danger" size="small" :aria-label="`删除第${line.line_order}行台词`" :disabled="deletingLineId !== null || line.status === 'processing'" @click.stop="removeLine(line)">删除台词</el-button>
               <el-button v-if="!isSpeakable(line)" text type="primary" size="small" @click.stop="openSoundLibrary(line.id, 'recommendations')">标签匹配音效</el-button>
               <el-button text size="small" :icon="Headset" @click.stop="openSoundLibrary(line.id)">{{ isSpeakable(line) ? '在这句附近加音效' : '去音效库挑选' }}</el-button>
               <p>{{ line.text_content }}</p>
@@ -133,7 +134,7 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeftBold, ArrowRightBold, Headset, MagicStick, Refresh, VideoPause, VideoPlay } from '@element-plus/icons-vue'
 import { addSmartRoleAndVoice } from '../../api/chapter'
 import { fetchSessionAudioTasks, generateSessionAudio, regenerateLineAudio } from '../../api/drama'
@@ -146,7 +147,7 @@ import { fetchAllEmotions, fetchAllStrengths } from '../../api/enums'
 import { getRoleAvatarUrl } from '../../api/drama'
 import WaveCellPro from '../WaveCellPro.vue'
 import SoundLibraryPanel from '../SoundLibraryPanel.vue'
-import { changeLineType } from '../../api/line'
+import { changeLineType, deleteLine } from '../../api/line'
 
 const props=defineProps({sessionId:{type:String,required:true},projectId:{type:Number,required:true},chapterId:{type:Number,required:true},ttsProviderId:Number,sourceText:String,voiceRevision:{type:Number,default:0},selectedLineId:[Number,String],scriptOnly:Boolean})
 const emit=defineEmits(['open-timeline'])
@@ -171,6 +172,29 @@ async function saveTypeChange(){
     await loadAll();ElMessage.success('已修改类型；请重新配音或选择素材，原音频保留')
   }catch(error){ElMessage.error(error?.response?.data?.detail||error?.response?.data?.message||error.message||'修改失败')}
   finally{typeSaving.value=false}
+}
+const deletingLineId = ref(null)
+async function removeLine(line) {
+  if (deletingLineId.value !== null) return
+  try {
+    await ElMessageBox.confirm(`删除第 ${line.line_order} 行“${(line.text_content || '').slice(0, 60)}”？将移除对应音轨，原音频和删除记录会保留。`, '删除台词', {
+      confirmButtonText: '删除台词', cancelButtonText: '取消', type: 'warning',
+    })
+    deletingLineId.value = line.id
+    const response = await deleteLine(line.id)
+    if (response?.code !== 200) throw new Error(response?.message || '删除失败')
+    if (playingLineId.value === line.id) {
+      player.pause(); player.removeAttribute('src'); player.load()
+      playingLineId.value = null; playAllActive.value = false
+      currentTime.value = 0; duration.value = 0
+    }
+    expandedLineIds.delete(line.id)
+    delete promptMap[line.id]; delete editMap[line.id]
+    await loadAll()
+    ElMessage.success('台词已删除，原音频保留；声音编排需刷新')
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') ElMessage.error(error?.response?.data?.detail || error?.message || '删除失败')
+  } finally { deletingLineId.value = null }
 }
 const soundLibraryOpen = ref(false), soundAnchorId = ref(null)
 const soundLibraryView = ref('library')
