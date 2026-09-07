@@ -98,6 +98,9 @@ class DramaWorkflowTest(unittest.TestCase):
         self.assertEqual(self.db.scalar(select(func.count(RolePO.id))), 2)
         self.assertEqual(self.db.scalar(select(func.count(LinePO.id))), 2)
 
+        material = self.db.scalar(select(LinePO).where(LinePO.track == "sfx"))
+        self.assertIn("敲门", material.sound_tags)
+
         voice_line = self.db.execute(
             select(LinePO).where(LinePO.should_speak == 1).limit(1)
         ).scalar_one()

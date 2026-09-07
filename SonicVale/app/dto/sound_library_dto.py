@@ -26,3 +26,10 @@ class SoundLibraryInsertDTO(BaseModel):
     volume_db: float = Field(default=-12, ge=-60, le=12)
     fade_in_ms: int = Field(default=0, ge=0)
     fade_out_ms: int = Field(default=0, ge=0)
+
+
+class SoundTagMatchDTO(BaseModel):
+    chapter_id: int = Field(gt=0)
+    line_id: int = Field(gt=0)
+    tags: list[str] | None = Field(default=None, max_length=12)
+    limit: int = Field(default=8, ge=1, le=20)

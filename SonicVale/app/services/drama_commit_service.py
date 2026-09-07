@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.core.sound_tags import script_sound_tags, tagging_instruction
 
 import os
 from datetime import datetime, timedelta, timezone
@@ -135,6 +136,7 @@ class DramaCommitService:
                         should_speak=1 if raw_line.get("shouldSpeak", True) else 0,
                         scene_title=scene.get("title") or "未命名场景",
                         sound_prompt=raw_line.get("soundPrompt") or None,
+                        sound_tags=script_sound_tags(raw_line.get("soundTags"), raw_line.get("soundPrompt") or raw_line.get("text")) if raw_line.get("type") in {"sfx","bgm"} else [],
                         voice_profile=raw_line.get("voiceProfile") or None,
                         production_note=raw_line.get("productionNote") or None,
                         audio_events=raw_line.get("audioEvents") or raw_line.get("audio_events") or None,

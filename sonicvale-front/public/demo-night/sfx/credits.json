@@ -374,5 +374,237 @@
     "author": "rubberduck",
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
     "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-typing",
+    "label": "键盘连续输入",
+    "file": "sfx/expanded/curated-typing.mp3",
+    "author": "unicaegames",
+    "source_url": "https://opengameart.org/content/keyboard-soundpack-1-typing-and-single-keystrokes",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-keypress",
+    "label": "键盘单键",
+    "file": "sfx/expanded/curated-keypress.mp3",
+    "author": "unicaegames",
+    "source_url": "https://opengameart.org/content/keyboard-soundpack-1-typing-and-single-keystrokes",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-dog-bark",
+    "label": "犬吠",
+    "file": "sfx/expanded/curated-dog-bark.mp3",
+    "author": "Brandon Morris",
+    "source_url": "https://opengameart.org/content/dog-barking-mono",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-dog-growl",
+    "label": "犬低吼",
+    "file": "sfx/expanded/curated-dog-growl.mp3",
+    "author": "bonebrah",
+    "source_url": "https://opengameart.org/content/dog-growl",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-traffic-city",
+    "label": "城市繁忙车流",
+    "file": "sfx/expanded/curated-traffic-city.mp3",
+    "author": "IgnasD",
+    "source_url": "https://opengameart.org/content/high-traffic-road-sounds",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-heartbeat",
+    "label": "单次心跳",
+    "file": "sfx/expanded/curated-heartbeat.mp3",
+    "author": "Independent.nu",
+    "source_url": "https://opengameart.org/content/heartbeat-single-sound",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-bird-chirp",
+    "label": "庭院鸟鸣",
+    "file": "sfx/expanded/curated-bird-chirp.mp3",
+    "author": "syncopika",
+    "source_url": "https://opengameart.org/content/bird-chirping-sounds",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-zipper",
+    "label": "衣服拉链",
+    "file": "sfx/expanded/curated-zipper.mp3",
+    "author": "AntumDeluge",
+    "source_url": "https://opengameart.org/content/zipper",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-bell-short",
+    "label": "短铃声",
+    "file": "sfx/expanded/curated-bell-short.mp3",
+    "author": "n4",
+    "source_url": "https://opengameart.org/content/basic-sound-effects",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-bell-long",
+    "label": "长铃声",
+    "file": "sfx/expanded/curated-bell-long.mp3",
+    "author": "n4",
+    "source_url": "https://opengameart.org/content/basic-sound-effects",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-button",
+    "label": "按钮短音",
+    "file": "sfx/expanded/curated-button.mp3",
+    "author": "n4",
+    "source_url": "https://opengameart.org/content/basic-sound-effects",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-coin",
+    "label": "硬币碰响",
+    "file": "sfx/expanded/curated-coin.mp3",
+    "author": "n4",
+    "source_url": "https://opengameart.org/content/basic-sound-effects",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-explosion",
+    "label": "爆炸声",
+    "file": "sfx/expanded/curated-explosion.mp3",
+    "author": "n4",
+    "source_url": "https://opengameart.org/content/basic-sound-effects",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-explosion-distant",
+    "label": "远处爆炸",
+    "file": "sfx/expanded/curated-explosion-distant.mp3",
+    "author": "n4",
+    "source_url": "https://opengameart.org/content/basic-sound-effects",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-gunshot",
+    "label": "单次枪声",
+    "file": "sfx/expanded/curated-gunshot.mp3",
+    "author": "n4",
+    "source_url": "https://opengameart.org/content/basic-sound-effects",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-splash",
+    "label": "水花溅起",
+    "file": "sfx/expanded/curated-splash.mp3",
+    "author": "n4",
+    "source_url": "https://opengameart.org/content/basic-sound-effects",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-drawer-open",
+    "label": "拉开抽屉",
+    "file": "sfx/expanded/curated-drawer-open.mp3",
+    "author": "laleksic",
+    "source_url": "https://opengameart.org/node/143670",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-drawer-close",
+    "label": "关上抽屉",
+    "file": "sfx/expanded/curated-drawer-close.mp3",
+    "author": "laleksic",
+    "source_url": "https://opengameart.org/node/143670",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-floor-creak",
+    "label": "地板吱呀",
+    "file": "sfx/expanded/curated-floor-creak.mp3",
+    "author": "laleksic",
+    "source_url": "https://opengameart.org/node/143670",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-lock",
+    "label": "门锁转动",
+    "file": "sfx/expanded/curated-lock.mp3",
+    "author": "laleksic",
+    "source_url": "https://opengameart.org/node/143670",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-lock-pick",
+    "label": "拨动锁芯",
+    "file": "sfx/expanded/curated-lock-pick.mp3",
+    "author": "laleksic",
+    "source_url": "https://opengameart.org/node/143670",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-keys",
+    "label": "拿起钥匙",
+    "file": "sfx/expanded/curated-keys.mp3",
+    "author": "laleksic",
+    "source_url": "https://opengameart.org/node/143670",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-match",
+    "label": "划火柴",
+    "file": "sfx/expanded/curated-match.mp3",
+    "author": "laleksic",
+    "source_url": "https://opengameart.org/node/143670",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-microwave",
+    "label": "微波炉运转",
+    "file": "sfx/expanded/curated-microwave.mp3",
+    "author": "laleksic",
+    "source_url": "https://opengameart.org/node/143670",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-tap",
+    "label": "水龙头流水",
+    "file": "sfx/expanded/curated-tap.mp3",
+    "author": "laleksic",
+    "source_url": "https://opengameart.org/node/143670",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-toilet",
+    "label": "马桶冲水",
+    "file": "sfx/expanded/curated-toilet.mp3",
+    "author": "laleksic",
+    "source_url": "https://opengameart.org/node/143670",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-manhole",
+    "label": "开启井盖",
+    "file": "sfx/expanded/curated-manhole.mp3",
+    "author": "laleksic",
+    "source_url": "https://opengameart.org/node/143670",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-stone-grind",
+    "label": "石块摩擦",
+    "file": "sfx/expanded/curated-stone-grind.mp3",
+    "author": "laleksic",
+    "source_url": "https://opengameart.org/node/143670",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "curated-horror-breath",
+    "label": "悬疑呼吸",
+    "file": "sfx/expanded/curated-horror-breath.mp3",
+    "author": "primbal",
+    "source_url": "https://opengameart.org/content/horror-breathing",
+    "license": "CC0-1.0"
   }
 ]

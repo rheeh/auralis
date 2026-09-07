@@ -41,6 +41,61 @@
       "author": "Voltiment555",
       "source_url": "https://opengameart.org/content/book-flip-sounds",
       "license": "CC0-1.0"
+    },
+    "typing": {
+      "author": "unicaegames",
+      "source_url": "https://opengameart.org/content/keyboard-soundpack-1-typing-and-single-keystrokes",
+      "license": "CC0-1.0"
+    },
+    "dog_bark": {
+      "author": "Brandon Morris",
+      "source_url": "https://opengameart.org/content/dog-barking-mono",
+      "license": "CC0-1.0"
+    },
+    "dog_growl": {
+      "author": "bonebrah",
+      "source_url": "https://opengameart.org/content/dog-growl",
+      "license": "CC0-1.0"
+    },
+    "traffic_city": {
+      "author": "IgnasD",
+      "source_url": "https://opengameart.org/content/high-traffic-road-sounds",
+      "license": "CC0-1.0"
+    },
+    "heartbeat": {
+      "author": "Independent.nu",
+      "source_url": "https://opengameart.org/content/heartbeat-single-sound",
+      "license": "CC0-1.0"
+    },
+    "bird_chirp": {
+      "author": "syncopika",
+      "source_url": "https://opengameart.org/content/bird-chirping-sounds",
+      "license": "CC0-1.0"
+    },
+    "zipper": {
+      "author": "AntumDeluge",
+      "source_url": "https://opengameart.org/content/zipper",
+      "license": "CC0-1.0"
+    },
+    "basic_n4": {
+      "author": "n4",
+      "source_url": "https://opengameart.org/content/basic-sound-effects",
+      "license": "CC0-1.0"
+    },
+    "various_laleksic": {
+      "author": "laleksic",
+      "source_url": "https://opengameart.org/node/143670",
+      "license": "CC0-1.0"
+    },
+    "horror_breathing": {
+      "author": "primbal",
+      "source_url": "https://opengameart.org/content/horror-breathing",
+      "license": "CC0-1.0"
+    },
+    "auralis_original": {
+      "author": "Auralis",
+      "source_url": "https://github.com/rheeh/auralis/blob/master/scripts/build_demo_effects.py",
+      "license": "CC0-1.0"
     }
   },
   "groups": [
@@ -55,82 +110,140 @@
         "background",
         "room-tone"
       ],
-      "files": [
-        "rubberduck-sfx100-v2/sfx100v2_loop_ambient_01.ogg",
-        "rubberduck-sfx100-v2/sfx100v2_loop_ambient_02.ogg",
-        "rubberduck-sfx100-v2/sfx100v2_loop_ambient_03.ogg",
-        "rubberduck-sfx100-v2/sfx100v2_loop_ambient_04.ogg",
-        "rubberduck-sfx100-v2/sfx100v2_loop_highway.ogg",
-        "rubberduck-sfx100-v2/sfx100v2_loop_water_01.ogg",
-        "rubberduck-sfx100-v2/sfx100v2_loop_water_02.ogg"
-      ],
       "items": [
+        {
+          "file": "rubberduck-sfx100-v2/sfx100v2_loop_ambient_01.ogg",
+          "source": "rubberduck_sfx100_v2",
+          "title": "环境底噪 01",
+          "tags": [
+            "环境底噪",
+            "循环"
+          ],
+          "archived": false
+        },
+        {
+          "file": "rubberduck-sfx100-v2/sfx100v2_loop_ambient_02.ogg",
+          "source": "rubberduck_sfx100_v2",
+          "title": "环境底噪 02",
+          "tags": [
+            "环境底噪",
+            "循环"
+          ],
+          "archived": false
+        },
+        {
+          "file": "rubberduck-sfx100-v2/sfx100v2_loop_ambient_03.ogg",
+          "source": "rubberduck_sfx100_v2",
+          "title": "环境底噪 03",
+          "tags": [
+            "环境底噪",
+            "循环"
+          ],
+          "archived": true,
+          "archive_reason": "同类编号变体精简；保留文件与 ID 供旧工程使用"
+        },
+        {
+          "file": "rubberduck-sfx100-v2/sfx100v2_loop_ambient_04.ogg",
+          "source": "rubberduck_sfx100_v2",
+          "title": "环境底噪 04",
+          "tags": [
+            "环境底噪",
+            "循环"
+          ],
+          "archived": true,
+          "archive_reason": "同类编号变体精简；保留文件与 ID 供旧工程使用"
+        },
+        {
+          "file": "rubberduck-sfx100-v2/sfx100v2_loop_highway.ogg",
+          "source": "rubberduck_sfx100_v2",
+          "title": "公路车流",
+          "tags": [
+            "交通",
+            "循环"
+          ],
+          "archived": false
+        },
+        {
+          "file": "rubberduck-sfx100-v2/sfx100v2_loop_water_01.ogg",
+          "source": "rubberduck_sfx100_v2",
+          "title": "水流循环 01",
+          "tags": [
+            "水声",
+            "循环"
+          ],
+          "archived": false
+        },
+        {
+          "file": "rubberduck-sfx100-v2/sfx100v2_loop_water_02.ogg",
+          "source": "rubberduck_sfx100_v2",
+          "title": "水流循环 02",
+          "tags": [
+            "水声",
+            "循环"
+          ],
+          "archived": false
+        },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_loop_construction_site.ogg",
           "title": "施工现场",
           "tags": [
             "施工",
-            "工地",
-            "都市",
-            "循环",
-            "construction"
+            "循环"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": false
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_loop_machine_01.ogg",
           "title": "机械运转 01",
           "tags": [
-            "机器",
-            "运转",
-            "循环",
-            "machine"
+            "机械",
+            "循环"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": false
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_loop_machine_02.ogg",
           "title": "机械运转 02",
           "tags": [
-            "机器",
-            "运转",
-            "循环",
-            "machine"
+            "机械",
+            "循环"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": false
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_loop_machine_03.ogg",
           "title": "机械运转 03",
           "tags": [
-            "机器",
-            "运转",
-            "循环",
-            "machine"
+            "机械",
+            "循环"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": true,
+          "archive_reason": "同类编号变体精简；保留文件与 ID 供旧工程使用"
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_loop_machine_04.ogg",
           "title": "机械运转 04",
           "tags": [
-            "机器",
-            "运转",
-            "循环",
-            "machine"
+            "机械",
+            "循环"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": true,
+          "archive_reason": "同类编号变体精简；保留文件与 ID 供旧工程使用"
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_loop_water_03.ogg",
           "title": "流水循环 03",
           "tags": [
-            "水",
-            "流水",
-            "循环",
-            "water"
+            "水声",
+            "循环"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": false
         }
       ]
     },
@@ -146,21 +259,43 @@
         "wind",
         "thunder"
       ],
-      "files": [
-        "rubberduck-sfx100-v2/sfx100v2_air_01.ogg",
-        "rubberduck-sfx100-v2/sfx100v2_air_02.ogg",
-        "rubberduck-sfx100-v2/sfx100v2_thunder_01.ogg"
-      ],
       "items": [
+        {
+          "file": "rubberduck-sfx100-v2/sfx100v2_air_01.ogg",
+          "source": "rubberduck_sfx100_v2",
+          "title": "气流风声 01",
+          "tags": [
+            "风声"
+          ],
+          "archived": false
+        },
+        {
+          "file": "rubberduck-sfx100-v2/sfx100v2_air_02.ogg",
+          "source": "rubberduck_sfx100_v2",
+          "title": "气流风声 02",
+          "tags": [
+            "风声"
+          ],
+          "archived": false
+        },
+        {
+          "file": "rubberduck-sfx100-v2/sfx100v2_thunder_01.ogg",
+          "source": "rubberduck_sfx100_v2",
+          "title": "雷声 01",
+          "tags": [
+            "雷声"
+          ],
+          "archived": false
+        },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_air_03.ogg",
           "title": "空气流动 03",
           "tags": [
-            "气流",
-            "风",
-            "air"
+            "风声"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": true,
+          "archive_reason": "同类编号变体精简；保留文件与 ID 供旧工程使用"
         }
       ]
     },
@@ -176,33 +311,72 @@
         "lock",
         "switch"
       ],
-      "files": [
-        "rubberduck-sfx100-v2/sfx100v2_door_01.ogg",
-        "rubberduck-sfx100-v2/sfx100v2_door_02.ogg",
-        "rubberduck-sfx100-v2/sfx100v2_door_03.ogg",
-        "rubberduck-sfx100-v2/sfx100v2_lock_open_01.ogg",
-        "rubberduck-sfx100-v2/sfx100v2_switch_01.ogg"
-      ],
       "items": [
+        {
+          "file": "rubberduck-sfx100-v2/sfx100v2_door_01.ogg",
+          "source": "rubberduck_sfx100_v2",
+          "title": "门开合 01",
+          "tags": [
+            "开关门"
+          ],
+          "archived": false
+        },
+        {
+          "file": "rubberduck-sfx100-v2/sfx100v2_door_02.ogg",
+          "source": "rubberduck_sfx100_v2",
+          "title": "门开合 02",
+          "tags": [
+            "开关门"
+          ],
+          "archived": false
+        },
+        {
+          "file": "rubberduck-sfx100-v2/sfx100v2_door_03.ogg",
+          "source": "rubberduck_sfx100_v2",
+          "title": "门开合 03",
+          "tags": [
+            "开关门"
+          ],
+          "archived": true,
+          "archive_reason": "同类编号变体精简；保留文件与 ID 供旧工程使用"
+        },
+        {
+          "file": "rubberduck-sfx100-v2/sfx100v2_lock_open_01.ogg",
+          "source": "rubberduck_sfx100_v2",
+          "title": "开启门锁",
+          "tags": [
+            "锁具"
+          ],
+          "archived": false
+        },
+        {
+          "file": "rubberduck-sfx100-v2/sfx100v2_switch_01.ogg",
+          "source": "rubberduck_sfx100_v2",
+          "title": "开关 01",
+          "tags": [
+            "开关"
+          ],
+          "archived": false
+        },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_door_04.ogg",
           "title": "门响 04",
           "tags": [
-            "门",
-            "开关门",
-            "door"
+            "开关门"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": true,
+          "archive_reason": "同类编号变体精简；保留文件与 ID 供旧工程使用"
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_door_05.ogg",
           "title": "门响 05",
           "tags": [
-            "门",
-            "开关门",
-            "door"
+            "开关门"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": true,
+          "archive_reason": "同类编号变体精简；保留文件与 ID 供旧工程使用"
         }
       ]
     },
@@ -218,37 +392,80 @@
         "wet",
         "wood"
       ],
-      "files": [
-        "rubberduck-sfx100-v2/sfx100v2_footstep_01.ogg",
-        "rubberduck-sfx100-v2/sfx100v2_footstep_02.ogg",
-        "rubberduck-sfx100-v2/sfx100v2_footstep_wet_01.ogg",
-        "rubberduck-sfx100-v2/sfx100v2_footstep_wood_01.ogg",
-        "rubberduck-sfx100-v2/sfx100v2_footstep_wood_02.ogg"
-      ],
       "items": [
+        {
+          "file": "rubberduck-sfx100-v2/sfx100v2_footstep_01.ogg",
+          "source": "rubberduck_sfx100_v2",
+          "title": "脚步 01",
+          "tags": [
+            "脚步"
+          ],
+          "archived": false
+        },
+        {
+          "file": "rubberduck-sfx100-v2/sfx100v2_footstep_02.ogg",
+          "source": "rubberduck_sfx100_v2",
+          "title": "脚步 02",
+          "tags": [
+            "脚步"
+          ],
+          "archived": false
+        },
+        {
+          "file": "rubberduck-sfx100-v2/sfx100v2_footstep_wet_01.ogg",
+          "source": "rubberduck_sfx100_v2",
+          "title": "湿地脚步 01",
+          "tags": [
+            "脚步",
+            "湿地",
+            "单次"
+          ],
+          "archived": false
+        },
+        {
+          "file": "rubberduck-sfx100-v2/sfx100v2_footstep_wood_01.ogg",
+          "source": "rubberduck_sfx100_v2",
+          "title": "木地板脚步 01",
+          "tags": [
+            "脚步",
+            "木地板",
+            "单次"
+          ],
+          "archived": false
+        },
+        {
+          "file": "rubberduck-sfx100-v2/sfx100v2_footstep_wood_02.ogg",
+          "source": "rubberduck_sfx100_v2",
+          "title": "木地板脚步 02",
+          "tags": [
+            "脚步",
+            "木地板",
+            "单次"
+          ],
+          "archived": false
+        },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_footstep_wet_02.ogg",
           "title": "湿地脚步 02",
           "tags": [
             "脚步",
-            "水",
-            "雨后",
             "湿地",
-            "wet"
+            "单次"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": false
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_footstep_wet_03.ogg",
           "title": "湿地脚步 03",
           "tags": [
             "脚步",
-            "水",
-            "雨后",
             "湿地",
-            "wet"
+            "单次"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": true,
+          "archive_reason": "同类编号变体精简；保留文件与 ID 供旧工程使用"
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_footstep_wood_03.ogg",
@@ -256,10 +473,11 @@
           "tags": [
             "脚步",
             "木地板",
-            "室内",
-            "wood"
+            "单次"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": true,
+          "archive_reason": "同类编号变体精简；保留文件与 ID 供旧工程使用"
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_footstep_wood_04.ogg",
@@ -267,10 +485,11 @@
           "tags": [
             "脚步",
             "木地板",
-            "室内",
-            "wood"
+            "单次"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": true,
+          "archive_reason": "同类编号变体精简；保留文件与 ID 供旧工程使用"
         }
       ]
     },
@@ -286,119 +505,169 @@
         "hit",
         "wood"
       ],
-      "files": [
-        "rubberduck-sfx100-v2/sfx100v2_glass_01.ogg",
-        "rubberduck-sfx100-v2/sfx100v2_hit_01.ogg",
-        "rubberduck-sfx100-v2/sfx100v2_wood_hit_01.ogg"
-      ],
       "items": [
+        {
+          "file": "rubberduck-sfx100-v2/sfx100v2_glass_01.ogg",
+          "source": "rubberduck_sfx100_v2",
+          "title": "玻璃声 01",
+          "tags": [
+            "玻璃"
+          ],
+          "archived": false
+        },
+        {
+          "file": "rubberduck-sfx100-v2/sfx100v2_hit_01.ogg",
+          "source": "rubberduck_sfx100_v2",
+          "title": "撞击 01",
+          "tags": [
+            "碰撞"
+          ],
+          "archived": false
+        },
+        {
+          "file": "rubberduck-sfx100-v2/sfx100v2_wood_hit_01.ogg",
+          "source": "rubberduck_sfx100_v2",
+          "title": "木材撞击 01",
+          "tags": [
+            "碰撞",
+            "木材"
+          ],
+          "archived": false
+        },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_glass_02.ogg",
           "title": "玻璃声 02",
           "tags": [
-            "玻璃",
-            "碰撞",
-            "glass"
+            "玻璃"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": false
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_glass_03.ogg",
           "title": "玻璃声 03",
           "tags": [
-            "玻璃",
-            "碰撞",
-            "glass"
+            "玻璃"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": true,
+          "archive_reason": "同类编号变体精简；保留文件与 ID 供旧工程使用"
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_glass_04.ogg",
           "title": "玻璃声 04",
           "tags": [
-            "玻璃",
-            "碰撞",
-            "glass"
+            "玻璃"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": true,
+          "archive_reason": "同类编号变体精简；保留文件与 ID 供旧工程使用"
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_glass_05.ogg",
           "title": "玻璃声 05",
           "tags": [
-            "玻璃",
-            "碰撞",
-            "glass"
+            "玻璃"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": true,
+          "archive_reason": "同类编号变体精简；保留文件与 ID 供旧工程使用"
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_glass_06.ogg",
           "title": "玻璃声 06",
           "tags": [
-            "玻璃",
-            "碰撞",
-            "glass"
+            "玻璃"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": true,
+          "archive_reason": "同类编号变体精简；保留文件与 ID 供旧工程使用"
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_hit_02.ogg",
           "title": "撞击 02",
           "tags": [
-            "撞击",
-            "hit"
+            "碰撞"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": false
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_hit_03.ogg",
           "title": "撞击 03",
           "tags": [
-            "撞击",
-            "hit"
+            "碰撞"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": true,
+          "archive_reason": "同类编号变体精简；保留文件与 ID 供旧工程使用"
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_metal_hit_01.ogg",
           "title": "金属撞击 01",
           "tags": [
-            "金属",
-            "撞击",
-            "metal hit"
+            "碰撞",
+            "金属"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": false
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_metal_hit_02.ogg",
           "title": "金属撞击 02",
           "tags": [
-            "金属",
-            "撞击",
-            "metal hit"
+            "碰撞",
+            "金属"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": false
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_wood_hit_02.ogg",
           "title": "木材撞击 02",
           "tags": [
-            "木材",
-            "撞击",
-            "wood hit"
+            "碰撞",
+            "木材"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": false
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_wood_hit_03.ogg",
           "title": "木材撞击 03",
           "tags": [
-            "木材",
-            "撞击",
-            "wood hit"
+            "碰撞",
+            "木材"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": true,
+          "archive_reason": "同类编号变体精简；保留文件与 ID 供旧工程使用"
+        },
+        {
+          "file": "expanded-20260907/explosion.mp3",
+          "source": "basic_n4",
+          "title": "爆炸声",
+          "tags": [
+            "爆炸"
+          ]
+        },
+        {
+          "file": "expanded-20260907/explosion-distant.mp3",
+          "source": "basic_n4",
+          "title": "远处爆炸",
+          "tags": [
+            "爆炸",
+            "远处"
+          ]
+        },
+        {
+          "file": "expanded-20260907/gunshot.mp3",
+          "source": "basic_n4",
+          "title": "单次枪声",
+          "tags": [
+            "枪声",
+            "单次"
+          ]
         }
       ]
     },
@@ -421,12 +690,11 @@
           "source": "rain_window",
           "title": "窗边雨声",
           "tags": [
-            "雨",
+            "雨声",
             "窗户",
-            "循环",
-            "rain",
-            "window"
-          ]
+            "循环"
+          ],
+          "archived": false
         },
         {
           "file": "supplemental/ambience_fire_crackle.ogg",
@@ -434,45 +702,40 @@
           "title": "火焰燃烧",
           "tags": [
             "火焰",
-            "壁炉",
-            "燃烧",
-            "fire",
-            "crackle"
-          ]
+            "循环"
+          ],
+          "archived": false
         },
         {
           "file": "supplemental/ambience_forest.mp3",
           "source": "forest_ambience",
           "title": "森林环境",
           "tags": [
-            "森林",
             "自然",
-            "鸟鸣",
-            "forest",
-            "nature"
-          ]
+            "环境底噪",
+            "室外"
+          ],
+          "archived": false
         },
         {
           "file": "supplemental/ambience_wind_01.ogg",
           "source": "wind",
           "title": "风声 1",
           "tags": [
-            "风",
-            "天气",
-            "wind",
-            "weather"
-          ]
+            "风声",
+            "室外"
+          ],
+          "archived": false
         },
         {
           "file": "supplemental/ambience_wind_02.ogg",
           "source": "wind",
           "title": "风声 2",
           "tags": [
-            "风",
-            "天气",
-            "wind",
-            "weather"
-          ]
+            "风声",
+            "室外"
+          ],
+          "archived": false
         }
       ]
     },
@@ -495,11 +758,10 @@
           "source": "clock_tick",
           "title": "时钟滴答",
           "tags": [
-            "时钟",
-            "滴答",
-            "clock",
-            "tick"
-          ]
+            "钟表",
+            "循环"
+          ],
+          "archived": false
         },
         {
           "file": "supplemental/foley_doorbell.ogg",
@@ -507,34 +769,29 @@
           "title": "门铃",
           "tags": [
             "门铃",
-            "提示",
-            "doorbell",
-            "ring"
-          ]
+            "单次"
+          ],
+          "archived": false
         },
         {
           "file": "supplemental/foley_page_turn_01.wav",
           "source": "book_flip",
           "title": "单次翻页",
           "tags": [
-            "书本",
-            "翻页",
-            "单次",
-            "book",
-            "page"
-          ]
+            "纸张",
+            "翻页"
+          ],
+          "archived": false
         },
         {
           "file": "supplemental/foley_page_flip_sequence.wav",
           "source": "book_flip",
           "title": "连续翻页",
           "tags": [
-            "书本",
-            "翻页",
-            "连续",
-            "book",
-            "page"
-          ]
+            "纸张",
+            "翻页"
+          ],
+          "archived": false
         }
       ]
     },
@@ -547,148 +804,427 @@
           "file": "rubberduck-sfx100-v2/sfx100v2_items_01.ogg",
           "title": "物件动作 01",
           "tags": [
-            "物件",
-            "动作",
-            "item"
+            "物件动作 01"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": false
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_items_02.ogg",
           "title": "物件动作 02",
           "tags": [
-            "物件",
-            "动作",
-            "item"
+            "物件动作 02"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": false
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_metal_01.ogg",
           "title": "金属声 01",
           "tags": [
-            "金属",
-            "metal"
+            "金属"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": false
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_metal_02.ogg",
           "title": "金属声 02",
           "tags": [
-            "金属",
-            "metal"
+            "金属"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": false
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_metal_03.ogg",
           "title": "金属声 03",
           "tags": [
-            "金属",
-            "metal"
+            "金属"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": true,
+          "archive_reason": "同类编号变体精简；保留文件与 ID 供旧工程使用"
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_metal_04.ogg",
           "title": "金属声 04",
           "tags": [
-            "金属",
-            "metal"
+            "金属"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": true,
+          "archive_reason": "同类编号变体精简；保留文件与 ID 供旧工程使用"
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_metal_05.ogg",
           "title": "金属声 05",
           "tags": [
-            "金属",
-            "metal"
+            "金属"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": true,
+          "archive_reason": "同类编号变体精简；保留文件与 ID 供旧工程使用"
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_metal_06.ogg",
           "title": "金属声 06",
           "tags": [
-            "金属",
-            "metal"
+            "金属"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": true,
+          "archive_reason": "同类编号变体精简；保留文件与 ID 供旧工程使用"
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_stones_01.ogg",
           "title": "石块声 01",
           "tags": [
-            "石块",
-            "stone"
+            "石块"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": false
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_stones_02.ogg",
           "title": "石块声 02",
           "tags": [
-            "石块",
-            "stone"
+            "石块"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": false
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_stones_03.ogg",
           "title": "石块声 03",
           "tags": [
-            "石块",
-            "stone"
+            "石块"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": true,
+          "archive_reason": "同类编号变体精简；保留文件与 ID 供旧工程使用"
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_switch_02.ogg",
           "title": "开关 02",
           "tags": [
-            "开关",
-            "按钮",
-            "switch"
+            "开关"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": false
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_wood_01.ogg",
           "title": "木材声 01",
           "tags": [
-            "木材",
-            "wood"
+            "木材"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": false
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_wood_02.ogg",
           "title": "木材声 02",
           "tags": [
-            "木材",
-            "wood"
+            "木材"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": false
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_wood_03.ogg",
           "title": "木材声 03",
           "tags": [
-            "木材",
-            "wood"
+            "木材"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": true,
+          "archive_reason": "同类编号变体精简；保留文件与 ID 供旧工程使用"
         },
         {
           "file": "rubberduck-sfx100-v2/sfx100v2_wood_04.ogg",
           "title": "木材声 04",
           "tags": [
-            "木材",
-            "wood"
+            "木材"
           ],
-          "source": "rubberduck_sfx100_v2"
+          "source": "rubberduck_sfx100_v2",
+          "archived": true,
+          "archive_reason": "同类编号变体精简；保留文件与 ID 供旧工程使用"
+        },
+        {
+          "file": "expanded-20260907/typing.mp3",
+          "source": "typing",
+          "title": "键盘连续输入",
+          "tags": [
+            "键盘",
+            "室内"
+          ]
+        },
+        {
+          "file": "expanded-20260907/keypress.mp3",
+          "source": "typing",
+          "title": "键盘单键",
+          "tags": [
+            "键盘",
+            "室内"
+          ]
+        },
+        {
+          "file": "expanded-20260907/zipper.mp3",
+          "source": "zipper",
+          "title": "衣服拉链",
+          "tags": [
+            "拉链",
+            "衣物"
+          ]
+        },
+        {
+          "file": "expanded-20260907/bell-short.mp3",
+          "source": "basic_n4",
+          "title": "短铃声",
+          "tags": [
+            "铃铛",
+            "单次"
+          ]
+        },
+        {
+          "file": "expanded-20260907/bell-long.mp3",
+          "source": "basic_n4",
+          "title": "长铃声",
+          "tags": [
+            "铃铛"
+          ]
+        },
+        {
+          "file": "expanded-20260907/button.mp3",
+          "source": "basic_n4",
+          "title": "按钮短音",
+          "tags": [
+            "开关",
+            "单次"
+          ]
+        },
+        {
+          "file": "expanded-20260907/coin.mp3",
+          "source": "basic_n4",
+          "title": "硬币碰响",
+          "tags": [
+            "金属",
+            "硬币"
+          ]
+        },
+        {
+          "file": "expanded-20260907/splash.mp3",
+          "source": "basic_n4",
+          "title": "水花溅起",
+          "tags": [
+            "水声",
+            "水花"
+          ]
+        },
+        {
+          "file": "expanded-20260907/drawer-open.mp3",
+          "source": "various_laleksic",
+          "title": "拉开抽屉",
+          "tags": [
+            "抽屉",
+            "拉开",
+            "室内"
+          ]
+        },
+        {
+          "file": "expanded-20260907/drawer-close.mp3",
+          "source": "various_laleksic",
+          "title": "关上抽屉",
+          "tags": [
+            "抽屉",
+            "关闭",
+            "室内"
+          ]
+        },
+        {
+          "file": "expanded-20260907/floor-creak.mp3",
+          "source": "various_laleksic",
+          "title": "地板吱呀",
+          "tags": [
+            "木地板",
+            "吱呀"
+          ]
+        },
+        {
+          "file": "expanded-20260907/lock.mp3",
+          "source": "various_laleksic",
+          "title": "门锁转动",
+          "tags": [
+            "锁具",
+            "单次"
+          ]
+        },
+        {
+          "file": "expanded-20260907/lock-pick.mp3",
+          "source": "various_laleksic",
+          "title": "拨动锁芯",
+          "tags": [
+            "锁具",
+            "拨动"
+          ]
+        },
+        {
+          "file": "expanded-20260907/keys.mp3",
+          "source": "various_laleksic",
+          "title": "拿起钥匙",
+          "tags": [
+            "钥匙",
+            "金属"
+          ]
+        },
+        {
+          "file": "expanded-20260907/match.mp3",
+          "source": "various_laleksic",
+          "title": "划火柴",
+          "tags": [
+            "火柴",
+            "单次"
+          ]
+        },
+        {
+          "file": "expanded-20260907/microwave.mp3",
+          "source": "various_laleksic",
+          "title": "微波炉运转",
+          "tags": [
+            "微波炉",
+            "机械",
+            "室内"
+          ]
+        },
+        {
+          "file": "expanded-20260907/tap.mp3",
+          "source": "various_laleksic",
+          "title": "水龙头流水",
+          "tags": [
+            "水声",
+            "水龙头",
+            "室内"
+          ]
+        },
+        {
+          "file": "expanded-20260907/toilet.mp3",
+          "source": "various_laleksic",
+          "title": "马桶冲水",
+          "tags": [
+            "水声",
+            "马桶",
+            "室内"
+          ]
+        },
+        {
+          "file": "expanded-20260907/manhole.mp3",
+          "source": "various_laleksic",
+          "title": "开启井盖",
+          "tags": [
+            "井盖",
+            "金属"
+          ]
+        },
+        {
+          "file": "expanded-20260907/stone-grind.mp3",
+          "source": "various_laleksic",
+          "title": "石块摩擦",
+          "tags": [
+            "石块",
+            "摩擦"
+          ]
+        },
+        {
+          "file": "original/knock.wav",
+          "source": "auralis_original",
+          "title": "敲门 · 一慢两快",
+          "tags": [
+            "敲门",
+            "一慢两快"
+          ]
+        },
+        {
+          "file": "original/vibration.wav",
+          "source": "auralis_original",
+          "title": "手机振动",
+          "tags": [
+            "振动",
+            "手机"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "animals",
+      "label": "animals",
+      "items": [
+        {
+          "file": "expanded-20260907/dog-bark.mp3",
+          "source": "dog_bark",
+          "title": "犬吠",
+          "tags": [
+            "狗叫",
+            "室外"
+          ]
+        },
+        {
+          "file": "expanded-20260907/dog-growl.mp3",
+          "source": "dog_growl",
+          "title": "犬低吼",
+          "tags": [
+            "狗叫",
+            "低吼"
+          ]
+        },
+        {
+          "file": "expanded-20260907/bird-chirp.mp3",
+          "source": "bird_chirp",
+          "title": "庭院鸟鸣",
+          "tags": [
+            "鸟鸣",
+            "自然",
+            "室外"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "transport",
+      "label": "transport",
+      "items": [
+        {
+          "file": "expanded-20260907/traffic-city.mp3",
+          "source": "traffic_city",
+          "title": "城市繁忙车流",
+          "tags": [
+            "交通",
+            "室外"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "human",
+      "label": "human",
+      "items": [
+        {
+          "file": "expanded-20260907/heartbeat.mp3",
+          "source": "heartbeat",
+          "title": "单次心跳",
+          "tags": [
+            "心跳",
+            "单次"
+          ]
+        },
+        {
+          "file": "expanded-20260907/horror-breath.mp3",
+          "source": "horror_breathing",
+          "title": "悬疑呼吸",
+          "tags": [
+            "呼吸",
+            "悬疑"
+          ]
         }
       ]
     }

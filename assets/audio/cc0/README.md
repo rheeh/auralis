@@ -1,6 +1,6 @@
 # Auralis CC0 Stock Audio
 
-This directory contains a small, redistributable starter library for common
+This directory contains a curated, redistributable library for common
 audio-drama ambience and Foley. Every included file is sourced from an asset
 page that declares the work under Creative Commons Zero 1.0 (CC0).
 
@@ -20,3 +20,9 @@ not require attribution.
 The Auralis media-library UI reads this catalog at runtime. Built-in assets are
 read-only; binding one to a line copies it into the project so later project
 editing does not mutate this source library.
+
+## Tag retrieval and curation (2026-09-07)
+
+79 assets are listed by default: 29 additional external sounds and 2 existing original Demo effects were added, while 24 similar numbered variants were archived from search. No byte-identical pairs were found. Archived files retain their IDs and remain resolvable for old projects. See `curation-20260907.json`.
+
+Each file has source-specific Chinese tags. Script adaptation produces `soundTags`; matching uses these tags locally without an LLM request. New user imports can be tagged manually.

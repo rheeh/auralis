@@ -26,3 +26,20 @@ https://creativecommons.org/publicdomain/zero/1.0/
 
 The source pages were checked on 2026-07-31. Keep this file with the audio
 library when redistributing Auralis.
+
+## 2026-09-07 additions
+
+The following original source pages were checked on 2026-09-07. Each offers CC0. New external clips are encoded as MP3; no existing project audio was edited.
+
+- n4: https://opengameart.org/content/basic-sound-effects
+- syncopika: https://opengameart.org/content/bird-chirping-sounds
+- Brandon Morris: https://opengameart.org/content/dog-barking-mono
+- bonebrah: https://opengameart.org/content/dog-growl
+- Independent.nu: https://opengameart.org/content/heartbeat-single-sound
+- primbal: https://opengameart.org/content/horror-breathing
+- IgnasD: https://opengameart.org/content/high-traffic-road-sounds
+- unicaegames: https://opengameart.org/content/keyboard-soundpack-1-typing-and-single-keystrokes
+- laleksic: https://opengameart.org/node/143670
+- AntumDeluge: https://opengameart.org/content/zipper
+
+Original Auralis procedural knocks and phone vibration are copied from the existing CC0 Demo; see `scripts/build_demo_effects.py`.

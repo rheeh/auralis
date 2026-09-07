@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.core.sound_tags import script_sound_tags, normalize_tags
 
 import re
 from typing import Any, Literal
@@ -103,6 +104,7 @@ class ScriptLine(BaseModel):
     strength: str | None = None
     voiceProfile: str | None = None
     soundPrompt: str | None = None
+    soundTags: list[str] = Field(default_factory=list)
     productionNote: str | None = None
     audioEvents: list[AudioEvent] = Field(default_factory=list)
 
@@ -115,11 +117,13 @@ class ScriptLine(BaseModel):
         aliases = {
             "role_name": "speaker", "text_content": "text", "emotion_name": "emotion",
             "strength_name": "strength", "production_note": "productionNote",
-            "audio_events": "audioEvents", "sound_prompt": "soundPrompt",
+            "audio_events": "audioEvents", "sound_prompt": "soundPrompt", "sound_tags": "soundTags",
         }
         for source, target in aliases.items():
             if source in normalized and target not in normalized:
                 normalized[target] = normalized[source]
+        if "soundTags" in normalized:
+            normalized["soundTags"] = normalize_tags(normalized["soundTags"])
         # Some compatible models use the audio-event label "amb" for a whole
         # environmental row. Only normalize an explicitly non-spoken row with
         # a compatible sound track; never reinterpret possible dialogue or
@@ -144,6 +148,7 @@ class ScriptLine(BaseModel):
             self.speaker = "音效" if self.type == "sfx" else "BGM"
             prompt = (self.soundPrompt or self.text or self.productionNote or "").strip()
             self.soundPrompt = prompt or None
+            self.soundTags = script_sound_tags(self.soundTags, prompt)
             if prompt and not self.text.strip():
                 self.text = prompt
         elif self.track not in {"voice", "narration"}:

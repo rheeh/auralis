@@ -1,3 +1,4 @@
+from app.core.sound_tags import tagging_instruction
 # 根据小说内容生成
 
 import textwrap
@@ -44,6 +45,7 @@ def get_audio_drama_script_prompt() -> str:
         "【导演分轨】dialogue/narration 的 shouldSpeak=true，track 分别为 voice/narration；sfx/bgm 的 shouldSpeak=false，track 与 type 一致。每场全部内容按播放顺序放进 scenes[].lines，禁止场景级 dialogues、audioEvents 或其他平行数组代替 lines。",
         "scenes[].lines[].type 严格只能是 dialogue、narration、sfx、bgm。环境音仍是type=sfx的非朗读行；amb、break、reverb只允许出现在audioEvents[].type，绝不能作为lines的type。",
         '静默示例：{"type":"dialogue","track":"voice","shouldSpeak":true,"speaker":"角色名","text":"别出声。","audioEvents":[{"timing":"台词后","type":"break","content":"静默0.5秒，保留雨声底噪","volume_db":"-28dB"}]}。这是局部格式示例；正式输出仍需完整剧本。不得另造type=break的独立行。',
+        tagging_instruction(),
         "【可执行声音】每条 sfx/bgm 必须有非空 soundPrompt，写明确声源、动作、材质、距离和时长；不能只把内容藏在 audioEvents。‘手悬在开关上方’等无可辨声音的画面不要编造音效。可懂人声包括电话和录音都用 dialogue/narration，让TTS生成，勿把整句人声写进SFX。",
         "【入点与去重】独立声音写 sfx/bgm 行；与台词同步的声音可写该行 audioEvents。同一声音只表示一次，勿同时复制到独立行和 audioEvents。持续底声只进入一次并标明淡出。若原文先声音A、随后声音B，B必须在A结束后出现，不得改成同步/重叠。",
         "audioEvents 必须给出 timing、type、content、volume_db；type 只能是 sfx、amb、bgm、reverb、break。环境声通常 -28dB，背景音 -24dB，前景动作约 -12dB，确保不遮挡台词。气息、重音、语速和演员意图写 productionNote，每句聚焦一处关键表达变化。",

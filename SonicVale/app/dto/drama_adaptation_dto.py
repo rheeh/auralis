@@ -31,6 +31,7 @@ class DramaLineDTO(BaseModel):
     strength: Optional[str] = None
     voice_profile: Optional[str] = None
     sound_prompt: Optional[str] = None
+    sound_tags: Optional[list[str]] = None
     production_note: Optional[str] = None
 
 

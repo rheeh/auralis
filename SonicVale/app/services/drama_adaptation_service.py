@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.core.sound_tags import script_sound_tags, tagging_instruction
 import json
 import logging
 import os
@@ -166,6 +167,7 @@ class DramaAdaptationService:
                     track=self._track(line),
                     should_speak=1 if bool(line.get("shouldSpeak", line.get("should_speak", True))) else 0,
                     scene_title=scene_title,
+                    sound_tags=script_sound_tags(line.get("soundTags") or line.get("sound_tags"), line.get("soundPrompt") or line.get("text")) if self._line_type(line) in {"sfx","bgm"} else [],
                     sound_prompt=str(line.get("soundPrompt") or line.get("sound_prompt") or "").strip() or None,
                     voice_profile=str(line.get("voiceProfile") or line.get("voice_profile") or "").strip() or None,
                     production_note=str(line.get("productionNote") or line.get("production_note") or "").strip() or None,
@@ -314,6 +316,7 @@ class DramaAdaptationService:
                 f"用户指令：{dto.instruction or '生成可直接制作的广播剧台本。'}",
                 "规则：dialogue 只能是人物说出口的话；narration 只能是旁白；sfx/bgm 只能是声音提示，不写成可朗读句。",
                 "严格执行 contentMap；禁止把 delete/sfx/bgm 内容重新写成长旁白。禁止连续旁白，单条旁白通常不超过45个汉字，旁白字数目标不超过人物可朗读文本的15%。",
+                tagging_instruction(),
                 "每一行必须包含 type、track、shouldSpeak、speaker、text、emotion、strength、voiceProfile、soundPrompt、productionNote。",
                 "JSON schema:",
                 json.dumps(self._script_schema(), ensure_ascii=False),
@@ -364,6 +367,7 @@ class DramaAdaptationService:
                             "strength": "微弱/稍弱/中等/较强/强烈",
                             "voiceProfile": "声线建议",
                             "soundPrompt": "音效或 BGM 提示",
+                            "soundTags": ["声源", "材质", "空间"],
                             "productionNote": "制作备注",
                         }
                     ],

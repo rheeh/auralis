@@ -26,6 +26,7 @@ from app.core.tts_engine import ConfigurableCloudTTSEngine, EdgeTTSEngine, TTSEn
 from app.core.tts_guidance import build_voice_instruction, edge_prosody
 from app.dto.line_dto import LineCreateDTO, LineOrderDTO, LineAudioProcessDTO, LineAudioVariantDTO
 from app.entity.line_entity import LineEntity
+from app.core.sound_tags import infer_tags
 from app.models.po import LinePO, RolePO
 from app.repositories.line_repository import LineRepository
 from app.repositories.role_repository import RoleRepository
@@ -157,6 +158,8 @@ class LineService:
         po = self.repository.get_by_id(line_id)
         if po is None:
             return False
+        if po.track in {"sfx", "bgm"} and "sound_tags" not in data and any(k in data for k in ("sound_prompt", "text_content")):
+            data = {**data, "sound_tags": infer_tags(data.get("sound_prompt") or data.get("text_content") or po.sound_prompt)}
         generation_fields = {"text_content", "production_note", "emotion_id", "strength_id", "voice_id"}
         changed = any(key in data and data[key] != getattr(po, key, None) for key in generation_fields)
         if changed and po.should_speak != 0 and po.track not in {"sfx", "bgm"}:
@@ -1037,6 +1040,7 @@ class LineService:
             "strength_id": line.strength_id,
             "voice_profile": getattr(line, "voice_profile", None),
             "sound_prompt": getattr(line, "sound_prompt", None),
+            "sound_tags": getattr(line, "sound_tags", None) or [],
             "production_note": getattr(line, "production_note", None),
             "audio_events": getattr(line, "audio_events", None) or [],
             "audio_versions": getattr(line, "audio_versions", None) or [],

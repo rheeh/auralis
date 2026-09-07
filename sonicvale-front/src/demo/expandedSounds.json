@@ -3,46 +3,70 @@
     "id": "sfx100v2_air_03",
     "label": "空气流动 03",
     "file": "sfx/expanded/sfx100v2_air_03.ogg",
-    "kind": "气流 / 风",
+    "kind": "风声",
     "seconds": 0.285,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": true,
+    "tags": [
+      "风声"
+    ]
   },
   {
     "id": "sfx100v2_door_04",
     "label": "门响 04",
     "file": "sfx/expanded/sfx100v2_door_04.ogg",
-    "kind": "门 / 开关门",
+    "kind": "开关门",
     "seconds": 0.201,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": true,
+    "tags": [
+      "开关门"
+    ]
   },
   {
     "id": "sfx100v2_door_05",
     "label": "门响 05",
     "file": "sfx/expanded/sfx100v2_door_05.ogg",
-    "kind": "门 / 开关门",
+    "kind": "开关门",
     "seconds": 0.306,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": true,
+    "tags": [
+      "开关门"
+    ]
   },
   {
     "id": "sfx100v2_footstep_wet_02",
     "label": "湿地脚步 02",
     "file": "sfx/expanded/sfx100v2_footstep_wet_02.ogg",
-    "kind": "脚步 / 水",
+    "kind": "脚步 / 湿地",
     "seconds": 0.402,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": false,
+    "tags": [
+      "脚步",
+      "湿地",
+      "单次"
+    ]
   },
   {
     "id": "sfx100v2_footstep_wet_03",
     "label": "湿地脚步 03",
     "file": "sfx/expanded/sfx100v2_footstep_wet_03.ogg",
-    "kind": "脚步 / 水",
+    "kind": "脚步 / 湿地",
     "seconds": 0.385,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": true,
+    "tags": [
+      "脚步",
+      "湿地",
+      "单次"
+    ]
   },
   {
     "id": "sfx100v2_footstep_wood_03",
@@ -51,7 +75,13 @@
     "kind": "脚步 / 木地板",
     "seconds": 0.256,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": true,
+    "tags": [
+      "脚步",
+      "木地板",
+      "单次"
+    ]
   },
   {
     "id": "sfx100v2_footstep_wood_04",
@@ -60,303 +90,861 @@
     "kind": "脚步 / 木地板",
     "seconds": 0.373,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": true,
+    "tags": [
+      "脚步",
+      "木地板",
+      "单次"
+    ]
   },
   {
     "id": "sfx100v2_glass_02",
     "label": "玻璃声 02",
     "file": "sfx/expanded/sfx100v2_glass_02.ogg",
-    "kind": "玻璃 / 碰撞",
+    "kind": "玻璃",
     "seconds": 0.665,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": false,
+    "tags": [
+      "玻璃"
+    ]
   },
   {
     "id": "sfx100v2_glass_03",
     "label": "玻璃声 03",
     "file": "sfx/expanded/sfx100v2_glass_03.ogg",
-    "kind": "玻璃 / 碰撞",
+    "kind": "玻璃",
     "seconds": 0.609,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": true,
+    "tags": [
+      "玻璃"
+    ]
   },
   {
     "id": "sfx100v2_glass_04",
     "label": "玻璃声 04",
     "file": "sfx/expanded/sfx100v2_glass_04.ogg",
-    "kind": "玻璃 / 碰撞",
+    "kind": "玻璃",
     "seconds": 0.235,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": true,
+    "tags": [
+      "玻璃"
+    ]
   },
   {
     "id": "sfx100v2_glass_05",
     "label": "玻璃声 05",
     "file": "sfx/expanded/sfx100v2_glass_05.ogg",
-    "kind": "玻璃 / 碰撞",
+    "kind": "玻璃",
     "seconds": 0.547,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": true,
+    "tags": [
+      "玻璃"
+    ]
   },
   {
     "id": "sfx100v2_glass_06",
     "label": "玻璃声 06",
     "file": "sfx/expanded/sfx100v2_glass_06.ogg",
-    "kind": "玻璃 / 碰撞",
+    "kind": "玻璃",
     "seconds": 0.395,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": true,
+    "tags": [
+      "玻璃"
+    ]
   },
   {
     "id": "sfx100v2_hit_02",
     "label": "撞击 02",
     "file": "sfx/expanded/sfx100v2_hit_02.ogg",
-    "kind": "撞击 / hit",
+    "kind": "碰撞",
     "seconds": 0.457,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": false,
+    "tags": [
+      "碰撞"
+    ]
   },
   {
     "id": "sfx100v2_hit_03",
     "label": "撞击 03",
     "file": "sfx/expanded/sfx100v2_hit_03.ogg",
-    "kind": "撞击 / hit",
+    "kind": "碰撞",
     "seconds": 0.224,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": true,
+    "tags": [
+      "碰撞"
+    ]
   },
   {
     "id": "sfx100v2_items_01",
     "label": "物件动作 01",
     "file": "sfx/expanded/sfx100v2_items_01.ogg",
-    "kind": "物件 / 动作",
+    "kind": "物件动作 01",
     "seconds": 0.57,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": false,
+    "tags": [
+      "物件动作 01"
+    ]
   },
   {
     "id": "sfx100v2_items_02",
     "label": "物件动作 02",
     "file": "sfx/expanded/sfx100v2_items_02.ogg",
-    "kind": "物件 / 动作",
+    "kind": "物件动作 02",
     "seconds": 0.508,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": false,
+    "tags": [
+      "物件动作 02"
+    ]
   },
   {
     "id": "sfx100v2_loop_construction_site",
     "label": "施工现场",
     "file": "sfx/expanded/sfx100v2_loop_construction_site.ogg",
-    "kind": "施工 / 工地",
+    "kind": "施工 / 循环",
     "seconds": 14.52,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": false,
+    "tags": [
+      "施工",
+      "循环"
+    ]
   },
   {
     "id": "sfx100v2_loop_machine_01",
     "label": "机械运转 01",
     "file": "sfx/expanded/sfx100v2_loop_machine_01.ogg",
-    "kind": "机器 / 运转",
+    "kind": "机械 / 循环",
     "seconds": 7.558,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": false,
+    "tags": [
+      "机械",
+      "循环"
+    ]
   },
   {
     "id": "sfx100v2_loop_machine_02",
     "label": "机械运转 02",
     "file": "sfx/expanded/sfx100v2_loop_machine_02.ogg",
-    "kind": "机器 / 运转",
+    "kind": "机械 / 循环",
     "seconds": 10.652,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": false,
+    "tags": [
+      "机械",
+      "循环"
+    ]
   },
   {
     "id": "sfx100v2_loop_machine_03",
     "label": "机械运转 03",
     "file": "sfx/expanded/sfx100v2_loop_machine_03.ogg",
-    "kind": "机器 / 运转",
+    "kind": "机械 / 循环",
     "seconds": 1.839,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": true,
+    "tags": [
+      "机械",
+      "循环"
+    ]
   },
   {
     "id": "sfx100v2_loop_machine_04",
     "label": "机械运转 04",
     "file": "sfx/expanded/sfx100v2_loop_machine_04.ogg",
-    "kind": "机器 / 运转",
+    "kind": "机械 / 循环",
     "seconds": 4.576,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": true,
+    "tags": [
+      "机械",
+      "循环"
+    ]
   },
   {
     "id": "sfx100v2_loop_water_03",
     "label": "流水循环 03",
     "file": "sfx/expanded/sfx100v2_loop_water_03.ogg",
-    "kind": "水 / 流水",
+    "kind": "水声 / 循环",
     "seconds": 9.707,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": false,
+    "tags": [
+      "水声",
+      "循环"
+    ]
   },
   {
     "id": "sfx100v2_metal_01",
     "label": "金属声 01",
     "file": "sfx/expanded/sfx100v2_metal_01.ogg",
-    "kind": "金属 / metal",
+    "kind": "金属",
     "seconds": 0.58,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": false,
+    "tags": [
+      "金属"
+    ]
   },
   {
     "id": "sfx100v2_metal_02",
     "label": "金属声 02",
     "file": "sfx/expanded/sfx100v2_metal_02.ogg",
-    "kind": "金属 / metal",
+    "kind": "金属",
     "seconds": 0.319,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": false,
+    "tags": [
+      "金属"
+    ]
   },
   {
     "id": "sfx100v2_metal_03",
     "label": "金属声 03",
     "file": "sfx/expanded/sfx100v2_metal_03.ogg",
-    "kind": "金属 / metal",
+    "kind": "金属",
     "seconds": 0.285,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": true,
+    "tags": [
+      "金属"
+    ]
   },
   {
     "id": "sfx100v2_metal_04",
     "label": "金属声 04",
     "file": "sfx/expanded/sfx100v2_metal_04.ogg",
-    "kind": "金属 / metal",
+    "kind": "金属",
     "seconds": 0.382,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": true,
+    "tags": [
+      "金属"
+    ]
   },
   {
     "id": "sfx100v2_metal_05",
     "label": "金属声 05",
     "file": "sfx/expanded/sfx100v2_metal_05.ogg",
-    "kind": "金属 / metal",
+    "kind": "金属",
     "seconds": 0.475,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": true,
+    "tags": [
+      "金属"
+    ]
   },
   {
     "id": "sfx100v2_metal_06",
     "label": "金属声 06",
     "file": "sfx/expanded/sfx100v2_metal_06.ogg",
-    "kind": "金属 / metal",
+    "kind": "金属",
     "seconds": 0.287,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": true,
+    "tags": [
+      "金属"
+    ]
   },
   {
     "id": "sfx100v2_metal_hit_01",
     "label": "金属撞击 01",
     "file": "sfx/expanded/sfx100v2_metal_hit_01.ogg",
-    "kind": "金属 / 撞击",
+    "kind": "碰撞 / 金属",
     "seconds": 0.811,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": false,
+    "tags": [
+      "碰撞",
+      "金属"
+    ]
   },
   {
     "id": "sfx100v2_metal_hit_02",
     "label": "金属撞击 02",
     "file": "sfx/expanded/sfx100v2_metal_hit_02.ogg",
-    "kind": "金属 / 撞击",
+    "kind": "碰撞 / 金属",
     "seconds": 0.21,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": false,
+    "tags": [
+      "碰撞",
+      "金属"
+    ]
   },
   {
     "id": "sfx100v2_stones_01",
     "label": "石块声 01",
     "file": "sfx/expanded/sfx100v2_stones_01.ogg",
-    "kind": "石块 / stone",
+    "kind": "石块",
     "seconds": 0.489,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": false,
+    "tags": [
+      "石块"
+    ]
   },
   {
     "id": "sfx100v2_stones_02",
     "label": "石块声 02",
     "file": "sfx/expanded/sfx100v2_stones_02.ogg",
-    "kind": "石块 / stone",
+    "kind": "石块",
     "seconds": 0.555,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": false,
+    "tags": [
+      "石块"
+    ]
   },
   {
     "id": "sfx100v2_stones_03",
     "label": "石块声 03",
     "file": "sfx/expanded/sfx100v2_stones_03.ogg",
-    "kind": "石块 / stone",
+    "kind": "石块",
     "seconds": 0.534,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": true,
+    "tags": [
+      "石块"
+    ]
   },
   {
     "id": "sfx100v2_switch_02",
     "label": "开关 02",
     "file": "sfx/expanded/sfx100v2_switch_02.ogg",
-    "kind": "开关 / 按钮",
+    "kind": "开关",
     "seconds": 0.233,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": false,
+    "tags": [
+      "开关"
+    ]
   },
   {
     "id": "sfx100v2_wood_01",
     "label": "木材声 01",
     "file": "sfx/expanded/sfx100v2_wood_01.ogg",
-    "kind": "木材 / wood",
+    "kind": "木材",
     "seconds": 0.532,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": false,
+    "tags": [
+      "木材"
+    ]
   },
   {
     "id": "sfx100v2_wood_02",
     "label": "木材声 02",
     "file": "sfx/expanded/sfx100v2_wood_02.ogg",
-    "kind": "木材 / wood",
+    "kind": "木材",
     "seconds": 0.451,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": false,
+    "tags": [
+      "木材"
+    ]
   },
   {
     "id": "sfx100v2_wood_03",
     "label": "木材声 03",
     "file": "sfx/expanded/sfx100v2_wood_03.ogg",
-    "kind": "木材 / wood",
+    "kind": "木材",
     "seconds": 0.678,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": true,
+    "tags": [
+      "木材"
+    ]
   },
   {
     "id": "sfx100v2_wood_04",
     "label": "木材声 04",
     "file": "sfx/expanded/sfx100v2_wood_04.ogg",
-    "kind": "木材 / wood",
+    "kind": "木材",
     "seconds": 0.227,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": true,
+    "tags": [
+      "木材"
+    ]
   },
   {
     "id": "sfx100v2_wood_hit_02",
     "label": "木材撞击 02",
     "file": "sfx/expanded/sfx100v2_wood_hit_02.ogg",
-    "kind": "木材 / 撞击",
+    "kind": "碰撞 / 木材",
     "seconds": 0.357,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": false,
+    "tags": [
+      "碰撞",
+      "木材"
+    ]
   },
   {
     "id": "sfx100v2_wood_hit_03",
     "label": "木材撞击 03",
     "file": "sfx/expanded/sfx100v2_wood_hit_03.ogg",
-    "kind": "木材 / 撞击",
+    "kind": "碰撞 / 木材",
     "seconds": 0.469,
     "source_url": "https://opengameart.org/content/100-cc0-sfx-2",
-    "license": "CC0-1.0"
+    "license": "CC0-1.0",
+    "archived": true,
+    "tags": [
+      "碰撞",
+      "木材"
+    ]
+  },
+  {
+    "id": "curated-typing",
+    "label": "键盘连续输入",
+    "file": "sfx/expanded/curated-typing.mp3",
+    "kind": "键盘 / 室内",
+    "tags": [
+      "键盘",
+      "室内"
+    ],
+    "seconds": 6.25,
+    "source_url": "https://opengameart.org/content/keyboard-soundpack-1-typing-and-single-keystrokes",
+    "license": "CC0-1.0",
+    "author": "unicaegames"
+  },
+  {
+    "id": "curated-keypress",
+    "label": "键盘单键",
+    "file": "sfx/expanded/curated-keypress.mp3",
+    "kind": "键盘 / 室内",
+    "tags": [
+      "键盘",
+      "室内"
+    ],
+    "seconds": 0.25,
+    "source_url": "https://opengameart.org/content/keyboard-soundpack-1-typing-and-single-keystrokes",
+    "license": "CC0-1.0",
+    "author": "unicaegames"
+  },
+  {
+    "id": "curated-dog-bark",
+    "label": "犬吠",
+    "file": "sfx/expanded/curated-dog-bark.mp3",
+    "kind": "狗叫 / 室外",
+    "tags": [
+      "狗叫",
+      "室外"
+    ],
+    "seconds": 2.039,
+    "source_url": "https://opengameart.org/content/dog-barking-mono",
+    "license": "CC0-1.0",
+    "author": "Brandon Morris"
+  },
+  {
+    "id": "curated-dog-growl",
+    "label": "犬低吼",
+    "file": "sfx/expanded/curated-dog-growl.mp3",
+    "kind": "狗叫 / 低吼",
+    "tags": [
+      "狗叫",
+      "低吼"
+    ],
+    "seconds": 0.608,
+    "source_url": "https://opengameart.org/content/dog-growl",
+    "license": "CC0-1.0",
+    "author": "bonebrah"
+  },
+  {
+    "id": "curated-traffic-city",
+    "label": "城市繁忙车流",
+    "file": "sfx/expanded/curated-traffic-city.mp3",
+    "kind": "交通 / 室外",
+    "tags": [
+      "交通",
+      "室外"
+    ],
+    "seconds": 59.592,
+    "source_url": "https://opengameart.org/content/high-traffic-road-sounds",
+    "license": "CC0-1.0",
+    "author": "IgnasD"
+  },
+  {
+    "id": "curated-heartbeat",
+    "label": "单次心跳",
+    "file": "sfx/expanded/curated-heartbeat.mp3",
+    "kind": "心跳 / 单次",
+    "tags": [
+      "心跳",
+      "单次"
+    ],
+    "seconds": 4.442,
+    "source_url": "https://opengameart.org/content/heartbeat-single-sound",
+    "license": "CC0-1.0",
+    "author": "Independent.nu"
+  },
+  {
+    "id": "curated-bird-chirp",
+    "label": "庭院鸟鸣",
+    "file": "sfx/expanded/curated-bird-chirp.mp3",
+    "kind": "鸟鸣 / 自然",
+    "tags": [
+      "鸟鸣",
+      "自然",
+      "室外"
+    ],
+    "seconds": 3.0,
+    "source_url": "https://opengameart.org/content/bird-chirping-sounds",
+    "license": "CC0-1.0",
+    "author": "syncopika"
+  },
+  {
+    "id": "curated-zipper",
+    "label": "衣服拉链",
+    "file": "sfx/expanded/curated-zipper.mp3",
+    "kind": "拉链 / 衣物",
+    "tags": [
+      "拉链",
+      "衣物"
+    ],
+    "seconds": 0.868,
+    "source_url": "https://opengameart.org/content/zipper",
+    "license": "CC0-1.0",
+    "author": "AntumDeluge"
+  },
+  {
+    "id": "curated-bell-short",
+    "label": "短铃声",
+    "file": "sfx/expanded/curated-bell-short.mp3",
+    "kind": "铃铛 / 单次",
+    "tags": [
+      "铃铛",
+      "单次"
+    ],
+    "seconds": 1.541,
+    "source_url": "https://opengameart.org/content/basic-sound-effects",
+    "license": "CC0-1.0",
+    "author": "n4"
+  },
+  {
+    "id": "curated-bell-long",
+    "label": "长铃声",
+    "file": "sfx/expanded/curated-bell-long.mp3",
+    "kind": "铃铛",
+    "tags": [
+      "铃铛"
+    ],
+    "seconds": 3.553,
+    "source_url": "https://opengameart.org/content/basic-sound-effects",
+    "license": "CC0-1.0",
+    "author": "n4"
+  },
+  {
+    "id": "curated-button",
+    "label": "按钮短音",
+    "file": "sfx/expanded/curated-button.mp3",
+    "kind": "开关 / 单次",
+    "tags": [
+      "开关",
+      "单次"
+    ],
+    "seconds": 0.209,
+    "source_url": "https://opengameart.org/content/basic-sound-effects",
+    "license": "CC0-1.0",
+    "author": "n4"
+  },
+  {
+    "id": "curated-coin",
+    "label": "硬币碰响",
+    "file": "sfx/expanded/curated-coin.mp3",
+    "kind": "金属 / 硬币",
+    "tags": [
+      "金属",
+      "硬币"
+    ],
+    "seconds": 1.567,
+    "source_url": "https://opengameart.org/content/basic-sound-effects",
+    "license": "CC0-1.0",
+    "author": "n4"
+  },
+  {
+    "id": "curated-explosion",
+    "label": "爆炸声",
+    "file": "sfx/expanded/curated-explosion.mp3",
+    "kind": "爆炸",
+    "tags": [
+      "爆炸"
+    ],
+    "seconds": 3.056,
+    "source_url": "https://opengameart.org/content/basic-sound-effects",
+    "license": "CC0-1.0",
+    "author": "n4"
+  },
+  {
+    "id": "curated-explosion-distant",
+    "label": "远处爆炸",
+    "file": "sfx/expanded/curated-explosion-distant.mp3",
+    "kind": "爆炸 / 远处",
+    "tags": [
+      "爆炸",
+      "远处"
+    ],
+    "seconds": 3.056,
+    "source_url": "https://opengameart.org/content/basic-sound-effects",
+    "license": "CC0-1.0",
+    "author": "n4"
+  },
+  {
+    "id": "curated-gunshot",
+    "label": "单次枪声",
+    "file": "sfx/expanded/curated-gunshot.mp3",
+    "kind": "枪声 / 单次",
+    "tags": [
+      "枪声",
+      "单次"
+    ],
+    "seconds": 1.045,
+    "source_url": "https://opengameart.org/content/basic-sound-effects",
+    "license": "CC0-1.0",
+    "author": "n4"
+  },
+  {
+    "id": "curated-splash",
+    "label": "水花溅起",
+    "file": "sfx/expanded/curated-splash.mp3",
+    "kind": "水声 / 水花",
+    "tags": [
+      "水声",
+      "水花"
+    ],
+    "seconds": 3.056,
+    "source_url": "https://opengameart.org/content/basic-sound-effects",
+    "license": "CC0-1.0",
+    "author": "n4"
+  },
+  {
+    "id": "curated-drawer-open",
+    "label": "拉开抽屉",
+    "file": "sfx/expanded/curated-drawer-open.mp3",
+    "kind": "抽屉 / 拉开",
+    "tags": [
+      "抽屉",
+      "拉开",
+      "室内"
+    ],
+    "seconds": 0.884,
+    "source_url": "https://opengameart.org/node/143670",
+    "license": "CC0-1.0",
+    "author": "laleksic"
+  },
+  {
+    "id": "curated-drawer-close",
+    "label": "关上抽屉",
+    "file": "sfx/expanded/curated-drawer-close.mp3",
+    "kind": "抽屉 / 关闭",
+    "tags": [
+      "抽屉",
+      "关闭",
+      "室内"
+    ],
+    "seconds": 0.692,
+    "source_url": "https://opengameart.org/node/143670",
+    "license": "CC0-1.0",
+    "author": "laleksic"
+  },
+  {
+    "id": "curated-floor-creak",
+    "label": "地板吱呀",
+    "file": "sfx/expanded/curated-floor-creak.mp3",
+    "kind": "木地板 / 吱呀",
+    "tags": [
+      "木地板",
+      "吱呀"
+    ],
+    "seconds": 1.787,
+    "source_url": "https://opengameart.org/node/143670",
+    "license": "CC0-1.0",
+    "author": "laleksic"
+  },
+  {
+    "id": "curated-lock",
+    "label": "门锁转动",
+    "file": "sfx/expanded/curated-lock.mp3",
+    "kind": "锁具 / 单次",
+    "tags": [
+      "锁具",
+      "单次"
+    ],
+    "seconds": 0.926,
+    "source_url": "https://opengameart.org/node/143670",
+    "license": "CC0-1.0",
+    "author": "laleksic"
+  },
+  {
+    "id": "curated-lock-pick",
+    "label": "拨动锁芯",
+    "file": "sfx/expanded/curated-lock-pick.mp3",
+    "kind": "锁具 / 拨动",
+    "tags": [
+      "锁具",
+      "拨动"
+    ],
+    "seconds": 1.823,
+    "source_url": "https://opengameart.org/node/143670",
+    "license": "CC0-1.0",
+    "author": "laleksic"
+  },
+  {
+    "id": "curated-keys",
+    "label": "拿起钥匙",
+    "file": "sfx/expanded/curated-keys.mp3",
+    "kind": "钥匙 / 金属",
+    "tags": [
+      "钥匙",
+      "金属"
+    ],
+    "seconds": 0.275,
+    "source_url": "https://opengameart.org/node/143670",
+    "license": "CC0-1.0",
+    "author": "laleksic"
+  },
+  {
+    "id": "curated-match",
+    "label": "划火柴",
+    "file": "sfx/expanded/curated-match.mp3",
+    "kind": "火柴 / 单次",
+    "tags": [
+      "火柴",
+      "单次"
+    ],
+    "seconds": 1.128,
+    "source_url": "https://opengameart.org/node/143670",
+    "license": "CC0-1.0",
+    "author": "laleksic"
+  },
+  {
+    "id": "curated-microwave",
+    "label": "微波炉运转",
+    "file": "sfx/expanded/curated-microwave.mp3",
+    "kind": "微波炉 / 机械",
+    "tags": [
+      "微波炉",
+      "机械",
+      "室内"
+    ],
+    "seconds": 4.738,
+    "source_url": "https://opengameart.org/node/143670",
+    "license": "CC0-1.0",
+    "author": "laleksic"
+  },
+  {
+    "id": "curated-tap",
+    "label": "水龙头流水",
+    "file": "sfx/expanded/curated-tap.mp3",
+    "kind": "水声 / 水龙头",
+    "tags": [
+      "水声",
+      "水龙头",
+      "室内"
+    ],
+    "seconds": 4.03,
+    "source_url": "https://opengameart.org/node/143670",
+    "license": "CC0-1.0",
+    "author": "laleksic"
+  },
+  {
+    "id": "curated-toilet",
+    "label": "马桶冲水",
+    "file": "sfx/expanded/curated-toilet.mp3",
+    "kind": "水声 / 马桶",
+    "tags": [
+      "水声",
+      "马桶",
+      "室内"
+    ],
+    "seconds": 4.631,
+    "source_url": "https://opengameart.org/node/143670",
+    "license": "CC0-1.0",
+    "author": "laleksic"
+  },
+  {
+    "id": "curated-manhole",
+    "label": "开启井盖",
+    "file": "sfx/expanded/curated-manhole.mp3",
+    "kind": "井盖 / 金属",
+    "tags": [
+      "井盖",
+      "金属"
+    ],
+    "seconds": 0.85,
+    "source_url": "https://opengameart.org/node/143670",
+    "license": "CC0-1.0",
+    "author": "laleksic"
+  },
+  {
+    "id": "curated-stone-grind",
+    "label": "石块摩擦",
+    "file": "sfx/expanded/curated-stone-grind.mp3",
+    "kind": "石块 / 摩擦",
+    "tags": [
+      "石块",
+      "摩擦"
+    ],
+    "seconds": 1.4,
+    "source_url": "https://opengameart.org/node/143670",
+    "license": "CC0-1.0",
+    "author": "laleksic"
+  },
+  {
+    "id": "curated-horror-breath",
+    "label": "悬疑呼吸",
+    "file": "sfx/expanded/curated-horror-breath.mp3",
+    "kind": "呼吸 / 悬疑",
+    "tags": [
+      "呼吸",
+      "悬疑"
+    ],
+    "seconds": 6.254,
+    "source_url": "https://opengameart.org/content/horror-breathing",
+    "license": "CC0-1.0",
+    "author": "primbal"
   }
 ]

@@ -34,7 +34,7 @@
       >渲染成片</el-button>
       <el-button @click="openDubbingProject">返回对应台词</el-button>
       <el-button v-if="!exportOnly" :icon="Bell" :disabled="!chapterId" @click="openSoundLibrary()">快捷加音效</el-button>
-      <el-button v-if="!exportOnly" :disabled="!chapterLines.length" @click="openSoundLibrary(selectedLineId || materialLines[0]?.id, 'recommendations')">AI 推荐音效</el-button>
+      <el-button v-if="!exportOnly" :disabled="!chapterLines.length" @click="openSoundLibrary(selectedLineId || materialLines[0]?.id, 'recommendations')">标签匹配音效</el-button>
     </section>
 
     <SceneIllustration v-if="renderResult && visualScenes.length" :scenes="visualScenes" :seconds="renderTime" @seek="seekScene" />
@@ -85,7 +85,7 @@
         </div>
       </el-form>
       <template #footer>
-        <el-button type="primary" plain @click="openSoundLibrary(clipForm?.line_id, 'recommendations')">AI 推荐音效</el-button>
+        <el-button type="primary" plain @click="openSoundLibrary(clipForm?.line_id, 'recommendations')">标签匹配音效</el-button>
         <el-button :icon="Bell" @click="openSoundLibrary(clipForm?.line_id)">在这句附近加音效</el-button>
         <el-button @click="openDubbingProject(clipForm?.line_id)">查看对应台词</el-button>
         <el-button @click="clipEditorVisible = false">取消</el-button>

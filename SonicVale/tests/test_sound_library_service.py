@@ -46,7 +46,11 @@ class SoundLibraryServiceTest(unittest.TestCase):
 
     def test_builtin_catalog_is_complete_and_filterable(self):
         assets = self.service.list_assets(source_type="builtin")
-        self.assertEqual(len(assets), 72)
+        self.assertEqual(len(assets), 79)
+        archived = [a for a in self.service._builtins().values() if a.get('archived')]
+        self.assertEqual(len(archived), 24)
+        self.assertTrue(self.service.resolve_path(archived[0]['id']).is_file())
+        self.assertFalse({a['id'] for a in assets}.intersection(a['id'] for a in archived))
         self.assertTrue(all(asset["license"] == "CC0-1.0" for asset in assets))
         self.assertTrue(all(asset["duration_ms"] > 0 for asset in assets))
         self.assertTrue(all(os.path.isfile(asset["path"]) for asset in assets))
@@ -257,6 +261,25 @@ class SoundLibraryServiceTest(unittest.TestCase):
         self.assertEqual(built["status"], "ready")
         self.assertEqual(built["clip_count"], 2)
         self.assertEqual(built["duration_ms"], 500)
+
+    def test_tag_api_and_legacy_endpoint_do_not_call_models_or_change_audio(self):
+        from app.routers.sound_library_router import match_sounds, save_sound_tags, recommend_sounds
+        from app.dto.sound_library_dto import SoundTagMatchDTO, SoundRecommendationDTO
+        chapter = ChapterPO(project_id=1,title='标签回归')
+        self.session.add(chapter);self.session.flush()
+        line = LinePO(chapter_id=chapter.id,track='sfx',line_type='sfx',sound_prompt='衣服拉链',audio_path='/unchanged.wav')
+        self.session.add(line);self.session.commit()
+        dto=SoundTagMatchDTO(chapter_id=chapter.id,line_id=line.id)
+        with patch('app.services.workflow_llm_service.WorkflowLLMService.make_engine',side_effect=AssertionError('No LLM')):
+            result=match_sounds(dto,self.session).data
+            self.assertEqual(result['matches'][0]['name'],'衣服拉链')
+            self.assertIn('拉链',result['matches'][0]['matched_tags'])
+            old=recommend_sounds(SoundRecommendationDTO(chapter_id=chapter.id,line_id=line.id),self.session).data
+            self.assertEqual(old['model'],'本地标签检索')
+        save_sound_tags(line.id,SoundTagMatchDTO(chapter_id=chapter.id,line_id=line.id,tags=['键盘']),self.session)
+        self.assertEqual(match_sounds(dto,self.session).data['tag_source'],'script')
+        self.assertEqual(line.audio_path,'/unchanged.wav')
+        self.assertEqual(line.sound_tags,['键盘'])
 
 
 if __name__ == "__main__":

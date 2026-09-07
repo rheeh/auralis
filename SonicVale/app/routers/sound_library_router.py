@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.response import Res
 from app.db.database import get_db
-from app.dto.sound_library_dto import SoundLibraryImportDTO, SoundLibraryInsertDTO, SoundRecommendationDTO
+from app.dto.sound_library_dto import SoundLibraryImportDTO, SoundLibraryInsertDTO, SoundRecommendationDTO, SoundTagMatchDTO
 from app.models.po import LinePO
 from app.repositories.line_repository import LineRepository
 from app.repositories.llm_provider_repository import LLMProviderRepository
@@ -15,21 +15,43 @@ from app.repositories.role_repository import RoleRepository
 from app.repositories.tts_provider_repository import TTSProviderRepository
 from app.services.line_service import LineService
 from app.services.sound_library_service import MAX_AUDIO_BYTES, SoundLibraryService, SUPPORTED_EXTENSIONS
-from app.services.sound_recommendation_service import SoundRecommendationService
-from app.services.workflow_llm_service import WorkflowLLMError
+from app.services.sound_tag_service import SoundTagService
+from app.core.sound_tags import normalize_tags
 
 
 router = APIRouter(prefix="/sound-library", tags=["Sound Library"])
 
 
-@router.post("/recommendations", response_model=Res[dict])
-def recommend_sounds(dto: SoundRecommendationDTO, db: Session = Depends(get_db)):
+@router.post("/matches", response_model=Res[dict])
+def match_sounds(dto: SoundTagMatchDTO, db: Session = Depends(get_db)):
     try:
-        return Res(data=SoundRecommendationService(db).recommend(dto), message="推荐已就绪，试听后选择")
+        return Res(data=SoundTagService(db).match(dto), message="标签匹配完成")
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except WorkflowLLMError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@router.put("/lines/{line_id}/tags", response_model=Res[dict])
+def save_sound_tags(line_id: int, dto: SoundTagMatchDTO, db: Session = Depends(get_db)):
+    line = db.get(LinePO, line_id)
+    if not line or line.id != dto.line_id or line.chapter_id != dto.chapter_id:
+        raise HTTPException(status_code=400, detail="请选择当前章节中的音效或台词")
+    line.sound_tags = normalize_tags(dto.tags)
+    db.commit()
+    return Res(data={"sound_tags": line.sound_tags}, message="标签已保存")
+
+
+@router.post("/recommendations", response_model=Res[dict], deprecated=True)
+def recommend_sounds(dto: SoundRecommendationDTO, db: Session = Depends(get_db)):
+    # Stale clients also receive local matches; never keep a hidden billable path.
+    try:
+        result = SoundTagService(db).match(SoundTagMatchDTO(chapter_id=dto.chapter_id, line_id=dto.line_id, limit=3))
+        choices = [{"asset_id": a["id"], "asset": a, "fit": "approximate" if a["missing_tags"] else "match",
+                    "reason": "标签命中：" + "、".join(a["matched_tags"]), "placement": "with", "volume_db": -12}
+                   for a in result["matches"]]
+        return Res(data={"model": "本地标签检索", "cached": False, "summary": "已改为按台本标签匹配素材，无需模型调用。",
+                         "missing_sound": "、".join(result["missing_tags"]), "recommendations": choices}, message="标签匹配完成")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 def get_sound_library_service(db: Session = Depends(get_db)) -> SoundLibraryService:

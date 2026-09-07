@@ -19,6 +19,7 @@ class LineEntity:
     should_speak : Optional[int] = 1
     scene_title : Optional[str] = None
     sound_prompt : Optional[str] = None
+    sound_tags: Optional[list[str]] = None
     voice_profile : Optional[str] = None
     production_note : Optional[str] = None
     audio_events: Optional[list[dict[str, Any]]] = None

@@ -1,7 +1,7 @@
 <template>
   <section ref="panelRoot" class="library-panel" @play.capture="pauseOtherPreviews">
     <el-radio-group v-if="chapterId" v-model="activeView" aria-label="音效选择方式">
-      <el-radio-button value="recommendations">AI 推荐音效</el-radio-button>
+      <el-radio-button value="recommendations">标签匹配音效</el-radio-button>
       <el-radio-button value="library">音效库 · 自己挑选</el-radio-button>
     </el-radio-group>
     <div v-if="activeView === 'library'" class="quick-scenes">
@@ -26,6 +26,8 @@
       </el-tooltip>
       <el-button type="primary" :icon="Upload" @click="chooseUpload">导入音频</el-button>
     </div>
+
+    <div v-if="activeView === 'library'" class="tag-shortcuts"><span>快速标签</span><button v-for="tag in popularTags" :key="tag" class="search-tag" :aria-pressed="keyword === tag" @click="keyword = keyword === tag ? '' : tag">{{ tag }}</button></div>
 
     <div v-if="chapterId" class="quick-insert-target">
       <div class="target-heading">
@@ -79,7 +81,7 @@
     <el-alert v-else-if="!chapterId" type="info" :closable="false" show-icon title="在项目工作台选择音效行，即可把这里的素材加入台本。" />
     <el-alert v-if="lastInsertion" type="success" show-icon :title="lastInsertion" @close="lastInsertion = ''" />
 
-    <SoundRecommendations v-if="chapterId && activeView === 'recommendations'" :chapter-id="chapterId" :line-id="actionMode === 'bind' ? selectedLineId : anchorLineId" :action-mode="actionMode" :busy-id="bindingId" @browse="activeView = 'library'" @select="applyRecommendation" />
+    <SoundTagMatches v-if="chapterId && activeView === 'recommendations'" :chapter-id="chapterId" :line-id="actionMode === 'bind' ? selectedLineId : anchorLineId" :action-mode="actionMode" :busy-id="bindingId" @browse="activeView = 'library'" @select="applyRecommendation" />
 
     <el-alert v-if="loadError" :title="loadError" type="error" :closable="false" show-icon />
     <div v-if="activeView === 'library'" v-loading="loading" class="asset-table-wrap" aria-live="polite">
@@ -101,7 +103,7 @@
               <a v-if="asset.source_url" :href="asset.source_url" target="_blank" rel="noreferrer">来源</a>
             </div>
             <div v-if="asset.tags?.length" class="asset-tags">
-              <el-tag v-for="tag in asset.tags" :key="tag" size="small" effect="plain">{{ tag }}</el-tag>
+              <button v-for="tag in asset.tags" :key="tag" class="search-tag" :aria-label="`搜索标签：${tag}`" @click="keyword = tag">{{ tag }}</button>
             </div>
           </div>
           <audio controls preload="none" :src="audioUrl(asset)" :aria-label="`试听${asset.name}`" @play="pauseOtherPreviews" />
@@ -158,7 +160,7 @@
 </template>
 
 <script setup>
-import SoundRecommendations from './SoundRecommendations.vue'
+import SoundTagMatches from './SoundTagMatches.vue'
 import CuePlacementSelect from './production/CuePlacementSelect.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { Delete, Link, Refresh, Search, Upload } from '@element-plus/icons-vue'
@@ -233,7 +235,15 @@ const categoryOptions = [
   { label: '撞击', value: 'impacts' },
   { label: '拟音', value: 'foley' },
   { label: '背景音乐', value: 'bgm' },
+  { label: '动物与自然', value: 'animals' },
+  { label: '人物反应', value: 'human' },
+  { label: '城市交通', value: 'transport' },
 ]
+
+const popularTags = computed(() => {
+ const counts = new Map(); assets.value.forEach(a => (a.tags || []).forEach(t => counts.set(t,(counts.get(t)||0)+1)))
+ return [...counts].sort((a,b)=>b[1]-a[1]).slice(0,18).map(([tag])=>tag)
+})
 
 const filteredAssets = computed(() => {
   const query = keyword.value.trim().toLowerCase()
@@ -241,8 +251,8 @@ const filteredAssets = computed(() => {
     if (sourceFilter.value !== 'all' && asset.source_type !== sourceFilter.value) return false
     if (categoryFilter.value !== 'all' && asset.category !== categoryFilter.value) return false
     if (!query) return true
-    return [asset.name, asset.category, ...(asset.tags || [])]
-      .some((value) => String(value || '').toLowerCase().includes(query))
+    const haystack=[asset.name,asset.category,...(asset.tags||[])].join(' ').toLowerCase()
+    return query.split(/[,，、\s]+/).filter(Boolean).every(word=>haystack.includes(word))
   })
 })
 
@@ -479,6 +489,7 @@ function apiError(error, fallback) {
 </script>
 
 <style scoped>
+.tag-shortcuts{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:12px 0}.tag-shortcuts>span{font-size:12px;color:var(--el-text-color-secondary)}.search-tag{border:1px solid var(--el-border-color);border-radius:14px;padding:4px 10px;background:var(--el-fill-color-blank);color:var(--el-text-color-regular);font-size:12px;cursor:pointer}.search-tag:hover,.search-tag[aria-pressed=true]{color:var(--el-color-primary);border-color:var(--el-color-primary)}
 .library-panel { display: grid; gap: 12px; }
 .quick-scenes { display: grid; gap: 12px; padding: 16px; border-radius: 10px; background: var(--el-fill-color-light); }
 .quick-scenes > div:first-child { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }

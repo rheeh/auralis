@@ -4,9 +4,7 @@ export function getSoundLibraryAssets(params = {}) {
   return request.get('/sound-library/assets', { params })
 }
 
-export function recommendSounds(payload) {
-  return request.post('/sound-library/recommendations', payload, { timeout: 180000 })
-}
+
 
 export function importSoundLibraryPath(payload) {
   return request.post('/sound-library/assets/import-path', payload)
@@ -37,3 +35,6 @@ export function getSoundLibraryAudioUrl(assetId, version = 0) {
   const query = version ? `?v=${encodeURIComponent(version)}` : ''
   return `${API_BASE_URL}sound-library/assets/${encodeURIComponent(assetId)}/audio${query}`
 }
+
+export const matchSounds = payload => request.post('/sound-library/matches', payload, { timeout: 15000 })
+export const saveSoundTags = payload => request.put(`/sound-library/lines/${payload.line_id}/tags`, payload)

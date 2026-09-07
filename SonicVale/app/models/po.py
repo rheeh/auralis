@@ -135,6 +135,7 @@ class LinePO(Base):
     should_speak = Column(Integer, default=1, nullable=False)
     scene_title = Column(String(255), nullable=True)
     sound_prompt = Column(Text, nullable=True)
+    sound_tags = Column(JSON, nullable=True)
     voice_profile = Column(Text, nullable=True)
     production_note = Column(Text, nullable=True)
     audio_events = Column(JSON, nullable=True)

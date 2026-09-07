@@ -372,6 +372,7 @@ def _line_ref(line) -> dict:
         "line_type": line.line_type,
         "text": line.text_content,
         "sound_prompt": line.sound_prompt,
+        "sound_tags": line.sound_tags or [],
         "audio_path": line.audio_path,
         "status": line.status,
         "production_note": line.production_note,

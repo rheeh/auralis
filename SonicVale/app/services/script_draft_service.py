@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.core.sound_tags import script_sound_tags
 
 import json
 from typing import Any
@@ -106,6 +107,7 @@ class ScriptDraftService:
                     label = "环境与动作音效" if line_type == "sfx" else "氛围音乐"
                     prompt = f"{scene_title}的{label}，与前后台词节奏自然衔接，层次清晰，不遮挡人声。"
                 line["soundPrompt"] = prompt
+                line["soundTags"] = script_sound_tags(line.get("soundTags"), prompt)
                 if not str(line.get("text") or "").strip():
                     line["text"] = prompt
 

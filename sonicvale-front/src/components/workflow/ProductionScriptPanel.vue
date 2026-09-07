@@ -34,9 +34,10 @@
             <div class="line-main">
               <div class="line-meta"><strong>{{ isSpeakable(line) ? roleName(line.role_id) : trackLabel(line) }}</strong><el-tag size="small" effect="plain">{{ trackLabel(line) }}</el-tag><span v-if="activeVariant(line)" class="active-version">当前采用 {{ activeVariant(line).label }}</span><span v-if="isSpeakable(line)" class="line-expand-state">{{ expandedLineIds.has(line.id)?'收起':'展开' }}</span></div>
               <el-button text size="small" @click.stop="$emit('open-timeline',line.id)">定位到音轨</el-button>
-              <el-button v-if="!isSpeakable(line)" text type="primary" size="small" @click.stop="openSoundLibrary(line.id, 'recommendations')">AI 推荐音效</el-button>
+              <el-button v-if="!isSpeakable(line)" text type="primary" size="small" @click.stop="openSoundLibrary(line.id, 'recommendations')">标签匹配音效</el-button>
               <el-button text size="small" :icon="Headset" @click.stop="openSoundLibrary(line.id)">{{ isSpeakable(line) ? '在这句附近加音效' : '去音效库挑选' }}</el-button>
               <p>{{ line.text_content }}</p>
+              <div v-if="!isSpeakable(line) && line.sound_tags?.length" class="line-annotations"><el-tag v-for="tag in line.sound_tags" :key="tag" size="small" effect="plain">{{ tag }}</el-tag></div>
               <div v-if="isSpeakable(line)" class="line-annotations">
                 <el-tag size="small" :type="line.emotion_id?undefined:'warning'" effect="plain">情绪 · {{ emotionName(line.emotion_id) }}</el-tag>
                 <el-tag size="small" :type="line.strength_id?undefined:'warning'" effect="plain">强度 · {{ strengthName(line.strength_id) }}</el-tag>

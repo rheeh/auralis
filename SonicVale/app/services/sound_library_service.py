@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.audio_metadata import probe_audio
+from app.core.sound_tags import normalize_tags, infer_tags
 from app.core.config import getConfigPath
 from app.dto.sound_library_dto import SoundLibraryInsertDTO
 from app.models.po import ChapterPO, LinePO, SoundLibraryAssetPO, TimelineClipPO, TimelineTrackPO
@@ -21,7 +22,7 @@ from app.services.timeline_service import TimelineService
 
 
 SUPPORTED_EXTENSIONS = {".wav", ".mp3", ".m4a", ".ogg", ".flac"}
-CATEGORIES = {"ambience", "weather", "doors", "footsteps", "impacts", "foley", "bgm"}
+CATEGORIES = {"ambience", "weather", "doors", "footsteps", "impacts", "foley", "bgm", "animals", "human", "transport"}
 MAX_AUDIO_BYTES = 200 * 1024 * 1024
 
 
@@ -55,24 +56,24 @@ class SoundLibraryService:
     ) -> list[dict[str, Any]]:
         assets: list[dict[str, Any]] = []
         if source_type in {"all", "builtin"}:
-            assets.extend(self._builtins().values())
+            assets.extend(a for a in self._builtins().values() if not a.get("archived"))
         if source_type in {"all", "user"}:
             rows = self.db.execute(
                 select(SoundLibraryAssetPO).order_by(SoundLibraryAssetPO.created_at.desc())
             ).scalars().all()
             assets.extend(self._serialize_user(row) for row in rows)
 
+        for asset in assets:
+            asset["tags"] = normalize_tags(asset.get("tags"))
         normalized_category = self._normalize_category(category, allow_empty=True)
         query = (keyword or "").strip().lower()
         if normalized_category:
             assets = [asset for asset in assets if asset["category"] == normalized_category]
         if query:
-            assets = [
-                asset for asset in assets
-                if query in " ".join([
-                    asset["name"], asset["category"], *asset.get("tags", [])
-                ]).lower()
-            ]
+            words = normalize_tags(query)
+            assets = [asset for asset in assets if all(word in " ".join([
+                asset["name"], asset["category"], *asset.get("tags", [])
+            ]).lower() for word in words)]
         return assets
 
     def import_path(
@@ -205,6 +206,7 @@ class SoundLibraryService:
                 should_speak=0,
                 scene_title=anchor.scene_title if anchor else chapter.title,
                 sound_prompt=asset["name"],
+                sound_tags=normalize_tags(asset.get("tags")),
                 production_note=f"素材库：{asset['name']} · {asset.get('license', 'user-provided')}",
                 audio_events=[cue],
                 audio_versions=[],
@@ -300,6 +302,7 @@ class SoundLibraryService:
                     "name": entry.get("title") or self._title_from_path(path),
                     "category": self._group_category(group.get("id", "foley")),
                     "tags": self._normalize_tags(entry.get("tags") or group.get("tags")),
+                    "archived": bool(entry.get("archived")),
                     "source_type": "builtin",
                     "license": source.get("license", "CC0-1.0"),
                     "author": source.get("author"),
