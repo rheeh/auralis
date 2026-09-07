@@ -96,6 +96,54 @@
       "author": "Auralis",
       "source_url": "https://github.com/rheeh/auralis/blob/master/scripts/build_demo_effects.py",
       "license": "CC0-1.0"
+    },
+    "bgm_ghost-piano": {
+      "author": "KiluaBoy",
+      "source_url": "https://opengameart.org/content/dark-environment-horror-games",
+      "download_url": "https://opengameart.org/sites/default/files/GoshtPiano2.ogg",
+      "license": "CC0-1.0",
+      "verified_at": "2026-09-07",
+      "processing": "Full track encoded MP3 160 kbps, 44.1 kHz stereo; no crop"
+    },
+    "bgm_emotional-piano": {
+      "author": "Centurion_of_war",
+      "source_url": "https://opengameart.org/content/emotional-piano-0",
+      "download_url": "https://opengameart.org/sites/default/files/emotional_piano_solo_0.ogg",
+      "license": "CC0-1.0",
+      "verified_at": "2026-09-07",
+      "processing": "Full track encoded MP3 160 kbps, 44.1 kHz stereo; no crop"
+    },
+    "bgm_vaporware": {
+      "author": "The Cynic Project / cynicmusic",
+      "source_url": "https://opengameart.org/content/calm-piano-1-vaporware",
+      "download_url": "https://opengameart.org/sites/default/files/003_Vaporware_2.mp3",
+      "license": "CC0-1.0",
+      "verified_at": "2026-09-07",
+      "processing": "Full track encoded MP3 160 kbps, 44.1 kHz stereo; no crop"
+    },
+    "bgm_opening-theme": {
+      "author": "nene",
+      "source_url": "https://opengameart.org/content/opening-theme-actionsuspense",
+      "download_url": "https://opengameart.org/sites/default/files/opening_theme.wav",
+      "license": "CC0-1.0",
+      "verified_at": "2026-09-07",
+      "processing": "Full track encoded MP3 160 kbps, 44.1 kHz stereo; no crop"
+    },
+    "female-short-laugh": {
+      "author": "OwlStorm / Ashe Kirk",
+      "source_url": "https://freesound.org/people/OwlStorm/sounds/151223/",
+      "download_url": "https://cdn.freesound.org/previews/151/151223_140737-hq.mp3",
+      "license": "CC0-1.0",
+      "verified_at": "2026-09-07",
+      "processing": "Public HQ MP3 preview, complete preview, original bytes unchanged; source recording is CC0"
+    },
+    "crowd-laugh": {
+      "author": "kikorurelas",
+      "source_url": "https://freesound.org/people/kikorurelas/sounds/767470/",
+      "download_url": "https://cdn.freesound.org/previews/767/767470_6252416-hq.mp3",
+      "license": "CC0-1.0",
+      "verified_at": "2026-09-07",
+      "processing": "Public HQ MP3 preview, complete preview, original bytes unchanged; source recording is CC0"
     }
   },
   "groups": [
@@ -1224,6 +1272,81 @@
           "tags": [
             "呼吸",
             "悬疑"
+          ]
+        },
+        {
+          "file": "laughter/female-short-laugh.mp3",
+          "title": "女声短笑 · 单人",
+          "source": "female-short-laugh",
+          "tags": [
+            "笑声",
+            "女声",
+            "单人",
+            "短促"
+          ]
+        },
+        {
+          "file": "laughter/crowd-laugh.mp3",
+          "title": "群体笑声 · 剧场反应",
+          "source": "crowd-laugh",
+          "tags": [
+            "笑声",
+            "人群",
+            "观众",
+            "背景反应"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bgm",
+      "items": [
+        {
+          "file": "bgm/ghost-piano.mp3",
+          "title": "暗室疑云 · 悬疑钢琴",
+          "source": "bgm_ghost-piano",
+          "tags": [
+            "背景音乐",
+            "悬疑",
+            "神秘",
+            "钢琴",
+            "夜晚"
+          ]
+        },
+        {
+          "file": "bgm/emotional-piano.mp3",
+          "title": "旧事回忆 · 情绪钢琴",
+          "source": "bgm_emotional-piano",
+          "tags": [
+            "背景音乐",
+            "回忆",
+            "悲伤",
+            "钢琴",
+            "缓慢"
+          ]
+        },
+        {
+          "file": "bgm/vaporware.mp3",
+          "title": "微光日常 · 平静钢琴",
+          "source": "bgm_vaporware",
+          "tags": [
+            "背景音乐",
+            "平静",
+            "温暖",
+            "钢琴",
+            "都市"
+          ]
+        },
+        {
+          "file": "bgm/opening-theme.mp3",
+          "title": "悬念开场 · 管弦片头",
+          "source": "bgm_opening-theme",
+          "tags": [
+            "背景音乐",
+            "悬疑",
+            "片头",
+            "管弦",
+            "紧张"
           ]
         }
       ]

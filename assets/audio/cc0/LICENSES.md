@@ -43,3 +43,25 @@ The following original source pages were checked on 2026-09-07. Each offers CC0.
 - AntumDeluge: https://opengameart.org/content/zipper
 
 Original Auralis procedural knocks and phone vibration are copied from the existing CC0 Demo; see `scripts/build_demo_effects.py`.
+
+## Background music added 2026-09-07
+
+All four original submission pages explicitly offer CC0. Files retain the full composition, encoded as 44.1 kHz stereo MP3 at 160 kbps; no excerpts or EQ variants are added as duplicate tracks. Chinese titles are browsing labels, not the composers' original titles.
+
+| Local file | Original title | Author | Source |
+|---|---|---|---|
+| `bgm/ghost-piano.mp3` | Dark environment / Horror games (GoshtPiano2) | KiluaBoy | https://opengameart.org/content/dark-environment-horror-games |
+| `bgm/emotional-piano.mp3` | Emotional Piano (solo) | Centurion_of_war | https://opengameart.org/content/emotional-piano-0 |
+| `bgm/vaporware.mp3` | Calm Piano 1 (Vaporware) | The Cynic Project / cynicmusic | https://opengameart.org/content/calm-piano-1-vaporware |
+| `bgm/opening-theme.mp3` | Opening Theme [Action/Suspense] | nene | https://opengameart.org/content/opening-theme-actionsuspense |
+
+`scripts/add_stock_bgm.py` documents the source downloads and reproducible packaging. The existing Rain on Window Loop by alxl is the continuous ambience in the Rainy Night Demo, not a music track.
+
+## Laughter added 2026-09-07
+
+Both source pages explicitly declare CC0. We package the complete, publicly available HQ MP3 previews, not the login-only original WAV downloads. The files are used as sound effects, not as voice-cloning references.
+
+| Local file | Author | Source |
+|---|---|---|
+| `laughter/female-short-laugh.mp3` | OwlStorm / Ashe Kirk / Owlish Media | https://freesound.org/people/OwlStorm/sounds/151223/ |
+| `laughter/crowd-laugh.mp3` | kikorurelas | https://freesound.org/people/kikorurelas/sounds/767470/ |

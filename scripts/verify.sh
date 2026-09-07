@@ -90,7 +90,7 @@ with TestClient(app) as client:
 
     library = client.get("/sound-library/assets", params={"source_type": "builtin"}).json()
     builtin_assets = library.get("data", [])
-    if library.get("code") != 200 or len(builtin_assets) != 79:
+    if library.get("code") != 200 or len(builtin_assets) != 85:
         raise SystemExit(f"builtin sound library invalid: {library}")
     builtin_id = builtin_assets[0]["id"]
     builtin_audio = client.get(f"/sound-library/assets/{builtin_id}/audio")

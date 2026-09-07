@@ -26,3 +26,7 @@ editing does not mutate this source library.
 79 assets are listed by default: 29 additional external sounds and 2 existing original Demo effects were added, while 24 similar numbered variants were archived from search. No byte-identical pairs were found. Archived files retain their IDs and remain resolvable for old projects. See `curation-20260907.json`.
 
 Each file has source-specific Chinese tags. Script adaptation produces `soundTags`; matching uses these tags locally without an LLM request. New user imports can be tagged manually.
+
+Four complete CC0 background-music tracks were subsequently added under `bgm/`, bringing the default library to 83 assets. Use the Background Music shortcut for mystery piano, emotional piano, calm piano, and an orchestral opening. Authors, source pages, conversion details, and hashes are retained. Existing Demo audio is unchanged.
+
+Two CC0 laughter clips under `laughter/` bring the total to 85: one short female laugh and one theater crowd reaction. These are complete public HQ MP3 previews from Freesound, with sources documented in `LICENSES.md`. Use them as chosen effects; a named character's laugh should normally retain that character's own voice.

@@ -5,9 +5,10 @@
       <el-radio-button value="library">音效库 · 自己挑选</el-radio-button>
     </el-radio-group>
     <div v-if="activeView === 'library'" class="quick-scenes">
-      <div><strong>给这一幕加点声音</strong><span>悬疑 / 都市常用素材 · 先试听，再加入</span></div>
+      <div><strong>给这一幕加点声音</strong><span>悬疑 / 都市音效与背景音乐 · 先试听，再加入</span></div>
       <div class="scene-shortcuts">
         <el-button v-for="scene in scenePresets" :key="scene.label" size="small" :type="keyword === scene.keyword ? 'primary' : 'default'" plain @click="applyScenePreset(scene)">{{ scene.label }}</el-button>
+        <el-button size="small" :type="categoryFilter === 'bgm' ? 'primary' : 'default'" plain @click="resetFilters(); categoryFilter = 'bgm'; mixPreset = 'ambience'; applyMixPreset('ambience')">背景音乐</el-button>
         <el-button size="small" text @click="resetFilters">全部素材</el-button>
       </div>
     </div>
@@ -100,6 +101,7 @@
               <span>{{ formatDuration(asset.duration_ms) }}</span>
               <span v-if="asset.sample_rate">{{ formatSampleRate(asset.sample_rate) }}</span>
               <span v-if="asset.channels">{{ asset.channels }} 声道</span>
+              <span v-if="asset.author">{{ asset.author }}</span>
               <a v-if="asset.source_url" :href="asset.source_url" target="_blank" rel="noreferrer">来源</a>
             </div>
             <div v-if="asset.tags?.length" class="asset-tags">
@@ -213,6 +215,7 @@ const scenePresets = [
   { label: '深夜调查', keyword: '时钟', mix: 'ambience' },
   { label: '翻找线索', keyword: '翻页', mix: 'foley' },
   { label: '突发撞击', keyword: '撞击', mix: 'accent' },
+  { label: '笑声反应', keyword: '笑声', mix: 'foley' },
 ]
 const anchorLines = computed(() => (props.lines.length ? props.lines : props.materialLines).filter((line) => {
   let events = line.audio_events || []

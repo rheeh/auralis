@@ -159,9 +159,17 @@ class ScriptLine(BaseModel):
             for raw_note in bracket_notes:
                 content = raw_note.strip("()（）[]【】 ")
                 if content:
-                    self.audioEvents.append(AudioEvent(timing="台词中", type="sfx", content=content, volume_db="-18dB"))
+                    # Actor delivery belongs to the same voice, not a stock effect.
+                    performance = re.search(r"笑|叹气|叹息|抽泣|哽咽|喘息|吸气|呼气|停顿|重音|语速|语气|压低声音", content)
+                    external = re.search(r"人群|观众|众人|背景|远处|电视|录音|门外", content)
+                    if performance and not external:
+                        self.productionNote = "；".join(filter(None, [self.productionNote, content]))
+                    else:
+                        self.audioEvents.append(AudioEvent(timing="台词中", type="sfx", content=content, volume_db="-18dB"))
             self.text = re.sub(bracket_pattern, "", self.text)
             self.text = re.sub(r"[ \t]+", "", self.text).strip()
+            if not self.text and bracket_notes and not self.audioEvents and re.search(r'笑', self.productionNote or ''):
+                self.text = '哈哈。' if re.search(r'大笑|哈哈', self.productionNote) else '呵。'
             if not self.text:
                 raise ValueError("可朗读台词不能只包含括号提示或音效标记")
             self.emotion = (self.emotion or "平静").strip() or "平静"

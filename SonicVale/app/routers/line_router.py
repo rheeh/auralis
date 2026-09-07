@@ -31,8 +31,18 @@ from app.services.role_service import RoleService
 from app.services.voice_service import VoiceService
 from app.models.po import LinePO
 from app.services.audio_task_service import AudioTaskService
+from app.dto.line_dto import LineTypeChangeDTO
+from app.services.line_type_service import LineTypeService
 
 router = APIRouter(prefix="/lines", tags=["Lines"])
+
+@router.put('/{line_id}/type', response_model=Res[dict])
+def change_line_type(line_id: int, dto: LineTypeChangeDTO, db: Session = Depends(get_db)):
+    try:
+        result = LineTypeService(db).change(line_id, dto)
+        return Res(data=result, message='类型已修改，原音频已保留，请重新配音或选用素材')
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 # 依赖注入（实际项目可用 DI 容器）

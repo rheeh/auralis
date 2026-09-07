@@ -1,7 +1,14 @@
 from datetime import datetime
 
-from pydantic import BaseModel
-from typing import Any, Optional
+from pydantic import BaseModel, Field
+from typing import Any, Optional, Literal
+
+class LineTypeChangeDTO(BaseModel):
+    chapter_id: int = Field(gt=0)
+    track: Literal['voice', 'narration', 'sfx', 'bgm']
+    role_id: Optional[int] = Field(default=None, gt=0)
+    text_content: str = Field(min_length=1, max_length=10000)
+    production_note: str = Field(default='', max_length=2000)
 
 class LineInitDTO(BaseModel):
     role_name: Optional[str] = None

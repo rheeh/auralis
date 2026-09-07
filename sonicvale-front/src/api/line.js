@@ -109,3 +109,6 @@ export function correctLinesByLLM(chapter_id, batch_size = 20) {
     params: { batch_size }
   })
 }
+export function changeLineType(lineId, payload) {
+  return request.put(`/lines/${lineId}/type`, payload)
+}

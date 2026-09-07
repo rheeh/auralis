@@ -46,7 +46,7 @@ class SoundLibraryServiceTest(unittest.TestCase):
 
     def test_builtin_catalog_is_complete_and_filterable(self):
         assets = self.service.list_assets(source_type="builtin")
-        self.assertEqual(len(assets), 79)
+        self.assertEqual(len(assets), 85)
         archived = [a for a in self.service._builtins().values() if a.get('archived')]
         self.assertEqual(len(archived), 24)
         self.assertTrue(self.service.resolve_path(archived[0]['id']).is_file())
@@ -54,6 +54,10 @@ class SoundLibraryServiceTest(unittest.TestCase):
         self.assertTrue(all(asset["license"] == "CC0-1.0" for asset in assets))
         self.assertTrue(all(asset["duration_ms"] > 0 for asset in assets))
         self.assertTrue(all(os.path.isfile(asset["path"]) for asset in assets))
+        music = self.service.list_assets(source_type='builtin', category='bgm')
+        self.assertEqual(len(music), 4)
+        self.assertTrue(all(a['author'] and a['source_url'] and a['duration_ms'] > 30000 for a in music))
+        self.assertEqual(len(self.service.list_assets(keyword='笑声')), 2)
         weather = self.service.list_assets(source_type="builtin", category="weather")
         self.assertEqual({asset["category"] for asset in weather}, {"weather"})
         self.assertTrue(self.service.list_assets(source_type="builtin", keyword="thunder"))

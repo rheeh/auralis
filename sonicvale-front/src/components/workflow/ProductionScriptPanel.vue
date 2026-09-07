@@ -34,6 +34,7 @@
             <div class="line-main">
               <div class="line-meta"><strong>{{ isSpeakable(line) ? roleName(line.role_id) : trackLabel(line) }}</strong><el-tag size="small" effect="plain">{{ trackLabel(line) }}</el-tag><span v-if="activeVariant(line)" class="active-version">当前采用 {{ activeVariant(line).label }}</span><span v-if="isSpeakable(line)" class="line-expand-state">{{ expandedLineIds.has(line.id)?'收起':'展开' }}</span></div>
               <el-button text size="small" @click.stop="$emit('open-timeline',line.id)">定位到音轨</el-button>
+              <el-button text size="small" :aria-label="`修改第${line.line_order}行类型`" @click.stop="openTypeEditor(line)">修改类型 / 角色</el-button>
               <el-button v-if="!isSpeakable(line)" text type="primary" size="small" @click.stop="openSoundLibrary(line.id, 'recommendations')">标签匹配音效</el-button>
               <el-button text size="small" :icon="Headset" @click.stop="openSoundLibrary(line.id)">{{ isSpeakable(line) ? '在这句附近加音效' : '去音效库挑选' }}</el-button>
               <p>{{ line.text_content }}</p>
@@ -102,6 +103,18 @@
     </div>
     <el-empty v-else description="台本写入后会在这里逐句制作" />
 
+    <el-dialog v-model="typeEditorVisible" title="修改台词类型与角色" width="min(520px,92vw)" :close-on-click-modal="!typeSaving">
+      <el-form label-position="top">
+        <el-form-item label="台词类型"><el-select v-model="typeForm.track" aria-label="台词类型"><el-option label="人物台词（含角色笑声、叹气）" value="voice" /><el-option label="旁白" value="narration" /><el-option label="音效（环境、群体反应）" value="sfx" /><el-option label="背景音乐" value="bgm" /></el-select></el-form-item>
+        <el-form-item v-if="typeIsSpoken" label="发声角色"><el-select v-model="typeForm.role_id" filterable aria-label="发声角色" placeholder="选择当前项目的角色"><el-option v-for="role in typeRoleOptions" :key="role.id" :label="role.name" :value="role.id" /></el-select></el-form-item>
+        <el-form-item :label="typeIsSpoken?'实际发声文字':'声音描述'"><el-input v-model="typeForm.text_content" type="textarea" :rows="3" aria-label="转换后的台词文本" /></el-form-item>
+        <p v-if="typeIsSpoken" class="type-editor-hint">独立轻笑可写“呵。”，大笑可写“哈哈。”；“自然轻笑、不要念说明”放在下方，保留该角色声线。</p>
+        <el-form-item label="声音指导"><el-input v-model="typeForm.production_note" type="textarea" :rows="2" aria-label="转换后的声音指导" /></el-form-item>
+        <p class="type-editor-hint">原音频与修改前记录会保留；保存后本句需重新配音或选用素材，声音编排会标记待刷新。</p>
+      </el-form>
+      <template #footer><el-button :disabled="typeSaving" @click="typeEditorVisible=false">取消</el-button><el-button type="primary" :loading="typeSaving" @click="saveTypeChange">保存类型修改</el-button></template>
+    </el-dialog>
+
     <el-drawer v-model="soundLibraryOpen" title="挑选场景音效" size="90%" class="sound-library-drawer" append-to-body destroy-on-close>
       <SoundLibraryPanel :chapter-id="chapterId" :lines="lines" :material-lines="lines.filter(line => !isSpeakable(line))" :target-line-id="soundAnchorId" :initial-view="soundLibraryView" @inserted="onSoundInserted" @bound="onSoundInserted" />
     </el-drawer>
@@ -133,6 +146,7 @@ import { fetchAllEmotions, fetchAllStrengths } from '../../api/enums'
 import { getRoleAvatarUrl } from '../../api/drama'
 import WaveCellPro from '../WaveCellPro.vue'
 import SoundLibraryPanel from '../SoundLibraryPanel.vue'
+import { changeLineType } from '../../api/line'
 
 const props=defineProps({sessionId:{type:String,required:true},projectId:{type:Number,required:true},chapterId:{type:Number,required:true},ttsProviderId:Number,sourceText:String,voiceRevision:{type:Number,default:0},selectedLineId:[Number,String],scriptOnly:Boolean})
 const emit=defineEmits(['open-timeline'])
@@ -141,6 +155,23 @@ const canGenerateAll=computed(()=>productionConfiguration.value.length>0 && prod
 function configurationFor(line){return productionConfiguration.value.find(item=>item.line_id===line.id)}
 function instructionLabel(mode){return {native:'支持表演指令',structured:'支持结构化指令',mapped:'仅映射语速等参数',none:'不支持表演指令'}[mode]||'能力未确认'}
 const roles=ref([]),voices=ref([]),providers=ref([]),lines=ref([])
+const typeEditorVisible=ref(false),typeSaving=ref(false),typeLineId=ref(null)
+const typeForm=reactive({track:'voice',role_id:null,text_content:'',production_note:''})
+const typeIsSpoken=computed(()=>['voice','narration'].includes(typeForm.track))
+const typeRoleOptions=computed(()=>roles.value.filter(role=>!['音效','BGM','背景音乐','环境音'].includes(role.name)))
+function openTypeEditor(line){typeLineId.value=line.id;Object.assign(typeForm,{track:line.track||'voice',role_id:typeRoleOptions.value.some(role=>role.id===line.role_id)?line.role_id:null,text_content:line.text_content||'',production_note:line.production_note||line.sound_prompt||''});typeEditorVisible.value=true}
+async function saveTypeChange(){
+  if(!typeForm.text_content.trim())return ElMessage.warning('请填写台词文本或声音描述')
+  if(typeIsSpoken.value&&!typeForm.role_id)return ElMessage.warning('请选择发声角色')
+  typeSaving.value=true
+  try{
+    const result=await changeLineType(typeLineId.value,{...typeForm,chapter_id:props.chapterId,role_id:typeIsSpoken.value?typeForm.role_id:null})
+    if(result?.code!==200)throw new Error(result?.message||'修改失败')
+    player.pause();playingLineId.value=null;playAllActive.value=false;typeEditorVisible.value=false
+    await loadAll();ElMessage.success('已修改类型；请重新配音或选择素材，原音频保留')
+  }catch(error){ElMessage.error(error?.response?.data?.detail||error?.response?.data?.message||error.message||'修改失败')}
+  finally{typeSaving.value=false}
+}
 const soundLibraryOpen = ref(false), soundAnchorId = ref(null)
 const soundLibraryView = ref('library')
 function openSoundLibrary(lineId = null, view = 'library') { soundAnchorId.value = lineId; soundLibraryView.value = view; soundLibraryOpen.value = true }
