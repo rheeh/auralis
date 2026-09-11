@@ -24,6 +24,7 @@ from app.routers import project_router, chapter_router, role_router, voice_route
     tts_provider_router, line_router, emotion_router, strength_router, multi_emotion_voice_router, prompt_router, \
     drama_adaptation_router, queue_router, chat_router
 from app.routers import sound_library_router, timeline_router
+from app.routers import speech_router
 from app.routers.chapter_router import get_strength_service, get_prompt_service, get_project_service
 from app.routers.emotion_router import get_emotion_service
 from app.routers.llm_provider_router import get_llm_service
@@ -248,6 +249,7 @@ app.include_router(queue_router.router)
 app.include_router(chat_router.router)
 app.include_router(timeline_router.router)
 app.include_router(sound_library_router.router)
+app.include_router(speech_router.router)
 # =========================
 # 健康检查接口
 # =========================

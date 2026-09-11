@@ -12,9 +12,10 @@ from app.workflows.drama.schemas import DramaScript, ScriptLine
 class AudioDramaPromptTest(unittest.TestCase):
     def test_shared_rules_define_narration_gate(self):
         rules = get_audio_drama_adaptation_rules()
-        self.assertIn("视觉无效信息 → 环境描写 → 动作描写", rules)
-        self.assertIn("只有三种情况允许保留旁白", rules)
-        self.assertIn("不超过15%", rules)
+        self.assertIn("不按内容类型机械删减", rules)
+        self.assertIn("必要旁白", rules)
+        self.assertNotIn("不超过15%", rules)
+        self.assertIn("不设统一旁白比例", rules)
         prompt = get_prompt_str()
         self.assertNotIn("其余均为旁白内容", prompt)
         self.assertNotIn("100%完整保留", prompt)
@@ -30,8 +31,11 @@ class AudioDramaPromptTest(unittest.TestCase):
             }]
         }
         issues = ScriptDraftService._narration_issues(script)
-        self.assertTrue(any("旁白字数占" in issue for issue in issues))
-        self.assertTrue(any("连续旁白" in issue for issue in issues))
+        self.assertEqual(issues, [])
+        metrics = ScriptDraftService.narration_metrics(script)
+        self.assertGreater(metrics["narration_ratio"], 0.8)
+        self.assertEqual(metrics["consecutive_narration_pairs"], 1)
+        self.assertTrue(metrics["informational_only"])
 
     def test_narration_audit_accepts_sound_led_scene(self):
         script = {
@@ -54,7 +58,8 @@ class AudioDramaPromptTest(unittest.TestCase):
             {"type": "narration", "text": "他回到旧屋。"},
             {"type": "dialogue", "text": "钥匙还在。我答应你的事没有忘，今天来给花浇水，这块桂花糕也带来了。"},
         ]}]}
-        self.assertTrue(any("连续旁白" in issue for issue in ScriptDraftService._narration_issues(script)))
+        self.assertEqual(ScriptDraftService.narration_metrics(script)["consecutive_narration_pairs"], 1)
+        self.assertEqual(ScriptDraftService._narration_issues(script), [])
 
     def test_auto_voice_assignment_forces_unique_voices(self):
         assignments = ChapterService._unique_voice_assignments(
@@ -168,7 +173,8 @@ class AudioDramaPromptTest(unittest.TestCase):
         self.assertEqual(len(calls), 1)
         self.assertEqual(calls[0]["system_prompt"], get_audio_drama_script_prompt())
         self.assertIs(calls[0]["response_model"], DramaScript)
-        self.assertTrue(ScriptDraftService._narration_issues(result))
+        self.assertEqual(ScriptDraftService._narration_issues(result), [])
+        self.assertGreater(ScriptDraftService.narration_metrics(result)["narration_ratio"], 0.8)
 
 
 if __name__ == "__main__":

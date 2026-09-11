@@ -23,6 +23,16 @@ class TTSEngine:
         """
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
+        self.observer = None
+
+    @staticmethod
+    def request_payload(text, filename, emo_text=None, emo_vector=None):
+        payload = {"text": text, "audio_path": filename}
+        if emo_vector is not None:
+            payload["emo_vector"] = emo_vector
+        elif emo_text:
+            payload["emo_text"] = emo_text
+        return payload
 
     def synthesize(
         self,
@@ -43,18 +53,25 @@ class TTSEngine:
         """
         url = f"{self.base_url}/v2/synthesize"
 
-        payload = {"text": text, "audio_path": filename}
-
-        if emo_vector is not None:
-            payload["emo_vector"] = emo_vector
-        elif emo_text:
-            payload["emo_text"] = emo_text
+        payload = self.request_payload(text, filename, emo_text, emo_vector)
+        if self.observer:
+            self.observer("request", {"driver": "legacy", "method": "POST", "url": url, "payload": payload})
 
         try:
             headers = {}
             if self.api_key:
                 headers["Authorization"] = f"Bearer {self.api_key}"
             resp = requests.post(url, json=payload, headers=headers, timeout=120)
+            if self.observer:
+                metadata = {"http_status": resp.status_code, "content_type": resp.headers.get("content-type", "")}
+                if resp.status_code != 200 or "json" in metadata["content_type"]:
+                    try:
+                        metadata["body"] = resp.json()
+                    except ValueError:
+                        metadata["body"] = resp.text[:8000]
+                else:
+                    metadata["audio_bytes"] = len(resp.content)
+                self.observer("response", metadata)
             if resp.status_code != 200:
                 # 尝试解析错误信息
                 try:
@@ -215,6 +232,7 @@ class ConfigurableCloudTTSEngine:
         self.api_key = api_key
         self.model = model
         self.custom_params = self._parse_params(custom_params)
+        self.observer = None
 
     def synthesize(
         self,
@@ -246,10 +264,20 @@ class ConfigurableCloudTTSEngine:
         query = self.custom_params.get("query") or {}
 
         method = str(self.custom_params.get("method") or "POST").upper()
+        self._observe("request", {"driver": "http", "method": method, "url": request_url, "payload": payload, "query": query})
         if method == "GET":
             resp = requests.get(request_url, params={**query, **payload}, headers=headers, timeout=180)
         else:
             resp = requests.post(request_url, json=payload, params=query, headers=headers, timeout=180)
+        response_meta = {"http_status": resp.status_code, "content_type": resp.headers.get("content-type", "")}
+        if "json" in response_meta["content_type"] or resp.status_code >= 400:
+            try:
+                response_meta["body"] = resp.json()
+            except ValueError:
+                response_meta["body"] = resp.text[:8000]
+        else:
+            response_meta["audio_bytes"] = len(resp.content)
+        self._observe("response", response_meta)
         if resp.status_code >= 400:
             raise RuntimeError(f"云端 TTS 返回错误({resp.status_code}): {resp.text[:500]}")
 
@@ -298,7 +326,11 @@ class ConfigurableCloudTTSEngine:
                 "volume": input_payload.get("volume", 50),
             })
             payload = {"model": self.model, "input": input_payload}
-            payload.update(self.custom_params.get("extra_payload") or {})
+            extra = self.custom_params.get("extra_payload") or {}
+            payload.update({key: value for key, value in extra.items() if key != "input"})
+            input_payload.update(extra.get("input") or {})
+            if "hot_fix" in self.custom_params:
+                input_payload["hot_fix"] = self.custom_params["hot_fix"]
             instruction_field = self._instruction_field()
             if instruction and instruction_field:
                 self._set_nested(payload, instruction_field, instruction.strip())
@@ -319,7 +351,9 @@ class ConfigurableCloudTTSEngine:
             parameters = self.custom_params.get("parameters")
             if isinstance(parameters, dict):
                 payload["parameters"] = parameters
-            payload.update(self.custom_params.get("extra_payload") or {})
+            extra = self.custom_params.get("extra_payload") or {}
+            payload.update({key: value for key, value in extra.items() if key != "input"})
+            input_payload.update(extra.get("input") or {})
             instruction_field = self._instruction_field()
             if instruction and instruction_field:
                 self._set_nested(payload, instruction_field, instruction.strip())
@@ -576,6 +610,21 @@ class ConfigurableCloudTTSEngine:
             dashscope.api_key = self.api_key
         dashscope.base_websocket_api_url = self._dashscope_cosyvoice_url()
 
+        kwargs = self._cosyvoice_kwargs(voice_name, instruction)
+        self._observe("request", {"driver": "dashscope_cosyvoice", "text": text,
+                                   "options": {**kwargs, "format": str(kwargs["format"])}})
+        synthesizer = SpeechSynthesizer(**kwargs)
+        audio_bytes = synthesizer.call(text)
+        self._observe("response", {"request_id": getattr(synthesizer, "get_last_request_id", lambda: "")(),
+                                    "audio_bytes": len(audio_bytes or b""), "response_kind": "audio"})
+        if not audio_bytes:
+            request_id = getattr(synthesizer, "get_last_request_id", lambda: "")()
+            raise RuntimeError(f"CosyVoice TTS 未返回音频，request_id={request_id}")
+
+        self._write_audio(save_path, audio_bytes)
+        return audio_bytes
+
+    def _cosyvoice_kwargs(self, voice_name=None, instruction=None):
         voice = voice_name or self.custom_params.get("voice") or self._default_cosyvoice_voice()
         kwargs: dict[str, Any] = {
             "model": self.model,
@@ -610,14 +659,24 @@ class ConfigurableCloudTTSEngine:
         if isinstance(self.custom_params.get("additional_params"), dict):
             kwargs["additional_params"] = self.custom_params["additional_params"]
 
-        synthesizer = SpeechSynthesizer(**kwargs)
-        audio_bytes = synthesizer.call(text)
-        if not audio_bytes:
-            request_id = getattr(synthesizer, "get_last_request_id", lambda: "")()
-            raise RuntimeError(f"CosyVoice TTS 未返回音频，request_id={request_id}")
+        return kwargs
 
-        self._write_audio(save_path, audio_bytes)
-        return audio_bytes
+    def _observe(self, event, data):
+        if self.observer is not None:
+            self.observer(event, data)
+
+    def preview_request(self, text, voice_name=None, reference_path=None, instruction=None, emo_vector=None):
+        """Use exactly the production serializers, without sending any request."""
+        driver = self._driver()
+        if driver == "dashscope_cosyvoice":
+            kwargs = self._cosyvoice_kwargs(voice_name, instruction)
+            return {"driver": driver, "text": text, "options": {**kwargs, "format": str(kwargs["format"])}}
+        if driver == "dashscope_sambert":
+            return {"driver": driver, "model": self.model, "text": text, "options": self._sambert_kwargs()}
+        url = self._resolve_request_url()
+        return {"driver": "http", "method": str(self.custom_params.get("method") or "POST").upper(),
+                "url": url, "payload": self._build_payload(text, voice_name, reference_path, None, emo_vector, instruction, url),
+                "query": self.custom_params.get("query") or {}}
 
     def _default_cosyvoice_voice(self) -> str:
         model = (self.model or "").lower()
@@ -715,6 +774,20 @@ class ConfigurableCloudTTSEngine:
             dashscope.api_key = self.api_key
         dashscope.base_websocket_api_url = self._dashscope_websocket_url()
 
+        kwargs = self._sambert_kwargs()
+        self._observe("request", {"driver": "dashscope_sambert", "model": self.model, "text": text, "options": kwargs})
+        result = SpeechSynthesizer.call(model=self.model, text=text, **kwargs)
+        audio_bytes = result.get_audio_data()
+        self._observe("response", {"audio_bytes": len(audio_bytes or b""), "request_id": getattr(result, "request_id", None), "response_kind": "audio"})
+        if not audio_bytes:
+            get_response = getattr(result, "get_response", None)
+            detail = get_response() if callable(get_response) else result
+            raise RuntimeError(f"Sambert TTS 未返回音频: {detail}")
+
+        self._write_audio(save_path, audio_bytes)
+        return audio_bytes
+
+    def _sambert_kwargs(self):
         pass_through_keys = {
             "format",
             "sample_rate",
@@ -728,15 +801,7 @@ class ConfigurableCloudTTSEngine:
         kwargs = {key: self.custom_params[key] for key in pass_through_keys if key in self.custom_params}
         kwargs.setdefault("format", "wav")
 
-        result = SpeechSynthesizer.call(model=self.model, text=text, **kwargs)
-        audio_bytes = result.get_audio_data()
-        if not audio_bytes:
-            get_response = getattr(result, "get_response", None)
-            detail = get_response() if callable(get_response) else result
-            raise RuntimeError(f"Sambert TTS 未返回音频: {detail}")
-
-        self._write_audio(save_path, audio_bytes)
-        return audio_bytes
+        return kwargs
 
     def _render_template(self, value: Any, context: dict[str, str]) -> Any:
         if isinstance(value, str):

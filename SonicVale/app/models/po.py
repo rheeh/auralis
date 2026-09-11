@@ -206,6 +206,33 @@ class AdaptationRunPO(Base):
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
 
+class ProjectSpeechProfilePO(Base):
+    __tablename__ = "project_speech_profiles"
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), primary_key=True)
+    settings = Column(JSON, nullable=False)
+    revision = Column(Integer, default=1, nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+
+class TTSGenerationPO(Base):
+    __tablename__ = "tts_generations"
+    id = Column(String(64), primary_key=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    chapter_id = Column(Integer, nullable=False, index=True)
+    # Keep historical input after a line is deleted; project deletion removes it.
+    line_id = Column(Integer, nullable=False, index=True)
+    task_id = Column(String(64), nullable=True, index=True)
+    audio_version_id = Column(String(64), nullable=True)
+    status = Column(String(32), default="preparing", nullable=False)
+    input_snapshot = Column(JSON, nullable=True)
+    request_json = Column(JSON, nullable=True)
+    response_json = Column(JSON, nullable=True)
+    error_message = Column(Text, nullable=True)
+    result_json = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    completed_at = Column(DateTime, nullable=True)
+
+
 class ChatSessionPO(Base):
     __tablename__ = "chat_sessions"
 

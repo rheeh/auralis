@@ -23,6 +23,8 @@ from app.models.po import (
     ChatMessagePO,
     ChatSessionPO,
     ProjectPO,
+    ProjectSpeechProfilePO,
+    TTSGenerationPO,
     SourceDocumentPO,
     WorkflowEventPO,
 )
@@ -137,6 +139,8 @@ class ProjectService:
         asset_ids = select(AudioAssetPO.id).where(AudioAssetPO.project_id == project_id)
         try:
             self._delete_legacy_knowledge_data(db, project_id, session_ids)
+            db.execute(delete(TTSGenerationPO).where(TTSGenerationPO.project_id == project_id))
+            db.execute(delete(ProjectSpeechProfilePO).where(ProjectSpeechProfilePO.project_id == project_id))
             db.execute(delete(AudioTaskPO).where(or_(AudioTaskPO.project_id == project_id, AudioTaskPO.line_id.in_(line_ids), AudioTaskPO.session_id.in_(session_ids))))
             db.execute(delete(WorkflowEventPO).where(or_(WorkflowEventPO.project_id == project_id, WorkflowEventPO.session_id.in_(session_ids))))
             db.execute(delete(AdaptationDraftRevisionPO).where(or_(AdaptationDraftRevisionPO.session_id.in_(session_ids), AdaptationDraftRevisionPO.run_id.in_(run_ids))))

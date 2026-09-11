@@ -1,5 +1,6 @@
 <template>
   <section class="production-script">
+    <SpeechTraceDialog v-if="!IS_STATIC_DEMO" v-model="traceOpen" :project-id="projectId" :line-id="traceLineId" />
     <details class="source-fold">
       <summary><span>小说原文</span><small>{{ sourceText?.length || 0 }} 字 · 点击展开核对</small></summary>
       <div>{{ sourceText || '本次会话没有保存原文。' }}</div>
@@ -33,6 +34,7 @@
             <div v-else class="material-icon"><el-icon><Headset /></el-icon></div>
             <div class="line-main">
               <div class="line-meta"><strong>{{ isSpeakable(line) ? roleName(line.role_id) : trackLabel(line) }}</strong><el-tag size="small" effect="plain">{{ trackLabel(line) }}</el-tag><span v-if="activeVariant(line)" class="active-version">当前采用 {{ activeVariant(line).label }}</span><span v-if="isSpeakable(line)" class="line-expand-state">{{ expandedLineIds.has(line.id)?'收起':'展开' }}</span></div>
+              <el-button v-if="!IS_STATIC_DEMO && isSpeakable(line)" text size="small" @click.stop="traceLineId=line.id;traceOpen=true">生成输入与记录</el-button>
               <el-button text size="small" @click.stop="$emit('open-timeline',line.id)">定位到音轨</el-button>
               <el-button text size="small" :aria-label="`修改第${line.line_order}行类型`" @click.stop="openTypeEditor(line)">修改类型 / 角色</el-button>
               <el-button text type="danger" size="small" :aria-label="`删除第${line.line_order}行台词`" :disabled="deletingLineId !== null || line.status === 'processing'" @click.stop="removeLine(line)">删除台词</el-button>
@@ -146,11 +148,14 @@ import { fetchTTSProviders } from '../../api/provider'
 import { fetchAllEmotions, fetchAllStrengths } from '../../api/enums'
 import { getRoleAvatarUrl } from '../../api/drama'
 import WaveCellPro from '../WaveCellPro.vue'
+import { IS_STATIC_DEMO } from '../../api/config'
+import SpeechTraceDialog from './SpeechTraceDialog.vue'
 import SoundLibraryPanel from '../SoundLibraryPanel.vue'
 import { changeLineType, deleteLine } from '../../api/line'
 
 const props=defineProps({sessionId:{type:String,required:true},projectId:{type:Number,required:true},chapterId:{type:Number,required:true},ttsProviderId:Number,sourceText:String,voiceRevision:{type:Number,default:0},selectedLineId:[Number,String],scriptOnly:Boolean})
 const emit=defineEmits(['open-timeline'])
+const traceOpen=ref(false),traceLineId=ref(null)
 const productionConfiguration=ref([])
 const canGenerateAll=computed(()=>productionConfiguration.value.length>0 && productionConfiguration.value.every(item=>item.enabled))
 function configurationFor(line){return productionConfiguration.value.find(item=>item.line_id===line.id)}

@@ -245,8 +245,10 @@ class LineService:
         emotion_name: str | None = None,
         strength_name: str | None = None,
         production_note: str | None = None,
+        speech_context: dict | None = None,
+        request_observer=None,
     ):
-        content = self.clean_tts_text(content)
+        content = speech_context["tts_text"] if speech_context else self.clean_tts_text(content)
         if not content:
             raise ValueError("可朗读文本清洗后为空，请把音效提示移到声音事件或制作备注")
         route = self.resolve_tts_route(role, line_type=line_type, track=track, emotion_name=emotion_name)
@@ -260,6 +262,12 @@ class LineService:
         voice_instruction = build_voice_instruction(
             emotion_name, strength_name, production_note, mode=mode, compact=compact,
         )
+        if speech_context:
+            voice_instruction = speech_context["instruction"]
+            emotion_name = speech_context["emotion"]
+            strength_name = speech_context["effective_strength"]
+            from app.core.tts_guidance import emotion_text_to_vector
+            emo_vector = emotion_text_to_vector(emotion_name, strength_name)
         if provider is not None and getattr(provider, "status", 1) == 0:
             raise ValueError("当前角色绑定的配音模型已停用，请选择已启用的音色；已保存配音可继续试听")
         if (getattr(provider, "provider_type", None) or "").lower() == "edge":
@@ -278,6 +286,7 @@ class LineService:
                 emotion_name=emotion_name,
                 strength_name=strength_name,
                 production_note=production_note,
+                request_observer=request_observer,
             )
         return self.generate_cloud_audio(
             reference_path,
@@ -288,13 +297,14 @@ class LineService:
             save_path,
             voice=voice,
             instruction=voice_instruction,
+            provider_overrides=(speech_context or {}).get("provider_overrides"),
+            request_observer=request_observer,
         )
 
     @staticmethod
     def clean_tts_text(content: str | None) -> str:
-        text = str(content or "")
-        text = re.sub(r"(?:\([^()]*\)|（[^（）]*）|\[[^\[\]]*\]|【[^【】]*】)", "", text)
-        return re.sub(r"[ \t]+", "", text).strip()
+        from app.services.speech_direction_service import clean_spoken_text
+        return clean_spoken_text(content)
 
     def generate_edge_audio(
         self,
@@ -306,11 +316,14 @@ class LineService:
         emotion_name: str | None = None,
         strength_name: str | None = None,
         production_note: str | None = None,
+        request_observer=None,
     ):
         edge_voice = self.resolve_edge_voice(role=role, voice=voice)
         guidance = production_note if production_note is not None else instruction
         prosody = edge_prosody(emotion_name, strength_name, guidance)
-        return EdgeTTSEngine().synthesize(
+        if request_observer:
+            request_observer("request", {"driver": "edge", "text": content, "voice": edge_voice, **prosody})
+        audio = EdgeTTSEngine().synthesize(
             content,
             save_path=save_path,
             voice=edge_voice,
@@ -318,6 +331,9 @@ class LineService:
             pitch=prosody["pitch"],
             volume=prosody["volume"],
         )
+        if request_observer:
+            request_observer("response", {"response_kind": "audio", "audio_bytes": len(audio)})
+        return audio
 
     def resolve_edge_voice(self, role=None, voice=None) -> str:
         role_edge_voice = (getattr(role, "edge_voice", None) or "").strip()
@@ -331,14 +347,14 @@ class LineService:
 
         return EdgeTTSEngine.DEFAULT_VOICE
 
-    def generate_cloud_audio(self, reference_path: str,tts_provider_id,content,emo_text:str,emo_vector:list[float],save_path= None, voice=None, instruction: str | None = None):
+    def generate_cloud_audio(self, reference_path: str,tts_provider_id,content,emo_text:str,emo_vector:list[float],save_path= None, voice=None, instruction: str | None = None, provider_overrides=None, request_observer=None):
         tts_provider = self.tts_provider_repository.get_by_id(tts_provider_id)
         if tts_provider is None:
             raise Exception(f"TTS服务提供商不存在（ID: {tts_provider_id}）")
 
         provider_type = (getattr(tts_provider, "provider_type", None) or "cloud").lower()
         if provider_type == "edge":
-            return self.generate_edge_audio(content, save_path=save_path, voice=voice, instruction=instruction)
+            return self.generate_edge_audio(content, save_path=save_path, voice=voice, instruction=instruction, request_observer=request_observer)
 
         if not tts_provider.api_base_url:
             raise Exception("TTS服务地址未配置，请先在配置中心设置TTS服务")
@@ -354,8 +370,9 @@ class LineService:
                 tts_provider.api_base_url,
                 api_key=tts_provider.api_key,
                 model=getattr(tts_provider, "model", None),
-                custom_params=getattr(tts_provider, "custom_params", None),
+                custom_params={**ConfigurableCloudTTSEngine._parse_params(getattr(tts_provider, "custom_params", None)), **(provider_overrides or {})},
             )
+            engine.observer = request_observer
             voice_name = self.resolve_cosyvoice_voice(voice) or getattr(voice, "name", None)
             return engine.synthesize(
                 content,
@@ -368,6 +385,7 @@ class LineService:
             )
 
         tts_engine = TTSEngine(tts_provider.api_base_url, api_key=tts_provider.api_key)
+        tts_engine.observer = request_observer
 
         # 检查参考音频路径是否有效
         if not reference_path:
@@ -391,8 +409,9 @@ class LineService:
                 if upload_result.get('code') and upload_result.get('code') != 200:
                     raise Exception(f"上传参考音频失败: {upload_result.get('msg', '未知错误')}")
             
-            # 合成音频
-            return tts_engine.synthesize(content, reference_path, emo_text, emo_vector, save_path)
+            # The engine records the serialized request and response at the transport boundary.
+            audio = tts_engine.synthesize(content, reference_path, emo_text, emo_vector, save_path)
+            return audio
 
     @staticmethod
     def resolve_cosyvoice_voice(voice=None) -> str | None:

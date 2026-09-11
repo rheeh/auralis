@@ -6,6 +6,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.core.prompts import get_audio_drama_adaptation_rules
+from app.services.script_draft_service import ScriptDraftService
 from app.models.po import ProjectPO
 from app.services.workflow_llm_service import WorkflowLLMService
 from app.workflows.drama.schemas import ScriptReviewReport
@@ -30,13 +31,14 @@ class ScriptReviewService:
         system_prompt = "\n\n".join([
             "你是 Auralis 的广播剧剧本审查员。你不改稿，只做独立验收并输出结构化审查报告。",
             get_audio_drama_adaptation_rules(),
-            "审查时把听众视为只能听见声音、完全看不到画面的人。所有必要信息必须能由对白、动作声、环境音、音乐、呼吸、沉默或听觉转场获得。",
+            "审查时把听众视为只能听见声音、完全看不到画面的人。所有必要信息必须能由对白、必要旁白、动作声、环境音、音乐、呼吸、沉默或听觉转场获得。",
+            "旁白比例、超过45字的条数和连续条数仅供观察，不能单独构成 error 或扣分依据。判断是否有叙事功能、重复解释或拖慢节奏，保留用户指定的叙述风格。",
             "逐项检查：叙述是否能转成对白；心理活动是否已外化；环境信息是否嵌入可听元素；时空跳转是否有听觉标记；纯视觉描写是否删除或转为可听证据。",
             "特殊场景检查：电话要能听懂通话关系；自言自语要有声音层次；多人场景要能分辨说话者；内心独白应标注声音层；沉默必须保留环境声。",
-            "禁止项：作者直接评述、无声音支撑的时间跳跃、纯视觉表情或眼神、角色机械复述信息、说明性对白、同一信息由对白和旁白重复。",
+            "检查缺陷：没有叙事功能的作者评述、听众无法理解的时间跳跃、未被表达的关键视觉信息、角色机械复述信息、同一信息由对白和旁白无意义重复。",
             "同时检查原作关键因果、人物动机和角色口吻是否保持；不要因为追求零旁白而制造不自然的解释性对白。",
             "逐条核对证据出现顺序、人物在当下知道的信息和结尾未解的身份；提前揭晓或新编关键证据属于 error。角色表、标题、productionNote 给制作人员看，不能视为听众已获知该事实。",
-            "检查音效是否真实可制作，是否与 audioEvents 重复，持续环境是否重复进入；先保障听觉因果与自然对白，再判断旁白比例，不按音效数量或零旁白机械加分。",
+            "检查音效是否真实可制作，是否与 audioEvents 重复，持续环境是否重复进入；先保障听觉因果、自然对白与旁白的叙事功能，不按音效数量或零旁白机械加分。",
             "检查 emotion、strength、productionNote 是否一致：心理紧张不能直接推断可听颤音；日常问答不得仅凭标点标成强烈。声音指导应有说话目的或一处可听变化。无原文或用户依据的哭腔、笑声、喊叫，以及强度标签与指导冲突，作为 warning 并给出具体改法。",
             "发现关键事实缺失时，evidence 必须指出原文事实和现稿真正可朗读的对应句；禁止脑补。特别核对物件与往事的关联、角色对白归属、先后声音是否被同步、元说明是否被朗读。声音提示中出现整句对白、只有标点的台词也必须报告。",
             "error 表示交付前必须修复；warning 表示明显影响听觉表达；suggestion 表示可选优化。只有没有 error、核心规范均满足且总分不低于80时 passed 才能为 true。",
@@ -47,6 +49,7 @@ class ScriptReviewService:
             f"小说解析：{json.dumps(parsed, ensure_ascii=False)}",
             f"已确认角色：{json.dumps(roles, ensure_ascii=False)}",
             f"小说原文：{source_text}",
+            f"旁白描述性统计（不是验收阈值）：{json.dumps(ScriptDraftService.narration_metrics(script), ensure_ascii=False)}",
             f"待审查剧本：{json.dumps(script, ensure_ascii=False)}",
             f"程序化预检发现：{'；'.join(known_issues or []) or '无'}",
         ])

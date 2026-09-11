@@ -1,5 +1,6 @@
 # app/tts_worker.py
 import asyncio
+import logging
 from fastapi import FastAPI
 
 from app.core.ws_manager import manager
@@ -11,6 +12,8 @@ from app.models.po import ChatSessionPO
 from app.core.tts_guidance import emotion_text_to_vector
 from app.services.audio_task_service import AudioTaskService
 from app.services.production_configuration import effective_provider_id
+from app.services.speech_direction_service import SpeechDirectionService
+from app.services.tts_trace_service import TTSTraceService, TTSRequestRecorder
 from app.workflows.drama.events import WorkflowEventPublisher
 
 TTS_TIMEOUT_SECONDS = 1200  # 可调
@@ -30,6 +33,9 @@ async def tts_worker(app: FastAPI):
             task_id = None
         db = SessionLocal()
         task_service = AudioTaskService(db)
+        trace_service = TTSTraceService(db)
+        generation_id = None
+        trace_secrets = ()
         try:
             line_service = get_line_service(db)
             task = task_service.mark(task_id, "processing") if task_id else None
@@ -102,6 +108,16 @@ async def tts_worker(app: FastAPI):
             emo_vector = emotion_text_to_vector(emotion_name or "", strength_name or "")
 
             project = project_service.get_project(project_id)
+            generation_id = trace_service.begin(project_id, dto.chapter_id, dto.id, task_id, {
+                "original_text": dto.text_content, "production_note": dto.production_note,
+                "emotion_id": dto.emotion_id, "strength_id": dto.strength_id,
+            })
+            prepared = SpeechDirectionService(db).prepare(project_id, dto.id, dto)
+            from app.models.po import TTSProviderPO
+            actual_provider = db.get(TTSProviderPO, prepared["provider_id"])
+            trace_secrets = (actual_provider.api_key or "",)
+            recorder = TTSRequestRecorder(db.get_bind(), generation_id, trace_secrets)
+            recorder("prepared", prepared)
 
             # Preserve the currently generated take before the canonical output
             # path is overwritten by a regeneration.
@@ -109,7 +125,7 @@ async def tts_worker(app: FastAPI):
                 line_service.ensure_generated_audio_version(dto.id)
 
             loop = asyncio.get_running_loop()
-            await asyncio.wait_for(
+            audio_result = await asyncio.wait_for(
                 loop.run_in_executor(
                     ex,
                     line_service.generate_audio,
@@ -126,6 +142,8 @@ async def tts_worker(app: FastAPI):
                     emotion_name,
                     strength_name,
                     dto.production_note,
+                    prepared,
+                    recorder,
                 ),
                 timeout=TTS_TIMEOUT_SECONDS
             )
@@ -137,7 +155,10 @@ async def tts_worker(app: FastAPI):
                 "strength_id": dto.strength_id,
                 "voice_id": role.default_voice_id if role else None,
                 "task_id": task_id,
+                "generation_id": generation_id,
             }) if dto.id else None
+            trace_service.finish(generation_id, audio=audio_result,
+                                 version_id=(generated_version or {}).get("id"), secrets=trace_secrets)
 
             line_service.update_line(dto.id, {"status": "done", "is_done": 1})
             task = task_service.mark(task_id, "done", audio_path=dto.audio_path) if task_id else None
@@ -163,6 +184,13 @@ async def tts_worker(app: FastAPI):
             })
 
         except Exception as e:
+            if generation_id:
+                db.rollback()
+                try:
+                    trace_service.finish(generation_id, error=e, secrets=trace_secrets)
+                except Exception:
+                    db.rollback()
+                    logging.error("无法更新配音记录 %s 的失败状态", generation_id)
             try:
                 line_service.update_line(dto.id, {"status": "failed"})
             except Exception:

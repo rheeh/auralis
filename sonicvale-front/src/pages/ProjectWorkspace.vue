@@ -4,10 +4,12 @@
       <div><p class="workspace-eyebrow">章节工作台</p><h1>{{ project?.name || '广播剧制作' }}</h1></div>
       <div class="workspace-actions">
         <el-select :model-value="snapshot?.chapter_id || null" placeholder="选择章节" aria-label="当前章节" :disabled="loadingWorkspace" @change="changeChapter"><el-option v-for="chapter in chapters" :key="chapter.id" :label="chapter.title" :value="chapter.id" /></el-select>
+        <el-button v-if="!IS_STATIC_DEMO" @click="speechSettingsOpen=true">配音设定</el-button>
         <el-button @click="startNew">新建章节</el-button>
         <el-button :aria-expanded="assistantOpen" @click="assistantOpen=!assistantOpen">{{ assistantOpen?'收起制作助手':'打开制作助手' }}</el-button>
       </div>
     </header>
+    <SpeechSettingsDialog v-if="!IS_STATIC_DEMO" v-model="speechSettingsOpen" :project-id="projectId" />
     <ProductionSteps :model-value="selectedView" :steps="workspaceSteps" @update:model-value="selectView" />
     <el-alert v-if="workspaceError" :title="workspaceError" type="error" :closable="false" />
     <section v-loading="loadingWorkspace" class="workspace-grid" :class="{'assistant-hidden':!assistantOpen}">
@@ -35,7 +37,7 @@
               <small>你也可以继续在右侧修改人物卡、头像和音色。</small>
             </template>
             <template v-else-if="snapshot.current_stage==='awaiting_script_confirmation'">
-              <el-button size="small" :disabled="actionBusy" @click="sendSuggestedRevision('进一步减少旁白，把能听见的动作改成对白或音效。')">减少旁白</el-button>
+              <el-button size="small" :disabled="actionBusy" @click="sendSuggestedRevision('检查旁白的叙事功能，减少与对白或声音重复的信息，保留必要的时空转换和心理信息，不按比例硬删。')">检查旁白</el-button>
               <el-button size="small" :disabled="actionBusy" @click="sendSuggestedRevision('检查所有 SFX 和 BGM，为空的声音轨补充可直接制作的详细声音提示词。')">补全音效提示</el-button>
               <el-button type="primary" :loading="actionBusy" @click="confirmScript(snapshot.script_draft)">台本满意，进入制作</el-button>
             </template>
@@ -79,7 +81,7 @@
         <div v-else class="source-composer">
           <el-input v-model="draft.title" placeholder="章节或本次改编标题（可选）" />
           <el-input v-model="draft.source_text" type="textarea" :rows="10" resize="none" placeholder="把小说原文粘贴到这里……" />
-          <el-input v-model="draft.instruction" type="textarea" :rows="3" resize="none" placeholder="补充要求：风格、时长、节奏、旁白比例等（可选）" />
+          <el-input v-model="draft.instruction" type="textarea" :rows="3" resize="none" placeholder="补充要求：风格、时长、节奏、旁白叙述方式等（可选）" />
           <div class="composer-footer"><span>{{ sourceChars }} 字</span><el-button type="primary" :loading="submitting" :disabled="!sourceChars" @click="createSession">解析原文，进入人物与台本</el-button></div>
         </div>
 
@@ -171,6 +173,8 @@ import ChapterTimeline from '../components/production/ChapterTimeline.vue'
 import { defaultWorkspaceView, resolveWorkspaceView, workspaceLocation } from '../workspace/navigation'
 import ChatMessageList from '../components/workflow/ChatMessageList.vue'
 import CharacterCardsArchive from '../components/workflow/CharacterCardsArchive.vue'
+import { IS_STATIC_DEMO } from '../api/config'
+import SpeechSettingsDialog from '../components/workflow/SpeechSettingsDialog.vue'
 import ProductionScriptPanel from '../components/workflow/ProductionScriptPanel.vue'
 import RoleDraftConfirmCard from '../components/workflow/RoleDraftConfirmCard.vue'
 import ScriptDraftConfirmCard from '../components/workflow/ScriptDraftConfirmCard.vue'
@@ -178,6 +182,7 @@ import WorkflowErrorCard from '../components/workflow/WorkflowErrorCard.vue'
 
 const route = useRoute(), router = useRouter()
 const projectId = Number(route.params.id)
+const speechSettingsOpen = ref(false)
 const chapters=ref([]),assistantOpen=ref(false),loadingWorkspace=ref(false),workspaceError=ref('')
 const selectedLineId=computed(()=>Number(route.query.line_id)||null)
 const selectedView=computed(()=>resolveWorkspaceView(route.query.view,snapshot.value?.current_stage,snapshot.value?.chapter_id))

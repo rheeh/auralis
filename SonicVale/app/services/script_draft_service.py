@@ -114,7 +114,7 @@ class ScriptDraftService:
                     line["text"] = prompt
 
     @staticmethod
-    def _narration_issues(script: dict[str, Any]) -> list[str]:
+    def narration_metrics(script: dict[str, Any]) -> dict[str, Any]:
         narration_chars = 0
         dialogue_chars = 0
         long_count = 0
@@ -134,13 +134,17 @@ class ScriptDraftService:
                     dialogue_chars += text_length
                     previous_was_narration = False
 
-        issues = []
         spoken_chars = narration_chars + dialogue_chars
-        narration_ratio = narration_chars / spoken_chars if spoken_chars else 0
-        if narration_chars and (dialogue_chars == 0 or narration_ratio > 0.18):
-            issues.append(f"旁白字数占可朗读文本 {narration_ratio:.0%}，目标不超过15%")
-        if long_count:
-            issues.append(f"有 {long_count} 条旁白超过45字")
-        if consecutive_count:
-            issues.append(f"有 {consecutive_count} 处连续旁白")
-        return issues
+        return {
+            "narration_chars": narration_chars,
+            "spoken_chars": spoken_chars,
+            "narration_ratio": narration_chars / spoken_chars if spoken_chars else 0,
+            "long_narration_lines": long_count,
+            "consecutive_narration_pairs": consecutive_count,
+            "informational_only": True,
+        }
+
+    @staticmethod
+    def _narration_issues(script: dict[str, Any]) -> list[str]:
+        """Compatibility hook: counts alone are no longer blocking defects."""
+        return []

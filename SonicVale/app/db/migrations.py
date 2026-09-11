@@ -16,7 +16,7 @@ from sqlalchemy import Engine, inspect, text
 
 
 SCHEMA_MIGRATIONS_TABLE = "schema_migrations"
-CURRENT_SCHEMA_VERSION = 6
+CURRENT_SCHEMA_VERSION = 7
 
 
 def _table_exists(engine: Engine, table_name: str) -> bool:
@@ -147,6 +147,12 @@ def _migration_006_clip_playback_rate(engine: Engine) -> None:
     _add_columns(engine, "timeline_clips", {"playback_rate": "REAL DEFAULT 1.0 NOT NULL"})
 
 
+def _migration_007_speech_context_and_traces(engine: Engine) -> None:
+    from app.models.po import ProjectSpeechProfilePO, TTSGenerationPO
+    for model in (ProjectSpeechProfilePO, TTSGenerationPO):
+        model.__table__.create(bind=engine, checkfirst=True)
+
+
 MIGRATIONS = {
     1: _migration_001_legacy_columns,
     2: _migration_002_timeline_foundation,
@@ -154,6 +160,7 @@ MIGRATIONS = {
     4: _migration_004_sound_library,
     5: _migration_005_sound_tags,
     6: _migration_006_clip_playback_rate,
+    7: _migration_007_speech_context_and_traces,
 }
 
 
