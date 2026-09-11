@@ -55,7 +55,7 @@ class DramaWorkflowTest(unittest.TestCase):
                 ],
             }],
         }
-        service.script_reviewer.review = lambda project, parsed, roles, source, script, known_issues: {
+        service.script_reviewer.review = lambda project, parsed, roles, source, script, known_issues, instruction=None: {
             "passed": True, "score": 92, "summary": "声音表达清晰", "strengths": ["听觉锚点明确"], "issues": [],
         }
         return service
@@ -142,9 +142,10 @@ class DramaWorkflowTest(unittest.TestCase):
             }]},
             {"passed": True, "score": 90, "summary": "返修后符合规范", "strengths": ["信息可听"], "issues": []},
         ])
-        workflow.script_reviewer.review = lambda *args: next(reports)
+        review_instructions, repair_instructions = [], []
+        workflow.script_reviewer.review = lambda *args: review_instructions.append(args[-1]) or next(reports)
         repaired = {**workflow.script_drafter.generate(None, None, None, None, None, None, None), "title": "雨夜·返修"}
-        workflow.script_drafter.revise_from_review = lambda *args: repaired
+        workflow.script_drafter.revise_from_review = lambda *args: repair_instructions.append(args[-1]) or repaired
 
         result = workflow.submit_action(snapshot["session_id"], {
             "action": "confirm_roles", "feedback": "", "payload": {"roles": role_snapshot["role_drafts"]["roles"]},
@@ -156,6 +157,8 @@ class DramaWorkflowTest(unittest.TestCase):
         self.assertTrue(result["script_review"]["passed"])
         self.assertTrue(result["script_review"]["repair_applied"])
         self.assertEqual(result["script_review"]["initial_score"], 68)
+        self.assertEqual(review_instructions, ["零旁白优先", "零旁白优先"])
+        self.assertEqual(repair_instructions, ["零旁白优先"])
         self.assertEqual([item["label"] for item in result["script_revisions"]], ["初稿", "AI 复核返修稿"])
         self.assertEqual(result["script_revisions"][0]["status"], "needs_repair")
         self.assertEqual(result["script_revisions"][1]["status"], "reviewed")

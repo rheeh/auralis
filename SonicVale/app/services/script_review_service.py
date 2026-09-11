@@ -25,6 +25,7 @@ class ScriptReviewService:
         source_text: str,
         script: dict[str, Any],
         known_issues: list[str] | None = None,
+        instruction: str | None = None,
     ) -> dict[str, Any]:
         system_prompt = "\n\n".join([
             "你是 Auralis 的广播剧剧本审查员。你不改稿，只做独立验收并输出结构化审查报告。",
@@ -36,11 +37,13 @@ class ScriptReviewService:
             "同时检查原作关键因果、人物动机和角色口吻是否保持；不要因为追求零旁白而制造不自然的解释性对白。",
             "逐条核对证据出现顺序、人物在当下知道的信息和结尾未解的身份；提前揭晓或新编关键证据属于 error。角色表、标题、productionNote 给制作人员看，不能视为听众已获知该事实。",
             "检查音效是否真实可制作，是否与 audioEvents 重复，持续环境是否重复进入；先保障听觉因果与自然对白，再判断旁白比例，不按音效数量或零旁白机械加分。",
+            "检查 emotion、strength、productionNote 是否一致：心理紧张不能直接推断可听颤音；日常问答不得仅凭标点标成强烈。声音指导应有说话目的或一处可听变化。无原文或用户依据的哭腔、笑声、喊叫，以及强度标签与指导冲突，作为 warning 并给出具体改法。",
             "发现关键事实缺失时，evidence 必须指出原文事实和现稿真正可朗读的对应句；禁止脑补。特别核对物件与往事的关联、角色对白归属、先后声音是否被同步、元说明是否被朗读。声音提示中出现整句对白、只有标点的台词也必须报告。",
             "error 表示交付前必须修复；warning 表示明显影响听觉表达；suggestion 表示可选优化。只有没有 error、核心规范均满足且总分不低于80时 passed 才能为 true。",
             "只返回符合响应结构的 JSON，不要改写或附带完整剧本。",
         ])
         prompt = "\n\n".join([
+            f"用户改编与表演要求：{instruction or '遵守默认改编规范。'}",
             f"小说解析：{json.dumps(parsed, ensure_ascii=False)}",
             f"已确认角色：{json.dumps(roles, ensure_ascii=False)}",
             f"小说原文：{source_text}",

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Final
 
 
@@ -66,24 +67,44 @@ VECTOR_STRENGTH_SCALE: Final[dict[str, float]] = {
 }
 
 EDGE_STRENGTH_SCALE: Final[dict[str, float]] = {
-    "微弱": 0.35,
-    "稍弱": 0.6,
-    "中等": 1.0,
-    "较强": 1.35,
-    "强烈": 1.7,
+    "微弱": 0.1,
+    "稍弱": 0.2,
+    "中等": 0.35,
+    "较强": 0.5,
+    "强烈": 0.7,
 }
 
-EDGE_BASE_PROSODY: Final[dict[str, tuple[float, float, float]]] = {
-    # rate percentage, pitch Hz, volume percentage
-    "高兴": (12, 10, 5),
-    "生气": (14, 6, 12),
-    "伤心": (-18, -10, -10),
-    "害怕": (12, 12, -5),
-    "厌恶": (-8, -8, -4),
-    "低落": (-22, -12, -12),
-    "惊喜": (18, 15, 6),
-    "平静": (-5, 0, -2),
+EDGE_BASE_PROSODY: Final[dict[str, tuple[float, float]]] = {
+    # rate percentage, pitch Hz; loudness is controlled separately.
+    "高兴": (12, 10),
+    "生气": (14, 6),
+    "伤心": (-18, -10),
+    "害怕": (12, 12),
+    "厌恶": (-8, -8),
+    "低落": (-22, -12),
+    "惊喜": (18, 15),
+    "平静": (0, 0),
 }
+
+# Product defaults for restrained dialogue, not vendor-calibrated intensity values.
+DELIVERY_BY_STRENGTH: Final[dict[str, str]] = {
+    "微弱": "按日常交谈回应，音量和音高保持平稳，只在一个关键词上轻微着力，句尾自然收住",
+    "稍弱": "保持日常交谈的音量和音域，只在一处重音或句尾呈现小幅变化，随后回到平稳",
+    "中等": "以自然交谈为基础，用一处重音或节奏变化传达意图，其他部分保持平稳",
+    "较强": "让关键转折的重音和节奏更清楚，其他部分收住，保持角色原有声线",
+    "强烈": "在关键情节处充分表达情感，保留前后层次，保持台词清晰和角色原有声线",
+}
+
+
+def affirmative_guidance(note: str) -> str:
+    """Conservative keyword input: skip negated clauses instead of reversing them.
+
+    This is not a natural-language parser. Ambiguous clauses stay unmapped; native
+    instruction models still receive the original, unmodified direction.
+    """
+    clauses = re.split(r"[，,。；;！!？?\n]|(?:但是|而是|但)", note)
+    negative = re.compile(r"不要|不能|不可|不得|不必|无需|避免|别|不|勿|莫|无|未|禁止|切忌|忌|正常|照常|保持原")
+    return "，".join(clause for clause in clauses if not negative.search(clause))
 
 
 def emotion_text_to_vector(emotion: str, strength: str) -> list[float]:
@@ -99,14 +120,38 @@ def build_voice_instruction(
     emotion: str | None,
     strength: str | None,
     production_note: str | None,
+    *,
+    mode: str = "native",
+    compact: bool = False,
 ) -> str:
-    parts: list[str] = []
-    if emotion:
-        parts.append(f"情绪：{emotion}")
-    if strength:
-        parts.append(f"情绪强度：{strength}")
-    if production_note and production_note.strip():
-        parts.append(f"声音指导：{production_note.strip()}")
+    """Compile authoring labels into delivery cues for the resolved model/voice."""
+    note = (production_note or "").strip()
+    if mode == "none":
+        return ""
+    if mode in {"mapped", "structured"}:
+        # Keep metadata separate from acting notes for deterministic adapters.
+        return "。".join(part for part in (
+            f"情绪：{emotion}" if emotion else "",
+            f"情绪强度：{strength or '微弱'}",
+            f"声音指导：{note}" if note else "",
+        ) if part)
+
+    selected_strength = strength if strength in DELIVERY_BY_STRENGTH else "微弱"
+    strong = selected_strength in {"较强", "强烈"}
+    if compact:
+        # CosyVoice native instructions have a 100 weighted-character budget.
+        # Put the delivery constraint first, so it survives provider truncation.
+        delivery = "关键处充分表达，声线稳定" if strong else "日常交谈，语调起伏小，句尾收住"
+        return "。".join(part for part in (delivery, note or (f"语气{emotion}" if strong and emotion else "")) if part)
+
+    parts: list[str] = [DELIVERY_BY_STRENGTH[selected_strength]]
+    # A categorical emotion word can trigger a full performance even when paired
+    # with “微弱”. For subtle delivery, use the specific note without that label.
+    if strong and emotion:
+        parts.append(f"本句语气{emotion}")
+    if note:
+        parts.append(f"本句具体要求：{note}")
+    parts.append("具体要求优先；只朗读台词正文，额外发声仅在具体要求明确提出时执行")
     return "。".join(parts)
 
 
@@ -116,36 +161,41 @@ def edge_prosody(
     production_note: str | None,
 ) -> dict[str, str]:
     """Approximate expressive guidance with the only controls Edge exposes."""
-    selected_emotion = emotion if emotion in EMOTION_COMPONENTS else _emotion_from_note(production_note or "")
+    note = affirmative_guidance(production_note or "")
+    selected_emotion = emotion if emotion in EMOTION_COMPONENTS else _emotion_from_note(note)
     components = EMOTION_COMPONENTS.get(selected_emotion or "", {"平静": 1.0})
     total_weight = sum(components.values()) or 1.0
     rate = sum(EDGE_BASE_PROSODY[name][0] * weight for name, weight in components.items()) / total_weight
     pitch = sum(EDGE_BASE_PROSODY[name][1] * weight for name, weight in components.items()) / total_weight
-    volume = sum(EDGE_BASE_PROSODY[name][2] * weight for name, weight in components.items()) / total_weight
+    # Emotional intensity is not loudness. Only explicit delivery controls volume.
+    volume = 0
 
-    selected_strength = strength if strength in EDGE_STRENGTH_SCALE else _strength_from_note(production_note or "")
-    scale = EDGE_STRENGTH_SCALE.get(selected_strength or "", EDGE_STRENGTH_SCALE["中等"])
+    selected_strength = strength if strength in EDGE_STRENGTH_SCALE else _strength_from_note(note)
+    scale = EDGE_STRENGTH_SCALE.get(selected_strength or "", EDGE_STRENGTH_SCALE["微弱"])
     rate *= scale
     pitch *= scale
-    volume *= scale
-
-    note = production_note or ""
     if any(word in note for word in ("极慢", "非常慢", "特别慢")):
         rate = -35
-    elif any(word in note for word in ("放慢", "稍慢", "慢速", "语速慢")):
-        rate = min(rate, -20)
+    elif any(word in note for word in ("稍慢", "偏慢")):
+        rate = min(rate, -6)
+    elif any(word in note for word in ("放慢", "慢速", "语速慢")):
+        rate = min(rate, -12)
     if any(word in note for word in ("极快", "非常快", "特别快")):
         rate = 35
-    elif any(word in note for word in ("加快", "稍快", "快速", "急促", "语速快")):
-        rate = max(rate, 20)
+    elif any(word in note for word in ("稍快", "偏快")):
+        rate = max(rate, 6)
+    elif any(word in note for word in ("加快", "快速", "急促", "语速快")):
+        rate = max(rate, 12)
 
     if any(word in note for word in ("压低", "低沉", "低音")):
-        pitch = min(pitch, -12)
+        pitch = min(pitch, -4)
     if any(word in note for word in ("提高音调", "高昂", "明亮", "高音")):
-        pitch = max(pitch, 12)
+        pitch = max(pitch, 4)
 
-    if any(word in note for word in ("耳语", "很轻", "轻声", "小声")):
+    if "耳语" in note:
         volume = min(volume, -25)
+    elif any(word in note for word in ("轻声", "小声", "降低音量")):
+        volume = min(volume, -10)
     if any(word in note for word in ("大声", "提高音量", "响亮")):
         volume = max(volume, 15)
 

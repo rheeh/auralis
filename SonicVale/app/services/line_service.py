@@ -23,6 +23,7 @@ from app.core.audio_engin import AudioProcessor
 from app.core.config import getConfigPath, getFfmpegPath
 from app.core.subtitle import subtitle_engine
 from app.core.tts_engine import ConfigurableCloudTTSEngine, EdgeTTSEngine, TTSEngine
+from app.core.tts_capabilities import cosyvoice_instruction_mode
 from app.core.tts_guidance import build_voice_instruction, edge_prosody
 from app.dto.line_dto import LineCreateDTO, LineOrderDTO, LineAudioProcessDTO, LineAudioVariantDTO
 from app.entity.line_entity import LineEntity
@@ -248,9 +249,17 @@ class LineService:
         content = self.clean_tts_text(content)
         if not content:
             raise ValueError("可朗读文本清洗后为空，请把音效提示移到声音事件或制作备注")
-        voice_instruction = build_voice_instruction(emotion_name, strength_name, production_note)
         route = self.resolve_tts_route(role, line_type=line_type, track=track, emotion_name=emotion_name)
         provider = self.tts_provider_repository.get_by_id(tts_provider_id) if self.tts_provider_repository and tts_provider_id else None
+        mode, compact = "native", False
+        model = str(getattr(provider, "model", None) or "").lower()
+        if model.startswith("cosyvoice"):
+            params = ConfigurableCloudTTSEngine._parse_params(getattr(provider, "custom_params", None))
+            mode = cosyvoice_instruction_mode(model, params, self.resolve_cosyvoice_voice(voice))
+            compact = mode == "native"
+        voice_instruction = build_voice_instruction(
+            emotion_name, strength_name, production_note, mode=mode, compact=compact,
+        )
         if provider is not None and getattr(provider, "status", 1) == 0:
             raise ValueError("当前角色绑定的配音模型已停用，请选择已启用的音色；已保存配音可继续试听")
         if (getattr(provider, "provider_type", None) or "").lower() == "edge":

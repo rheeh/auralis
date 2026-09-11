@@ -255,6 +255,7 @@ class DramaWorkflowService:
             "label": label,
             "review_status": "reviewing",
         })
+        review_instruction = "\n".join(part for part in (session.instruction, feedback) if part)
         initial_review = self.script_reviewer.review(
             project,
             run.parsed_json or {},
@@ -262,6 +263,7 @@ class DramaWorkflowService:
             session.source_text or "",
             script,
             self.script_drafter._narration_issues(script),
+            review_instruction,
         )
         review = initial_review
         repair_applied = False
@@ -279,6 +281,7 @@ class DramaWorkflowService:
                 session.source_text or "",
                 script,
                 initial_review,
+                review_instruction,
             )
             repair_applied = True
             revision = self._save_script_revision(
@@ -313,6 +316,7 @@ class DramaWorkflowService:
                 session.source_text or "",
                 script,
                 self.script_drafter._narration_issues(script),
+                review_instruction,
             )
         review["repair_applied"] = repair_applied
         review["initial_score"] = initial_review.get("score")

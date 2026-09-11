@@ -64,7 +64,22 @@ class ConfigurableCloudTTSEngineCapabilityTests(unittest.TestCase):
 
     def test_native_instruction_obeys_cjk_weighted_length_limit(self):
         engine = self.make_engine("cosyvoice-v3.5-flash")
-        self.assertEqual(engine._prepare_cosyvoice_instruction("轻" * 70), "轻" * 50)
+        prompt = "自然交谈。" + "轻" * 46 + "，不要大声。"
+        self.assertEqual(engine._prepare_cosyvoice_instruction(prompt), "自然交谈。")
+        with self.assertRaisesRegex(ValueError, "过长"):
+            engine._prepare_cosyvoice_instruction("轻" * 70)
+
+    def test_structured_low_intensity_and_negated_emotions_stay_neutral(self):
+        engine = self.make_engine("cosyvoice-v3-flash")
+        for prompt in ("情绪：害怕。情绪强度：微弱", "情绪：高兴。情绪强度：稍弱。声音指导：笑意留在语气里",
+                       "不要害怕，不要悲伤", "克制紧张，正常交谈"):
+            self.assertEqual(engine._prepare_cosyvoice_instruction(prompt), "你说话的情感是neutral。")
+
+    def test_mapped_negative_notes_and_strength_do_not_change_prosody(self):
+        for prompt in ("不要大声，不要放慢，不要压低", "情绪：愤怒。情绪强度：强烈", "克制"):
+            kwargs = {}
+            ConfigurableCloudTTSEngine._apply_prosody_controls(kwargs, prompt)
+            self.assertEqual(kwargs, {})
 
     def test_prosody_keeps_fractional_multiplier_and_avoids_extreme_shifts(self):
         kwargs = {"speech_rate": 0.88, "pitch_rate": 1.0}
@@ -85,13 +100,18 @@ class ConfigurableCloudTTSEngineCapabilityTests(unittest.TestCase):
         self.assertNotIn("instruction", synthesizer.call_args.kwargs)
         self.assertEqual(synthesizer.call_args.kwargs["speech_rate"], 0.94)
 
-    def test_mapped_prosody_uses_emotional_strength(self):
+    def test_mapped_prosody_uses_explicit_loudness(self):
         kwargs = {}
         ConfigurableCloudTTSEngine._apply_prosody_controls(
             kwargs,
             "情绪：愤怒。情绪强度：强烈。声音指导：大声",
         )
         self.assertEqual(kwargs["volume"], 65)
+
+    def test_strong_emotion_does_not_override_explicit_quiet_delivery(self):
+        kwargs = {}
+        ConfigurableCloudTTSEngine._apply_prosody_controls(kwargs, "情绪：愤怒。情绪强度：强烈。声音指导：小声")
+        self.assertEqual(kwargs["volume"], 35)
 
     def test_cosyvoice_v35_keeps_native_instruction(self):
         engine = self.make_engine("cosyvoice-v3.5-flash")
@@ -126,6 +146,12 @@ class ConfigurableCloudTTSEngineCapabilityTests(unittest.TestCase):
         self.assertEqual(payload["input"]["instructions"], "低声克制")
         self.assertNotIn("instruction", payload["input"])
         self.assertEqual(payload["input"]["text"], "别开门。")
+        self.assertIs(payload["input"]["optimize_instructions"], False)
+
+    def test_qwen_instruction_optimization_remains_opt_in(self):
+        engine = self.make_engine("qwen3-tts-instruct-flash", {"driver": "http", "optimize_instructions": True})
+        payload = engine._build_payload("别开门。", "Moon", None, None, None, "低声克制", engine._resolve_request_url())
+        self.assertIs(payload["input"]["optimize_instructions"], True)
 
     def test_qwen_audio_http_endpoint_and_singular_instruction(self):
         engine = self.make_engine("qwen-audio-3.0-tts-plus", {"driver": "dashscope_cosyvoice", "language_type": "Chinese", "language_hints": ["zh"], "sample_rate": 24000})

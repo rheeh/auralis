@@ -65,6 +65,7 @@ class ScriptDraftService:
         source_text: str,
         script: dict[str, Any],
         review: dict[str, Any],
+        instruction: str | None = None,
     ) -> dict[str, Any]:
         system_prompt = "\n\n".join([
             "你是 Auralis 的广播剧编剧返修 Agent。你只根据独立审查报告修订现有草稿，不重新解析小说。",
@@ -75,6 +76,7 @@ class ScriptDraftService:
             "只返回符合响应结构的完整修订剧本 JSON。",
         ])
         prompt = "\n\n".join([
+            f"用户改编与表演要求（返修时仍须保留）：{instruction or '遵守默认改编规范。'}",
             f"小说解析：{json.dumps(parsed, ensure_ascii=False)}",
             f"已确认角色：{json.dumps(roles, ensure_ascii=False)}",
             f"小说原文：{source_text}",

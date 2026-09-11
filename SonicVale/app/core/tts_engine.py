@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.core.tts_capabilities import cosyvoice_instruction_mode, http_instruction_field
+from app.core.tts_guidance import affirmative_guidance
 
 import asyncio
 import base64
@@ -324,6 +325,8 @@ class ConfigurableCloudTTSEngine:
                 self._set_nested(payload, instruction_field, instruction.strip())
                 if "optimize_instructions" in self.custom_params:
                     input_payload["optimize_instructions"] = bool(self.custom_params["optimize_instructions"])
+                elif "qwen" in (self.model or "").lower() and "instruct" in (self.model or "").lower():
+                    input_payload["optimize_instructions"] = False
             return {k: v for k, v in payload.items() if v is not None}
 
         payload: dict[str, Any] = {
@@ -633,19 +636,32 @@ class ConfigurableCloudTTSEngine:
             return None
         if mode == "native":
             # DashScope counts CJK characters as two, punctuation/Latin as one.
+            # Keep whole clauses: cutting “不要” halfway can reverse a direction.
             result, length = [], 0
-            for char in prompt:
-                cost = 2 if "\u3400" <= char <= "\u9fff" else 1
+            for clause in re.findall(r"[^，,。；;！？!?\n]+[，,。；;！？!?\n]?", prompt):
+                cost = sum(2 if "\u3400" <= char <= "\u9fff" else 1 for char in clause)
                 if length + cost > 100:
                     break
-                result.append(char)
+                result.append(clause)
                 length += cost
+            if not result:
+                raise ValueError("CosyVoice 单条声音指导过长，请缩短至 100 字符以内（汉字计 2）并用标点分句")
             return "".join(result)
 
         # Preserve a valid explicit emotion rather than turning e.g. fearful into neutral.
         explicit = re.fullmatch(r"你说话的情感是(neutral|fearful|angry|sad|surprised|happy|disgusted)。", prompt)
         if explicit:
             return prompt
+
+        # Fixed emotion categories have no documented intensity control. Do not
+        # turn low-intensity fear/sadness into full categorical acting.
+        strength = re.search(r"情绪强度[：:]\s*(微弱|稍弱|中等|较强|强烈)", prompt)
+        if strength and strength.group(1) in {"微弱", "稍弱"}:
+            return "你说话的情感是neutral。"
+        if not strength and any(word in affirmative_guidance(prompt) for word in ("克制", "平稳", "自然交谈")):
+            return "你说话的情感是neutral。"
+        selected_emotion = re.search(r"情绪[：:]\s*([^。；;，,\n]+)", prompt)
+        emotion_prompt = selected_emotion.group(1) if selected_emotion else affirmative_guidance(prompt)
 
         emotion_aliases = (
             (("恐惧", "害怕", "惊恐", "紧张", "惊慌", "焦急"), "fearful"),
@@ -657,15 +673,17 @@ class ConfigurableCloudTTSEngine:
         )
         emotion = "neutral"
         for words, value in emotion_aliases:
-            if any(word in prompt for word in words):
+            if any(word in emotion_prompt for word in words):
                 emotion = value
                 break
         return f"你说话的情感是{emotion}。"
 
     @staticmethod
     def _apply_prosody_controls(kwargs: dict[str, Any], prompt: str) -> None:
-        """Keep common speed/pitch/volume controls across Base and Instruct models."""
-        if any(word in prompt for word in ("慢", "克制", "舒缓")):
+        """Map explicit delivery cues only; emotion strength is never volume."""
+        note = prompt.split("声音指导：", 1)[-1] if "声音指导：" in prompt else re.sub(r"情绪(?:强度)?[：:][^。；;\n]*", "", prompt)
+        prompt = affirmative_guidance(note)
+        if any(word in prompt for word in ("放慢", "稍慢", "偏慢", "慢速", "语速慢")):
             kwargs["speech_rate"] = min(float(kwargs.get("speech_rate", 1.0)), 0.94)
         elif any(word in prompt for word in ("加快", "偏快", "急促")):
             kwargs["speech_rate"] = max(float(kwargs.get("speech_rate", 1.0)), 1.06)
@@ -675,13 +693,7 @@ class ConfigurableCloudTTSEngine:
             kwargs["pitch_rate"] = max(float(kwargs.get("pitch_rate", 1.0)), 1.03)
         if any(word in prompt for word in ("轻声", "小声", "耳语")):
             kwargs["volume"] = min(int(kwargs.get("volume", 50)), 35)
-        if "情绪强度：微弱" in prompt:
-            kwargs["volume"] = min(int(kwargs.get("volume", 50)), 42)
-        elif "情绪强度：稍弱" in prompt:
-            kwargs["volume"] = min(int(kwargs.get("volume", 50)), 46)
-        elif "情绪强度：较强" in prompt:
-            kwargs["volume"] = max(int(kwargs.get("volume", 50)), 58)
-        elif "情绪强度：强烈" in prompt:
+        elif any(word in prompt for word in ("大声", "提高音量", "响亮")):
             kwargs["volume"] = max(int(kwargs.get("volume", 50)), 65)
 
     @staticmethod
