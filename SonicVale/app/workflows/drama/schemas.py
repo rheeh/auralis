@@ -5,6 +5,7 @@ import re
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from app.workflows.drama.performance import ScenePerformancePlan, LinePerformanceCue
 
 
 WorkflowStage = Literal[
@@ -107,6 +108,7 @@ class ScriptLine(BaseModel):
     soundTags: list[str] = Field(default_factory=list)
     productionNote: str | None = None
     audioEvents: list[AudioEvent] = Field(default_factory=list)
+    performanceCue: LinePerformanceCue | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -167,17 +169,18 @@ class ScriptLine(BaseModel):
                     else:
                         self.audioEvents.append(AudioEvent(timing="台词中", type="sfx", content=content, volume_db="-18dB"))
             self.text = re.sub(bracket_pattern, "", self.text)
-            self.text = re.sub(r"[ \t]+", "", self.text).strip()
+            self.text = re.sub(r"[ \t]+", " ", self.text).strip()
             if not self.text and bracket_notes and not self.audioEvents and re.search(r'笑', self.productionNote or ''):
                 self.text = '哈哈。' if re.search(r'大笑|哈哈', self.productionNote) else '呵。'
             if not self.text:
                 raise ValueError("可朗读台词不能只包含括号提示或音效标记")
             self.emotion = (self.emotion or "平静").strip() or "平静"
-            self.strength = (self.strength or "中等").strip() or "中等"
+            self.strength = (self.strength or "微弱").strip() or "微弱"
             if self.type == "narration":
                 self.speaker = "旁白"
                 self.emotion = "平静"
-                self.strength = "中等"
+                # Explicit direction may be retained; a missing label stays subtle.
+                self.strength = self.strength or "微弱"
         return self
 
 
@@ -188,6 +191,33 @@ class ScriptScene(BaseModel):
     location: str = ""
     mood: str = ""
     lines: list[ScriptLine] = Field(min_length=1)
+    performancePlan: ScenePerformancePlan | None = None
+
+    @model_validator(mode="after")
+    def validate_performance_references(self):
+        if self.performancePlan is None:
+            if any(line.performanceCue for line in self.lines):
+                raise ValueError("逐句表演提示必须属于场景表演设计")
+            return self
+        beats = {beat.id: index for index, beat in enumerate(self.performancePlan.beats)}
+        speakers = {item.speaker for item in self.performancePlan.characters}
+        previous_beat = -1
+        for index, line in enumerate(self.lines, 1):
+            cue = line.performanceCue
+            if not line.shouldSpeak:
+                if cue is not None:
+                    raise ValueError("音效和音乐不能绑定人物表演提示")
+                continue
+            if cue is None or cue.beatId not in beats:
+                raise ValueError("每句人物声和旁白必须绑定有效的表演节拍")
+            if line.speaker not in speakers:
+                raise ValueError("表演设计缺少当前说话人的意图与基调")
+            if beats[cue.beatId] < previous_beat:
+                raise ValueError("台词表演节拍不能逆序，重复动作应建立新的节拍")
+            previous_beat = beats[cue.beatId]
+            if cue.respondsTo is not None and (cue.respondsTo >= index or not self.lines[cue.respondsTo - 1].shouldSpeak):
+                raise ValueError("接话对象必须是本场已经发生的可朗读台词")
+        return self
 
 
 class DramaScript(BaseModel):
@@ -197,6 +227,15 @@ class DramaScript(BaseModel):
     logline: str = ""
     characters: list[dict[str, Any]] = Field(min_length=1)
     scenes: list[ScriptScene] = Field(min_length=1)
+
+
+class DirectedScriptScene(ScriptScene):
+    # Required for new LLM generations; historical scripts remain readable.
+    performancePlan: ScenePerformancePlan
+
+
+class DirectedDramaScript(DramaScript):
+    scenes: list[DirectedScriptScene] = Field(min_length=1)
 
 
 class ScriptReviewIssue(BaseModel):

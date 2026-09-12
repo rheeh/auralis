@@ -11,9 +11,10 @@ from sqlalchemy import select
 
 from app.core.config import getConfigPath
 from app.core.llm_engine import LLMEngine
-from app.core.prompts import get_audio_drama_adaptation_rules
+from app.core.prompts import get_audio_drama_adaptation_rules, get_audio_drama_script_prompt
 from app.dto.drama_adaptation_dto import DramaAdaptationRequestDTO
 from app.models.po import AdaptationRunPO, ChapterPO, LinePO, RolePO
+from app.services.scene_performance_service import bind_scene_performance, save_chapter_performances
 from app.repositories.chapter_repository import ChapterRepository
 from app.repositories.emotion_repository import EmotionRepository
 from app.repositories.line_repository import LineRepository
@@ -123,6 +124,9 @@ class DramaAdaptationService:
             raise ValueError("项目不存在")
 
         script = self._normalize_script(run.final_json)
+        if any(scene.get("performancePlan") for scene in script.get("scenes", [])):
+            from app.workflows.drama.schemas import DramaScript
+            script = DramaScript.model_validate(script).model_dump()
         target_title = chapter_title or script.get("title") or run.title
         chapter = self.chapter_repository.get_by_name(target_title, run.project_id)
         if chapter:
@@ -150,9 +154,12 @@ class DramaAdaptationService:
         emotions = {item.name: item.id for item in self.emotion_repository.get_all()}
         strengths = {item.name: item.id for item in self.strength_repository.get_all()}
 
-        order = 1
+        existing_orders = [line.line_order or 0 for line in self.line_repository.get_all(chapter.id)] if not replace_chapter_lines else []
+        order = max(existing_orders, default=0) + 1
+        performances = []
         for scene in script.get("scenes", []):
             scene_title = scene.get("title") or "未命名场景"
+            scene_lines, role_names = [], {}
             for line in scene.get("lines", []):
                 speaker = self._speaker_name(line)
                 role = self._ensure_role(run.project_id, speaker)
@@ -162,7 +169,7 @@ class DramaAdaptationService:
                     line_order=order,
                     text_content=str(line.get("text") or "").strip(),
                     emotion_id=emotions.get(str(line.get("emotion") or "").strip()) or emotions.get("平静"),
-                    strength_id=strengths.get(str(line.get("strength") or "").strip()) or strengths.get("中等"),
+                    strength_id=strengths.get(str(line.get("strength") or "").strip()) or strengths.get("微弱"),
                     line_type=self._line_type(line),
                     track=self._track(line),
                     should_speak=1 if bool(line.get("shouldSpeak", line.get("should_speak", True))) else 0,
@@ -175,7 +182,11 @@ class DramaAdaptationService:
                 )
                 created = self.line_repository.create(po)
                 self.line_repository.update(created.id, {"audio_path": os.path.join(audio_path, f"id_{created.id}.wav")})
+                scene_lines.append(created)
+                role_names[role.id] = role.name
                 order += 1
+            performances.append(bind_scene_performance(scene, scene_lines, role_names, run.source_text, run.instruction))
+        save_chapter_performances(chapter, performances, replace=replace_chapter_lines)
 
         self._update_run(run, chapter_id=chapter.id, status="committed", current_stage="committed")
         return chapter
@@ -311,7 +322,7 @@ class DramaAdaptationService:
         return "\n\n".join(
             [
                 "你是生成广播剧台本 Agent。只输出严格 JSON。",
-                get_audio_drama_adaptation_rules(),
+                get_audio_drama_script_prompt(),
                 f"改编密度：{dto.adaptation_density}",
                 f"用户指令：{dto.instruction or '生成可直接制作的广播剧台本。'}",
                 "规则：dialogue 只能是人物说出口的话；narration 只能是旁白；sfx/bgm 只能是声音提示，不写成可朗读句。",
@@ -332,6 +343,7 @@ class DramaAdaptationService:
             [
                 "你是生成广播剧语言 Agent。只输出严格 JSON。",
                 "把台本整理成最终可编辑、可进入语音 API 的广播剧工程。",
+                "保留整场 performancePlan 和逐句 performanceCue，改动台词后同步修正节拍与接话引用，不增加没有原文依据的情绪转折。",
                 get_audio_drama_adaptation_rules(),
                 "这是最后一次声音审计：删除没有叙事作用的重复旁白，保留必要信息与叙述视角；允许连续旁白，不按数量或比例删减，也不把关键视觉事实只藏在制作备注里。",
                 "硬规则：dialogue/narration shouldSpeak=true；sfx/bgm shouldSpeak=false。",
@@ -356,6 +368,9 @@ class DramaAdaptationService:
                     "title": "场景名",
                     "location": "地点",
                     "mood": "情绪",
+                    "performancePlan": {"purpose": "本场任务", "baseline": "自然交谈", "pace": "听完再回答",
+                        "characters": [{"speaker": "角色名", "objective": "确认对方来意", "relationship": "当下关系", "baseline": "声线稳定"}],
+                        "beats": [{"id": "b1", "purpose": "试探", "delivery": "疑问词轻点"}]},
                     "lines": [
                         {
                             "type": "dialogue|narration|sfx|bgm",
@@ -369,6 +384,7 @@ class DramaAdaptationService:
                             "soundPrompt": "音效或 BGM 提示",
                             "soundTags": ["声源", "材质", "空间"],
                             "productionNote": "制作备注",
+                            "performanceCue": {"beatId": "b1", "intent": "确认", "delivery": "", "respondsTo": None, "turningPoint": False, "evidence": ""},
                         }
                     ],
                 }

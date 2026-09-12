@@ -266,6 +266,7 @@ class LineService:
             voice_instruction = speech_context["instruction"]
             emotion_name = speech_context["emotion"]
             strength_name = speech_context["effective_strength"]
+            production_note = speech_context.get("delivery_note", production_note)
             from app.core.tts_guidance import emotion_text_to_vector
             emo_vector = emotion_text_to_vector(emotion_name, strength_name)
         if provider is not None and getattr(provider, "status", 1) == 0:

@@ -8,6 +8,7 @@
         <div v-if="preview" v-loading="loading">
           <p><el-tag>{{ preview.model }}</el-tag> {{ preview.context?.speaker }} · 强度 {{ preview.original_strength }} → {{ preview.effective_strength }}</p>
           <ul v-if="preview.warnings?.length" class="warnings"><li v-for="warning in preview.warnings" :key="warning">{{ warning }}</li></ul>
+          <ScenePerformanceCard :plan="preview.context?.scene_performance?.plan" :cue="preview.context?.scene_performance?.cue" :message="preview.context?.scene_performance?.message" />
           <div class="text-comparison"><div><strong>原台词</strong><pre>{{ preview.original_text }}</pre></div><div><strong>送入 TTS 的正文</strong><pre>{{ preview.tts_text }}</pre></div></div>
           <details open><summary>最终请求预览（已脱敏）</summary><pre>{{ json(preview.request_preview) }}</pre></details>
           <details><summary>上下文与发音处理</summary><pre>{{ json({ context: preview.context, pronunciation: preview.pronunciation_applied, policy: preview.policy_version, settings_revision: preview.settings_revision }) }}</pre></details>
@@ -33,6 +34,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import ScenePerformanceCard from './ScenePerformanceCard.vue'
 import { getSpeechPreview, getSpeechGenerations } from '../../api/speech'
 const props = defineProps({ modelValue: Boolean, projectId: { type: Number, required: true }, lineId: Number })
 defineEmits(['update:modelValue'])

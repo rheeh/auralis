@@ -85,6 +85,7 @@ class ChapterPO(Base):
     title = Column(String(255), nullable=False)
     order_index = Column(Integer, nullable=True)
     text_content = Column(Text, nullable=True)  # SQLite 没有 LongText，用 Text 替代
+    performance_plan = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc),
                         nullable=False)

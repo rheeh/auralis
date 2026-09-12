@@ -16,10 +16,10 @@
       <el-icon class="is-loading"><Loading /></el-icon>
       <div><strong>AI 正在独立审查这一版</strong><span>你可以先阅读台本；审查完成或生成返修稿后，版本会自动保留在上方。</span></div>
     </div>
-    <div class="draft-audit" :class="{ warning: audit.hasIssues }">
+    <div class="draft-audit">
       <div class="audit-metrics">
         <el-tag size="small" effect="plain">对白 {{ audit.dialogueCount }}</el-tag>
-        <el-tag size="small" effect="plain" :type="audit.narrationRatio > 18 ? 'warning' : 'success'">旁白 {{ audit.narrationRatio }}%</el-tag>
+        <el-tag size="small" effect="plain" type="info">旁白 {{ audit.narrationRatio }}%</el-tag>
         <el-tag size="small" effect="plain" type="info">声音轨 {{ audit.soundCount }}</el-tag>
       </div>
       <span>{{ audit.message }}</span>
@@ -32,9 +32,10 @@
     <el-collapse accordion>
       <el-collapse-item v-for="(scene,index) in displayScript?.scenes || []" :key="index" :name="index">
         <template #title><strong>第 {{ index+1 }} 场 · {{ scene.title }}</strong><span class="scene-count">{{ scene.lines?.length || 0 }} 行</span></template>
+        <ScenePerformanceCard :plan="scene.performancePlan" />
         <div class="line-list">
           <article v-for="(line,lineIndex) in scene.lines" :key="lineIndex">
-            <el-tag size="small" effect="plain">{{ trackLabel(line.track) }}</el-tag><strong>{{ line.speaker }}</strong><div><p>{{ displayText(line) }}</p><small v-if="line.productionNote">制作提示：{{ line.productionNote }}</small><small v-for="(event,eventIndex) in line.audioEvents || []" :key="eventIndex">{{ event.timing }} · {{ event.type }} · {{ event.content }} · {{ event.volume_db }}</small></div>
+            <el-tag size="small" effect="plain">{{ trackLabel(line.track) }}</el-tag><strong>{{ line.speaker }}</strong><div><p>{{ displayText(line) }}</p><small v-if="line.performanceCue">意图：{{ line.performanceCue.intent }}<template v-if="line.performanceCue.delivery"> · {{ line.performanceCue.delivery }}</template><template v-if="line.performanceCue.respondsTo"> · 回应第 {{ line.performanceCue.respondsTo }} 行</template><template v-if="line.performanceCue.turningPoint"> · 转折依据：{{ line.performanceCue.evidence }}</template></small><small v-if="line.productionNote">制作提示：{{ line.productionNote }}</small><small v-for="(event,eventIndex) in line.audioEvents || []" :key="eventIndex">{{ event.timing }} · {{ event.type }} · {{ event.content }} · {{ event.volume_db }}</small></div>
           </article>
         </div>
       </el-collapse-item>
@@ -46,6 +47,8 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { Loading } from '@element-plus/icons-vue'
+import ScenePerformanceCard from './ScenePerformanceCard.vue'
+import { scriptAudit } from '../../utils/scriptAudit'
 import DraftRevisionBar from './DraftRevisionBar.vue'
 const props = defineProps({ script: Object, review: Object, revision: Number, revisions: {type:Array,default:()=>[]}, reviewing: Boolean, canConfirm: {type:Boolean,default:true}, loading: Boolean, confirmLabel: String })
 defineEmits(['confirm'])
@@ -58,23 +61,7 @@ const displayScript = computed(() => activeVersion.value?.script || props.script
 const displayReview = computed(() => activeVersion.value?.review || ((!activeVersion.value || activeVersion.value.revision===props.revision) ? props.review : null))
 function trackLabel(track) { return { voice:'人物', narration:'旁白', sfx:'音效', bgm:'BGM' }[track] || track }
 function displayText(line) { return line.text || line.soundPrompt || line.productionNote || '缺少声音提示，请让 AI 补充' }
-const audit = computed(() => {
-  const lines = (displayScript.value?.scenes || []).flatMap((scene) => scene.lines || [])
-  const dialogues = lines.filter((line) => line.type === 'dialogue' || line.track === 'voice')
-  const narrations = lines.filter((line) => line.type === 'narration' || line.track === 'narration')
-  const soundCount = lines.filter((line) => ['sfx','bgm'].includes(line.type) || ['sfx','bgm'].includes(line.track)).length
-  const countChars = (items) => items.reduce((sum,line) => sum + String(line.text || '').replace(/\s/g,'').length,0)
-  const narrationChars = countChars(narrations)
-  const dialogueChars = countChars(dialogues)
-  const ratio = narrationChars + dialogueChars ? Math.round(narrationChars * 100 / (narrationChars + dialogueChars)) : 0
-  const hasLong = narrations.some((line) => String(line.text || '').replace(/\s/g,'').length > 45)
-  const hasConsecutive = (displayScript.value?.scenes || []).some((scene) => (scene.lines || []).some((line,index,all) => index > 0 && (line.type === 'narration' || line.track === 'narration') && (all[index-1].type === 'narration' || all[index-1].track === 'narration')))
-  const hasIssues = ratio > 18 || hasLong || hasConsecutive
-  return {
-    dialogueCount: dialogues.length, narrationRatio: ratio, soundCount, hasIssues,
-    message: hasIssues ? '建议继续修改：减少长旁白或连续旁白，让声音和角色行动承担信息。' : '声音结构通过快速检查，可以继续逐场确认。',
-  }
-})
+const audit = computed(() => scriptAudit(displayScript.value))
 </script>
 
 <style scoped>
@@ -85,7 +72,7 @@ const audit = computed(() => {
 .confirm-card h3,.eyebrow { margin:0; }.confirm-card header p:not(.eyebrow){margin:6px 0 0;color:var(--el-text-color-secondary)}
 .eyebrow { color:var(--el-color-primary); font-size:12px; }.scene-count{margin-left:10px;color:var(--el-text-color-secondary);font-size:12px}
 .revision-picker{display:flex;align-items:center;gap:8px;min-width:230px}.revision-picker .el-select{flex:1}.review-progress{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid color-mix(in srgb,var(--el-color-primary) 38%,var(--el-border-color));border-radius:10px;background:color-mix(in srgb,var(--el-color-primary) 7%,var(--el-bg-color));color:var(--el-color-primary)}.review-progress div{display:grid;gap:2px}.review-progress span,.revision-feedback{color:var(--el-text-color-secondary);font-size:12px}.revision-feedback{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.draft-audit{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid color-mix(in srgb,var(--el-color-success) 28%,var(--el-border-color));border-radius:10px;background:color-mix(in srgb,var(--el-color-success) 5%,var(--el-bg-color));color:var(--el-text-color-secondary);font-size:12px}.draft-audit.warning{border-color:color-mix(in srgb,var(--el-color-warning) 42%,var(--el-border-color));background:color-mix(in srgb,var(--el-color-warning) 7%,var(--el-bg-color))}.audit-metrics{display:flex;gap:6px;flex:0 0 auto}
+.draft-audit{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--el-border-color);border-radius:10px;background:var(--el-fill-color-light);color:var(--el-text-color-secondary);font-size:12px}.draft-audit.warning{border-color:color-mix(in srgb,var(--el-color-warning) 42%,var(--el-border-color));background:color-mix(in srgb,var(--el-color-warning) 7%,var(--el-bg-color))}.audit-metrics{display:flex;gap:6px;flex:0 0 auto}
 .ai-review{display:grid;gap:8px;padding:11px 12px;border:1px solid color-mix(in srgb,var(--el-color-warning) 38%,var(--el-border-color));border-radius:10px;background:color-mix(in srgb,var(--el-color-warning) 6%,var(--el-bg-color))}.ai-review.passed{border-color:color-mix(in srgb,var(--el-color-success) 34%,var(--el-border-color));background:color-mix(in srgb,var(--el-color-success) 6%,var(--el-bg-color))}.ai-review header{align-items:center}.ai-review header div strong,.ai-review header div span{display:block}.ai-review header div span{margin-top:2px;color:var(--el-text-color-secondary);font-size:11px}.ai-review p{margin:0;color:var(--el-text-color-secondary);font-size:12px;line-height:1.55}.ai-review ul{display:grid;gap:6px;margin:0;padding:0;list-style:none}.ai-review li{display:flex;align-items:flex-start;gap:7px;color:var(--el-text-color-secondary);font-size:11px;line-height:1.5}.ai-review li span{min-width:0;overflow-wrap:anywhere}
 .line-list{display:grid;gap:8px}.line-list article{display:grid;grid-template-columns:auto minmax(64px,110px) 1fr;align-items:start;gap:8px}.line-list p{margin:0;line-height:1.6;overflow-wrap:anywhere}.line-list small{display:block;margin-top:4px;color:var(--el-text-color-secondary);line-height:1.45}.confirm-card footer{justify-content:flex-end}
 @media(max-width:600px){.line-list article{grid-template-columns:auto 1fr}.line-list p{grid-column:1/-1}.confirm-card header,.draft-audit{display:grid}.revision-picker{min-width:0;width:100%}}

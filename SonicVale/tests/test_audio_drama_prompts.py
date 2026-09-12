@@ -6,7 +6,7 @@ from pydantic import ValidationError
 from app.core.prompts import get_audio_drama_adaptation_rules, get_audio_drama_script_prompt, get_prompt_str
 from app.services.chapter_service import ChapterService
 from app.services.script_draft_service import ScriptDraftService
-from app.workflows.drama.schemas import DramaScript, ScriptLine
+from app.workflows.drama.schemas import DramaScript, DirectedDramaScript, ScriptLine
 
 
 class AudioDramaPromptTest(unittest.TestCase):
@@ -159,6 +159,13 @@ class AudioDramaPromptTest(unittest.TestCase):
                 ],
             }],
         }
+        draft["scenes"][0]["performancePlan"] = {
+            "purpose": "建立门外的悬念", "baseline": "自然叙述", "pace": "从容",
+            "characters": [{"speaker": name, "objective": "交代当下", "baseline": "平稳"} for name in ("旁白", "林默")],
+            "beats": [{"id": "b1", "purpose": "留意门外", "delivery": "自然短收"}],
+        }
+        for line in draft["scenes"][0]["lines"]:
+            line["performanceCue"] = {"beatId": "b1", "intent": "观察当前情况"}
         calls = []
         service = ScriptDraftService.__new__(ScriptDraftService)
         service.llm = SimpleNamespace(call_json=lambda *args, **kwargs: calls.append(kwargs) or draft)
@@ -172,7 +179,7 @@ class AudioDramaPromptTest(unittest.TestCase):
 
         self.assertEqual(len(calls), 1)
         self.assertEqual(calls[0]["system_prompt"], get_audio_drama_script_prompt())
-        self.assertIs(calls[0]["response_model"], DramaScript)
+        self.assertIs(calls[0]["response_model"], DirectedDramaScript)
         self.assertEqual(ScriptDraftService._narration_issues(result), [])
         self.assertGreater(ScriptDraftService.narration_metrics(result)["narration_ratio"], 0.8)
 

@@ -15,9 +15,11 @@ from app.models.po import (AdaptationRunPO, ChapterPO, EmotionPO, LinePO, Projec
                            ProjectSpeechProfilePO, RolePO, StrengthPO, VoicePO)
 from app.services.production_configuration import effective_provider_id
 from app.models.po import TTSProviderPO
+from app.services.scene_performance_service import resolve_scene_performance
+from app.core.speech_context_budget import compile_context_instruction
 
 
-POLICY_VERSION = "speech-context-2026-09-11-v1"
+POLICY_VERSION = "speech-context-2026-09-12-v2"
 
 
 def clean_spoken_text(text):
@@ -111,12 +113,9 @@ class SpeechDirectionService:
         rows = list(self.db.scalars(select(LinePO).where(LinePO.chapter_id == chapter.id).order_by(LinePO.line_order, LinePO.id)))
         position = next(i for i, item in enumerate(rows) if item.id == line_id)
         rows[position] = line  # preserve queued input, even if the editor has changed
-        start, end = position, position + 1
         scene = line.scene_title or ""
-        while start and (rows[start - 1].scene_title or "") == scene:
-            start -= 1
-        while end < len(rows) and (rows[end].scene_title or "") == scene:
-            end += 1
+        roles = {item.id: item.name for item in self.db.scalars(select(RolePO).where(RolePO.project_id == project_id))}
+        start, end, performance, planned_cues = resolve_scene_performance(chapter, rows, position, roles)
         block = rows[start:end]
         previous = [item for item in rows[start:position] if is_spoken(item)][-2:]
         following = [item for item in rows[position + 1:end] if is_spoken(item)][:1]
@@ -130,11 +129,15 @@ class SpeechDirectionService:
                 # Cap unexplained rises; never amplify a deliberately quiet line.
                 selected = strengths.get(item.strength_id, "微弱")
                 target = STRENGTH_NAMES.index(selected) if selected in STRENGTH_NAMES else 0
-                level = target if permits_emotion_jump(item.production_note) else min(level + 1, target)
+                # A reviewed, current scene plan uses its grounded turning points.
+                # An edited/legacy scene falls back to explicit per-line direction.
+                jump = (bool(planned_cues.get(str(item.id), {}).get("turning_point_verified"))
+                        if performance["status"] == "current" else permits_emotion_jump(item.production_note))
+                level = target if jump else min(level + 1, target)
                 if item.id == line_id:
                     effective_strength = STRENGTH_NAMES[level]
                     break
-        warnings = []
+        warnings = [performance["message"]] if performance.get("message") else []
         if effective_strength != strength:
             warnings.append(f"连续性处理：{strength} → {effective_strength}；剧情需要突变时，在本句指导中明确写“情绪转折”及表达方式。")
         run = self.db.scalar(select(AdaptationRunPO).where(
@@ -143,7 +146,6 @@ class SpeechDirectionService:
         ).order_by(AdaptationRunPO.committed_at.desc(), AdaptationRunPO.id.desc()).limit(1))
         parsed = (run.parsed_json or {}) if run else {}
         background = settings["story_background"] or parsed.get("logline") or project.description or ""
-        roles = {item.id: item.name for item in self.db.scalars(select(RolePO).where(RolePO.project_id == project_id))}
 
         def cue(item):
             return {"line_id": item.id, "speaker": roles.get(item.role_id, "旁白"),
@@ -162,25 +164,33 @@ class SpeechDirectionService:
             "next_lines": [cue(item) for item in following],
             "previous_same_speaker": cue(same_role[-1]) if same_role else None,
             "continuity_enabled": settings["continuity_enabled"],
+            "scene_performance": performance,
         }
         if not background:
             warnings.append("尚无全书背景摘要；可在配音设定补充。当前仅使用已有章节、场景和相邻对白，不自动编造摘要。")
         note = line.production_note or ""
+        plan = performance.get("plan") or {}
+        planned_cue = performance.get("cue") or {}
+        character = next((item for item in plan.get("characters", []) if item["speaker"] == context["speaker"]), {})
+        beat = next((item for item in plan.get("beats", []) if item["id"] == planned_cue.get("beatId")), {})
+        delivery_note = note or planned_cue.get("delivery") or beat.get("delivery") or character.get("baseline") or ""
+        reply = next((item for item in rows[start:position] if item.id == planned_cue.get("responds_to_line_id")), None)
+        context["reply_to"] = cue(reply) if reply else None
         compact = model.startswith("cosyvoice") and mode == "native"
         if compact:
             # The model has ~50 Chinese characters of instruction budget. Prefer
             # a stable production style and current action, never paste a novel.
-            instruction = build_voice_instruction(emotion, effective_strength, note or settings["delivery_style"], compact=True)
+            instruction = build_voice_instruction(emotion, effective_strength, delivery_note or settings["delivery_style"], compact=True)
             warnings.append("此音色指令长度有限：请求按完整分句保留基础表演约束，再放本句要求或共同基调；完整上下文保留在记录中，请核对最终请求预览。")
         else:
-            instruction = build_voice_instruction(emotion, effective_strength, note, mode=mode)
+            instruction = build_voice_instruction(emotion, effective_strength, delivery_note, mode=mode)
             if mode == "native":
                 # Keep all source context in the trace, but bound what we ask a
                 # speech model to interpret. Never append neighbouring words to text.
                 compact_context = {
-                    "作品背景": context["background"][:240],
+                    "作品背景": context["background"][:180],
                     "题材": context["genre"],
-                    "共同表演基调": context["delivery_style"][:140],
+                    "共同表演基调": context["delivery_style"][:100],
                     "改编要求": context["adaptation_instruction"][:100],
                     "场景": scene[:60],
                     "当前人物": context["speaker"],
@@ -190,9 +200,19 @@ class SpeechDirectionService:
                     "上次本人发言": ({**context["previous_same_speaker"], "text": context["previous_same_speaker"]["text"][:70]}
                                     if context["previous_same_speaker"] else None),
                 }
-                instruction += "\n以下是理解用上下文，不能朗读或追加到正文；后文只用于接话，不能提前表现角色尚未知晓的事。\n"
-                instruction += json.dumps(compact_context, ensure_ascii=False, separators=(",", ":"))
-                instruction += "\n沿用当前人物在同一场景的声线与交谈节奏。除本句明确的情绪转折外，局部调整后回到共同基调。只合成 input 中的本句正文。"
+                if performance["status"] == "current":
+                    compact_context["整场表演"] = {
+                        "本句意图": planned_cue.get("intent", ""), "人物目标": character.get("objective", ""),
+                        "稳定声线": character.get("baseline", ""), "当前阶段": beat.get("purpose", ""),
+                        "基调": plan["baseline"], "接话节奏": plan["pace"],
+                        "场景任务": plan["purpose"], "人物关系": character.get("relationship", ""),
+                        "回应对象": ({"speaker": context["reply_to"]["speaker"], "text": context["reply_to"]["text"][:70]}
+                                     if context["reply_to"] else None),
+                    }
+                    # Deliberately exclude future beats and their acting directions.
+                instruction, omitted = compile_context_instruction(instruction, compact_context, budget=1600 if model.startswith("qwen3") else 2000)
+                if omitted:
+                    warnings.append("指导长度控制：以下上下文未送入模型，但完整快照仍保留：" + "、".join(omitted))
             else:
                 warnings.append("此音色无法理解完整小说背景；上下文用于本地连续性控制与排查，不会伪装成可执行的原生指令。")
         text = clean_spoken_text(line.text_content)
@@ -226,7 +246,7 @@ class SpeechDirectionService:
             "policy_version": POLICY_VERSION, "settings_revision": settings["revision"],
             "provider_id": provider_id, "model": model, "voice_id": voice.id if voice else None,
             "voice_name": voice_name, "route": route, "mode": mode, "context": context,
-            "original_text": line.text_content, "tts_text": text, "production_note": note,
+            "original_text": line.text_content, "tts_text": text, "production_note": note, "delivery_note": delivery_note,
             "emotion": emotion, "original_strength": strength, "effective_strength": effective_strength,
             "instruction": instruction, "provider_overrides": overrides,
             "pronunciation_applied": applied, "warnings": warnings,
@@ -243,7 +263,7 @@ class SpeechDirectionService:
             prepared["request_preview"] = {
                 "driver": "edge", "text": prepared["tts_text"],
                 "voice": LineService(None, None, None).resolve_edge_voice(role, voice),
-                **edge_prosody(prepared["emotion"], prepared["effective_strength"], prepared["production_note"]),
+                **edge_prosody(prepared["emotion"], prepared["effective_strength"], prepared["delivery_note"]),
             }
         elif provider.provider_type in {"fish", "legacy", "index_tts"}:
             prepared["request_preview"] = {"driver": "legacy", "method": "POST",

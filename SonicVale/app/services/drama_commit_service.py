@@ -13,6 +13,7 @@ from app.core.config import getConfigPath
 from app.models.po import AdaptationDraftRevisionPO, AdaptationRunPO, ChapterPO, ChatSessionPO, EmotionPO, LinePO, ProjectPO, RolePO, StrengthPO
 from app.workflows.drama.schemas import DramaScript
 from app.services.timeline_service import TimelineService
+from app.services.scene_performance_service import bind_scene_performance, save_chapter_performances
 
 
 class DramaCommitService:
@@ -102,8 +103,11 @@ class DramaCommitService:
             os.makedirs(audio_dir, exist_ok=True)
 
             line_count = 0
+            order_offset = 0 if replace_chapter_lines else (self.db.scalar(select(func.max(LinePO.line_order)).where(LinePO.chapter_id == chapter.id)) or 0)
+            performances = []
             created_role_count = 0
             for scene in script.get("scenes", []):
+                scene_lines = []
                 for raw_line in scene.get("lines", []):
                     speaker = self._speaker_name(raw_line)
                     role = roles.get(speaker)
@@ -129,7 +133,7 @@ class DramaCommitService:
                     line = LinePO(
                         chapter_id=chapter.id,
                         role_id=role.id,
-                        line_order=line_count,
+                        line_order=order_offset + line_count,
                         text_content=str(raw_line.get("text") or "").strip(),
                         line_type=raw_line.get("type", "dialogue"),
                         track=raw_line.get("track", "voice"),
@@ -141,11 +145,14 @@ class DramaCommitService:
                         production_note=raw_line.get("productionNote") or None,
                         audio_events=raw_line.get("audioEvents") or raw_line.get("audio_events") or None,
                         emotion_id=emotions.get(raw_line.get("emotion")) or emotions.get("平静"),
-                        strength_id=strengths.get(raw_line.get("strength")) or strengths.get("中等"),
+                        strength_id=strengths.get(raw_line.get("strength")) or strengths.get("微弱"),
                     )
                     self.db.add(line)
                     self.db.flush()
                     line.audio_path = os.path.join(audio_dir, f"id_{line.id}.wav")
+                    scene_lines.append(line)
+                performances.append(bind_scene_performance(scene, scene_lines, {role.id: role.name for role in roles.values()}, session.source_text, session.instruction))
+            save_chapter_performances(chapter, performances, replace=replace_chapter_lines)
 
             now = datetime.now(timezone.utc)
             run.chapter_id = chapter.id
