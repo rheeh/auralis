@@ -1,3 +1,4 @@
+from app.services import factory as service_factory
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -21,8 +22,7 @@ router = APIRouter(prefix="/emotions", tags=["Emotions"])
 # 依赖注入（实际项目可用 DI 容器）
 
 def get_emotion_service(db: Session = Depends(get_db)) -> EmotionService:
-    repository = EmotionRepository(db)
-    return EmotionService(repository)
+    return service_factory.get_emotion_service(db)
 
 @router.post("", response_model=Res[EmotionResponseDTO],
              summary="创建情绪枚举",

@@ -1,3 +1,4 @@
+import { localMediaUrl } from './config'
 import request from './config'
 import { API_BASE_URL, IS_STATIC_DEMO } from './config'
 
@@ -60,7 +61,7 @@ export function getLineAudioUrl(lineId, version = 0, original = false) {
   if (version) params.set('v', version)
   if (original) params.set('original', 'true')
   const query = params.toString() ? `?${params}` : ''
-  return `${API_BASE_URL}lines/${lineId}/audio${query}`
+  return localMediaUrl(`${API_BASE_URL}lines/${lineId}/audio${query}`)
 }
 
 export function processAudio(line_id, payload) {
@@ -86,7 +87,7 @@ export function activateAudioVariant(lineId, variantId) {
 export function getAudioVariantUrl(lineId, variantId, version = 0) {
   if (IS_STATIC_DEMO) return `./demo-audio/line-${lineId}-variant-${variantId}.mp3`
   const query = version ? `?v=${encodeURIComponent(version)}` : ''
-  return `${API_BASE_URL}lines/${lineId}/audio-variants/${variantId}/audio${query}`
+  return localMediaUrl(`${API_BASE_URL}lines/${lineId}/audio-variants/${variantId}/audio${query}`)
 }
 
 // 导出结果和字幕

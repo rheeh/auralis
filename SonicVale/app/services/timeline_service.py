@@ -127,7 +127,12 @@ class TimelineService:
                 ],
             })
 
-        present_line_ids = {clip.line_id for clip in clips}
+        from app.services.production.audio_state import generation_state
+        outdated={line.id for line in lines.values() if self._track_type(line) in {'voice','narration'} and
+                  generation_state(self.db,line)['input_current'] is False}
+        if outdated:
+            statuses.append('stale')
+        present_line_ids = {clip.line_id for clip in clips} - outdated
         missing_lines = [
             {"line_id": line.id, "line_order": line.line_order,
              "track": self._track_type(line), "text_content": line.text_content}
@@ -454,15 +459,13 @@ class TimelineService:
             db.execute(delete(AudioAssetPO).where(AudioAssetPO.id.in_(deletable)))
 
     @staticmethod
-    def invalidate_line(db: Session, line_id: int, reason: str = "台词或音频版本已变化") -> None:
-        track_ids = list(db.execute(select(TimelineClipPO.track_id).where(TimelineClipPO.line_id == line_id)).scalars())
-        if track_ids:
-            db.execute(
-                update(TimelineTrackPO)
-                .where(TimelineTrackPO.id.in_(track_ids))
-                .values(status="stale", last_error=reason)
-            )
-            db.commit()
+    def invalidate_line(db: Session, line_id: int, reason: str = "台词或音频版本已变化", *, commit: bool = True) -> None:
+        line = db.get(LinePO, line_id)
+        if line:
+            db.execute(update(TimelineTrackPO).where(TimelineTrackPO.chapter_id == line.chapter_id)
+                       .values(status="stale", last_error=reason))
+            if commit:
+                db.commit()
 
     @staticmethod
     def _effective_status(
@@ -505,6 +508,7 @@ class TimelineService:
                 "track": cls._track_type(line),
                 "path": path,
                 "stat": stat,
+                "input": [getattr(line,key,None) for key in ("text_content","production_note","role_id","voice_id","emotion_id","strength_id","is_done","audio_events")],
                 "active_version": line.active_audio_version_id,
                 "active_variant": line.active_audio_variant_id,
             })
@@ -560,6 +564,9 @@ class TimelineService:
         line: LinePO,
         track_type: str,
     ) -> AudioAssetPO | None:
+        from app.services.production.audio_state import generation_state
+        if track_type in {'voice','narration'} and generation_state(self.db,line)['input_current'] is False:
+            return None
         candidates: list[tuple[str, str, str | None]] = []
         base_type = track_type if track_type in {"sfx", "bgm"} else "tts_take"
         if line.audio_path:

@@ -1,9 +1,10 @@
+from app.services.production.audio_state import generation_state
 """Resolve the actual provider binding without exposing provider credentials."""
 from sqlalchemy import select
 from app.models.po import ChapterPO, LinePO, ProjectPO, RolePO, TTSProviderPO, VoicePO
 from app.core.tts_engine import ConfigurableCloudTTSEngine
 from app.core.tts_capabilities import cosyvoice_instruction_mode, http_instruction_field
-from app.services.line_service import LineService
+from app.services.speech import routing as speech_routing
 
 
 def effective_provider_id(project, voice):
@@ -36,7 +37,7 @@ def chapter_configuration(db, project_id, chapter_id):
         voice = db.get(VoicePO, role.default_voice_id) if role and role.default_voice_id else None
         provider_id = effective_provider_id(project, voice)
         provider = db.get(TTSProviderPO, provider_id) if provider_id else None
-        voice_name = LineService.resolve_cosyvoice_voice(voice) or getattr(voice, 'name', '')
+        voice_name = speech_routing.resolve_cosyvoice_voice(voice) or getattr(voice, 'name', '')
         result.append({
             'line_id': line.id, 'role_id': line.role_id, 'voice_id': getattr(voice, 'id', None),
             'voice_name': getattr(voice, 'name', None), 'provider_id': provider_id,
@@ -44,6 +45,6 @@ def chapter_configuration(db, project_id, chapter_id):
             'binding_source': 'voice' if voice and voice.tts_provider_id else 'project',
             'enabled': bool(voice and provider and provider.status != 0),
             'instruction_mode': instruction_mode(provider, voice_name),
-            'needs_generation': line.status != 'done' or line.is_done != 1,
+            **generation_state(db,line),
         })
     return {'project_id': project_id, 'chapter_id': chapter_id, 'lines': result}

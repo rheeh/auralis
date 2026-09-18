@@ -1,3 +1,5 @@
+> 历史资料：保留原始内容，不作为当前执行指令。当前事实见 [架构地图](project-map.md)、[产品范围](../PROJECT.md) 和 [待办/验收](../BACKLOG.md)。本轮禁止自动推送/部署，历史授权不继承。
+
 # Auralis LangGraph 对话式改编架构实现方案
 
 > **归档说明（2026-07-13）**：本方案对应早期架构，当前运行时已移除 LangGraph。现行实现使用 SQLAlchemy 数据库状态机，`chat_sessions / adaptation_runs / adaptation_draft_revisions` 是唯一状态源；常驻自由对话由 `ProductionAssistantAgent` 和受控业务工具负责。本文不再作为实施依据。

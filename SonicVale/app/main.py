@@ -25,9 +25,9 @@ from app.routers import project_router, chapter_router, role_router, voice_route
     drama_adaptation_router, queue_router, chat_router
 from app.routers import sound_library_router, timeline_router
 from app.routers import speech_router
-from app.routers.chapter_router import get_strength_service, get_prompt_service, get_project_service
-from app.routers.emotion_router import get_emotion_service
-from app.routers.llm_provider_router import get_llm_service
+from app.services.factory import get_strength_service, get_prompt_service, get_project_service
+from app.services.factory import get_emotion_service, get_tts_service as build_tts_service
+from app.services.factory import get_llm_service
 from app.services.llm_provider_service import LLMProviderService
 
 from app.services.tts_provider_service import TTSProviderService
@@ -62,12 +62,34 @@ app = FastAPI(
 )
 # 跨域
 # 允许的前端地址
-origins = [
-    "http://localhost:5173",  # Vue 开发服务器
-    "http://127.0.0.1:5173",
-    "http://localhost:5174",  # 5173 被其他本地项目占用时的 Demo 服务
-    "http://127.0.0.1:5174",
-]
+from app.core.local_access import allowed_origins, allows_browser
+origins = allowed_origins()
+if os.environ.get('AURALIS_INSTANCE_TOKEN'):
+    origins.append('null')
+
+@app.middleware('http')
+async def local_origin_boundary(request, call_next):
+    from fastapi.responses import JSONResponse
+    desktop_preflight=(request.method=='OPTIONS' and request.headers.get('origin')=='null'
+                       and bool(os.environ.get('AURALIS_INSTANCE_TOKEN')))
+    if not desktop_preflight and not allows_browser(request.headers, request.query_params):
+        return JSONResponse({'detail':'不允许的本地请求来源'},status_code=403)
+    return await call_next(request)
+
+@app.get('/health')
+def health():
+    from app.db.migrations import CURRENT_SCHEMA_VERSION
+    from sqlalchemy import text
+    from app.core.config import getFfmpegPath
+    with engine.connect() as connection:
+        version=connection.execute(text('SELECT COALESCE(MAX(version),0) FROM schema_migrations')).scalar_one()
+    workers=getattr(app.state,'tts_workers',[])
+    worker_ready=bool(workers) and all(not worker.done() for worker in workers)
+    ffmpeg_ready=os.path.isfile(getFfmpegPath())
+    return {'application':'auralis','api_version':1,'schema_version':version,
+            'worker_ready':worker_ready,'ffmpeg_available':ffmpeg_ready,
+            'ready':version==CURRENT_SCHEMA_VERSION and worker_ready and ffmpeg_ready}
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -89,18 +111,23 @@ app.add_middleware(
 #     Base.metadata.create_all(bind=engine)
 
 WORKERS = 1
-QUEUE_CAPACITY = 0
+QUEUE_CAPACITY = 128
 
 def get_tts_service(db: Session = Depends(get_db)) -> TTSProviderService:
-    return TTSProviderService(TTSProviderRepository(db))
+    return build_tts_service(db)
 
 @app.on_event("startup")
 async def startup_event():
+    from app.runtime.recovery import InstanceLock, recover_interrupted
+    app.state.instance_lock=InstanceLock(getConfigPath())
     # 1) 建表
     try:
         Base.metadata.create_all(bind=engine)
         apply_schema_migrations(engine)
+        with SessionLocal() as recovery_db:
+            recover_interrupted(recovery_db)
     except Exception as e:
+        app.state.instance_lock.close()
         logging.exception("❌ 数据库建表失败: %s", e)
         raise RuntimeError("Auralis 数据库迁移失败，已阻止应用继续启动") from e
 
@@ -108,9 +135,12 @@ async def startup_event():
     try:
         manager.bind_loop(asyncio.get_running_loop())
         app.state.tts_queue = asyncio.Queue(maxsize=QUEUE_CAPACITY)
+        app.state.tts_queue._auralis_loop=asyncio.get_running_loop()
         app.state.tts_executor = ThreadPoolExecutor(max_workers=WORKERS)
     except Exception as e:
         logging.exception("❌ 初始化队列/线程池失败: %s", e)
+        app.state.instance_lock.close()
+        raise
 
     # 3) 启动后台 worker
     try:
@@ -119,6 +149,8 @@ async def startup_event():
         ]
     except Exception as e:
         logging.exception("❌ 启动 worker 失败: %s", e)
+        app.state.instance_lock.close()
+        raise
 
     # 4) 初始化默认数据
     db = SessionLocal()
@@ -227,9 +259,12 @@ async def shutdown_event():
     # 优雅退出
     for t in getattr(app.state, "tts_workers", []):
         t.cancel()
+    await asyncio.gather(*getattr(app.state,"tts_workers",[]),return_exceptions=True)
     ex = getattr(app.state, "tts_executor", None)
     if ex:
         ex.shutdown(wait=False, cancel_futures=True)
+    lock=getattr(app.state,"instance_lock",None)
+    if lock:lock.close()
 # =========================
 # 注册路由
 # =========================
@@ -293,6 +328,8 @@ from fastapi import WebSocket, WebSocketDisconnect
 
 @app.websocket("/ws")
 async def ws_endpoint(ws: WebSocket):
+    if not allows_browser(ws.headers,ws.query_params):
+        await ws.close(code=4403);return
     project_id_raw = ws.query_params.get("project_id")
     project_id = int(project_id_raw) if project_id_raw and project_id_raw.isdigit() else None
     await manager.connect(ws, project_id=project_id)
@@ -323,6 +360,8 @@ async def ws_endpoint(ws: WebSocket):
 
 @app.websocket("/ws/projects/{project_id}/sessions/{session_id}")
 async def workflow_ws_endpoint(ws: WebSocket, project_id: int, session_id: str):
+    if not allows_browser(ws.headers,ws.query_params):
+        await ws.close(code=4403);return
     db = SessionLocal()
     try:
         session = db.get(ChatSessionPO, session_id)

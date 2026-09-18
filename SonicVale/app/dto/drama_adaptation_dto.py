@@ -12,13 +12,17 @@ class DramaAdaptationRequestDTO(BaseModel):
     scene_count: int = Field(default=4, ge=1, le=24)
     adaptation_density: str = "balanced"
     commit_to_project: bool = True
-    replace_chapter_lines: bool = True
+    replace_chapter_lines: bool = False
 
 
 class DramaAdaptationCommitRequestDTO(BaseModel):
+    model_config={"extra":"forbid"}
+    target_chapter_id:int|None=None
+    expected_version:str|None=None
+    confirm_replace:bool=False
     run_id: int
     chapter_title: Optional[str] = None
-    replace_chapter_lines: bool = True
+    replace_chapter_lines: bool = False
 
 
 class DramaLineDTO(BaseModel):

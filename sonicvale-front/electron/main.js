@@ -7,18 +7,29 @@ const fs = require('fs')
 const { spawn, exec } = require('child_process')
 const os = require('os')
 const http = require('http')
+const {isAuralisHealth}=require('./backend-health.cjs')
+const INSTANCE_TOKEN = require('crypto').randomBytes(32).toString('hex')
 
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..')
 const BACKEND_PORT = process.env.AURALIS_BACKEND_PORT || '8200'
 const BACKEND_URL = process.env.AURALIS_BACKEND_URL || `http://127.0.0.1:${BACKEND_PORT}`
 const FRONTEND_URL = process.env.AURALIS_FRONTEND_URL || 'http://127.0.0.1:5173'
 let backendProcess = null
+const selectedDestinations=new Set()
+const selectedSources=new Set()
 
 function requestUrl(url, timeout = 1000) {
   return new Promise((resolve, reject) => {
     const req = http.get(url, res => {
-      res.resume()
-      res.on('end', () => resolve(true))
+      let body=''
+      res.on('data',chunk=>{body+=chunk;if(body.length>16384)req.destroy(new Error('Unexpected health response'))})
+      res.on('end', () => {
+        if(res.statusCode!==200)return reject(new Error('Service not ready'))
+        if(new URL(url).pathname==='/health'){
+          if(!isAuralisHealth(res.statusCode,body))return reject(new Error('Wrong backend identity or not ready'))
+        }
+        resolve(true)
+      })
     })
     req.on('error', reject)
     req.setTimeout(timeout, () => {
@@ -37,7 +48,7 @@ async function isUrlReady(url) {
 }
 
 async function startBackend() {
-  if (await isUrlReady(`${BACKEND_URL}/docs`)) {
+  if (await isUrlReady(`${BACKEND_URL}/health`)) {
     console.log('检测到已运行后端，复用：', BACKEND_URL)
     return
   }
@@ -80,7 +91,7 @@ async function startBackend() {
 
   backendProcess = spawn(command, args, {
     cwd,
-    env,
+    env: {...env,AURALIS_INSTANCE_TOKEN:INSTANCE_TOKEN},
     detached: true,
     stdio: ['ignore', 'pipe', 'pipe'],
   })
@@ -99,24 +110,15 @@ async function startBackend() {
   });
 }
 
-function waitForUrlReady(url, retries = 60, delay = 500) {
-  return new Promise((resolve, reject) => {
-    let attempts = 0
-    const check = () => {
-      const req = http.get(url, res => {
-        res.resume()
-        resolve(true)
-      }).on('error', err => {
-        if (++attempts >= retries) reject(err)
-        else setTimeout(check, delay)
-      })
-    }
-    check()
-  })
+async function waitForUrlReady(url, retries = 60, delay = 500) {
+  for(let attempt=0;attempt<retries;attempt++) {
+    try{return await requestUrl(url)}
+    catch(error){if(attempt===retries-1)throw error;await new Promise(resolve=>setTimeout(resolve,delay))}
+  }
 }
 
 function waitForBackendReady(retries = 60, delay = 500) {
-  return waitForUrlReady(`${BACKEND_URL}/docs`, retries, delay)
+  return waitForUrlReady(`${BACKEND_URL}/health`, retries, delay)
 }
 
 function waitForFrontendReady(retries = 60, delay = 500) {
@@ -135,13 +137,16 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: false,
-      webSecurity: false,
+      sandbox: true,
+      webSecurity: true,
+      additionalArguments: [`--auralis-api=${encodeURIComponent(BACKEND_URL)}`,`--auralis-token=${INSTANCE_TOKEN}`,`--auralis-home=${encodeURIComponent(os.homedir())}`],
     },
     autoHideMenuBar: true, // 这会让菜单栏自动隐藏，但通过 Alt 可以唤出
 
   })
 
+  win.webContents.setWindowOpenHandler(()=>({action:'deny'}))
+  win.webContents.on('will-navigate',(event,url)=>{if(url!==win.webContents.getURL())event.preventDefault()})
   win.once('ready-to-show', () => {
     win.maximize() // ✅ 启动时自动最大化（不是全屏）
     win.show()     // ✅ 再显示窗口
@@ -234,8 +239,17 @@ process.on('exit', shutdown)
 
 
 // ============== IPC 处理 ===============
+function handleNative(channel,handler) {
+  ipcMain.handle(channel,(event,...args)=>{
+    const frame=event.senderFrame
+    const expected=app.isPackaged?require('url').pathToFileURL(path.join(__dirname,'../dist/index.html')).href:FRONTEND_URL
+    if(!frame||frame!==event.sender.mainFrame||frame.url.split('#')[0].replace(/\/$/,'')!==expected.replace(/\/$/,''))throw new Error('Untrusted IPC sender')
+    return handler(event,...args)
+  })
+}
+
 // 选择参考音频
-ipcMain.handle('dialog:pick-audio', async () => {
+handleNative('dialog:pick-audio', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog({
     title: '选择参考音频',
     properties: ['openFile'],
@@ -245,12 +259,13 @@ ipcMain.handle('dialog:pick-audio', async () => {
   })
 
   if (canceled || !filePaths || !filePaths[0]) return null
+  selectedSources.add(path.resolve(filePaths[0]))
   return filePaths[0] // 返回绝对路径
 })
 
 // 打开文件夹
-ipcMain.handle('dialog:open-folder', async (event, folderPath) => {
-  if (!folderPath) return
+handleNative('dialog:open-folder', async (event, folderPath) => {
+  if (typeof folderPath!=='string'||!path.isAbsolute(folderPath)||!fs.statSync(folderPath).isDirectory())throw new Error('请选择有效的本地文件夹')
 
   try {
     await shell.openPath(folderPath)
@@ -262,7 +277,7 @@ ipcMain.handle('dialog:open-folder', async (event, folderPath) => {
 })
 
 //选择音色文件夹
-ipcMain.handle('select-voice-folder', async () => {
+handleNative('select-voice-folder', async () => {
   const result = await dialog.showOpenDialog({
     properties: ['openDirectory']
   })
@@ -296,7 +311,7 @@ ipcMain.handle('select-voice-folder', async () => {
 
 
 // ✅ 选择文件夹：返回选中的绝对路径
-ipcMain.handle('dialog:selectDir', async () => {
+handleNative('dialog:selectDir', async () => {
   const result = await dialog.showOpenDialog({
     title: '选择项目根路径',
     properties: ['openDirectory', 'createDirectory']
@@ -306,7 +321,7 @@ ipcMain.handle('dialog:selectDir', async () => {
 })
 
 // 保存文件对话框
-ipcMain.handle('dialog:save-file', async (event, options) => {
+handleNative('dialog:save-file', async (event, options) => {
   const { title, defaultPath, filters } = options || {}
   const result = await dialog.showSaveDialog({
     title: title || '保存文件',
@@ -314,11 +329,12 @@ ipcMain.handle('dialog:save-file', async (event, options) => {
     filters: filters || [{ name: '所有文件', extensions: ['*'] }]
   })
   if (result.canceled || !result.filePath) return null
+  selectedDestinations.add(path.resolve(result.filePath))
   return result.filePath
 })
 
 // 选择文件对话框
-ipcMain.handle('dialog:pick-file', async (event, options) => {
+handleNative('dialog:pick-file', async (event, options) => {
   const { title, filters } = options || {}
   const result = await dialog.showOpenDialog({
     title: title || '选择文件',
@@ -326,11 +342,12 @@ ipcMain.handle('dialog:pick-file', async (event, options) => {
     filters: filters || [{ name: '所有文件', extensions: ['*'] }]
   })
   if (result.canceled || !result.filePaths || !result.filePaths.length) return null
+  selectedSources.add(path.resolve(result.filePaths[0]))
   return result.filePaths[0]
 })
 
 // 选择目录对话框
-ipcMain.handle('dialog:pick-directory', async (event, options) => {
+handleNative('dialog:pick-directory', async (event, options) => {
   const { title } = options || {}
   const result = await dialog.showOpenDialog({
     title: title || '选择目录',
@@ -341,11 +358,14 @@ ipcMain.handle('dialog:pick-directory', async (event, options) => {
 })
 
 // 写入文件（用于音频下载等）
-ipcMain.handle('fs:write-file', async (event, { filePath, data }) => {
+handleNative('fs:write-file', async (event, { filePath, data }) => {
   try {
     // data 是 Uint8Array 转成的普通数组，需要转回 Buffer
+    if(typeof filePath!=='string'||!selectedDestinations.has(path.resolve(filePath)))throw new Error('请先通过保存对话框选择目标文件')
+    if(!Array.isArray(data)||data.length>200*1024*1024||data.some(value=>!Number.isInteger(value)||value<0||value>255))throw new Error('文件数据无效或超过限制')
     const buffer = Buffer.from(data)
     fs.writeFileSync(filePath, buffer)
+    selectedDestinations.delete(path.resolve(filePath))
     return { success: true }
   } catch (error) {
     console.error('写入文件失败:', error)
@@ -354,9 +374,12 @@ ipcMain.handle('fs:write-file', async (event, { filePath, data }) => {
 })
 
 // 复制文件（用于音频下载等）
-ipcMain.handle('fs:copy-file', async (event, { sourcePath, destPath }) => {
+handleNative('fs:copy-file', async (event, { sourcePath, destPath }) => {
   try {
+    if(typeof sourcePath!=='string'||typeof destPath!=='string'||!selectedDestinations.has(path.resolve(destPath)))throw new Error('请先选择保存目标')
+    if(!selectedSources.has(path.resolve(sourcePath))||!fs.statSync(sourcePath).isFile()||fs.statSync(sourcePath).size>200*1024*1024)throw new Error('源文件无效')
     fs.copyFileSync(sourcePath, destPath)
+    selectedDestinations.delete(path.resolve(destPath))
     return { success: true }
   } catch (error) {
     console.error('复制文件失败:', error)

@@ -114,18 +114,19 @@ class ProjectService:
         return True
 
     def delete_project(self, project_id: int) -> bool:
-        """Delete the complete dependency graph atomically, then remove files."""
+        """Archive metadata and files, then remove the live dependency graph atomically."""
         db = self.repository.db
         project = self.repository.get_by_id(project_id)
         if not project:
             return False
-        if db.scalar(select(AudioTaskPO.id).where(AudioTaskPO.project_id == project_id, AudioTaskPO.status.in_(["running", "processing"])).limit(1)):
+        if db.scalar(select(AudioTaskPO.id).where(AudioTaskPO.project_id == project_id, AudioTaskPO.status.in_(["queued", "running", "processing", "completing"])).limit(1)):
             raise ValueError("项目仍在生成音频，请等待当前任务结束后再删除")
         root = Path(project.project_root_path or Path(getConfigPath()) / "projects").expanduser().resolve()
         folder = root / str(project_id)
         if folder.is_symlink():
             raise ValueError("项目目录是符号链接，请先检查项目存储位置")
         quarantine = root / f".deleting-{project_id}-{uuid4().hex}"
+        archive=root / f".archived-{project_id}-{uuid4().hex}"
         moved = False
         session_ids = list(db.execute(
             select(ChatSessionPO.id).where(ChatSessionPO.project_id == project_id)
@@ -134,6 +135,18 @@ class ProjectService:
             select(AdaptationRunPO.id).where(AdaptationRunPO.project_id == project_id)
         ).scalars())
 
+
+        from app.services.production.chapter_lifecycle import chapter_snapshot
+        import json
+        serialize=lambda item:{c.name:getattr(item,c.name) for c in item.__table__.columns}
+        backup={'project':serialize(project),'original_folder':str(folder),'archived_folder':str(archive),
+                'chapters':[chapter_snapshot(db,id) for id in db.scalars(select(ChapterPO.id).where(ChapterPO.project_id==project_id))]}
+        for model in (RolePO,ProjectSpeechProfilePO,AdaptationRunPO,SourceDocumentPO,WorkflowEventPO):
+            backup[model.__tablename__]=[serialize(item) for item in db.scalars(select(model).where(model.project_id==project_id))]
+        for model in (ChatMessagePO,AdaptationDraftRevisionPO):
+            backup[model.__tablename__]=[serialize(item) for item in db.scalars(select(model).where(model.session_id.in_(session_ids)))]
+        history=Path(getConfigPath())/'project_history';history.mkdir(parents=True,exist_ok=True)
+        (history/f'{project_id}-{uuid4().hex}.json').write_text(json.dumps(backup,ensure_ascii=False,indent=2,default=str),encoding='utf-8')
         chapter_ids = select(ChapterPO.id).where(ChapterPO.project_id == project_id)
         line_ids = select(LinePO.id).where(LinePO.chapter_id.in_(chapter_ids))
         asset_ids = select(AudioAssetPO.id).where(AudioAssetPO.project_id == project_id)
@@ -169,7 +182,7 @@ class ProjectService:
             raise
         if moved:
             try:
-                shutil.rmtree(quarantine)
+                quarantine.rename(archive)
             except OSError:
                 logging.warning("项目已删除，待清理的文件副本保留在 %s", quarantine)
         return True

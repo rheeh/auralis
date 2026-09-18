@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.models.po import AudioTaskPO, ChatSessionPO, LinePO
@@ -25,9 +25,20 @@ class AudioTaskService:
         task: AudioTaskPO | None = None,
     ) -> AudioTaskPO:
         self._validate_context(project_id, chapter_id, line, session_id)
+        if getattr(queue,'_auralis_loop',None):
+            from app.runtime.queue import ThreadsafeQueueProxy
+            queue=ThreadsafeQueueProxy(queue,queue._auralis_loop)
         if queue.full():
             raise OverflowError("队列已满，请稍后重试")
 
+        from app.services.speech.request import prepare_request, output_path
+        active = self.db.scalar(select(AudioTaskPO).where(AudioTaskPO.line_id==line.id,
+            AudioTaskPO.status.in_(['queued','processing','completing'])).limit(1))
+        if active:
+            return active
+        request, snapshot, fingerprint = prepare_request(self.db, project_id, line.id)
+        token = uuid4().hex
+        request['output_path'] = output_path(self.db,project_id,chapter_id,line.id,token)
         if task:
             task.status = "queued"
             task.attempt = (task.attempt or 0) + 1
@@ -43,17 +54,93 @@ class AudioTaskService:
                 session_id=session_id, line_id=line.id, status="queued", audio_path=line.audio_path,
             )
             self.db.add(task)
+        task.run_token=token
+        task.input_snapshot=snapshot
+        task.input_fingerprint=fingerprint
+        task.audio_path=request['output_path']
         line.status = "processing"
         line.is_done = 0
-        self.db.commit()
-        queue.put_nowait({
-            "task_id": task.id,
-            "project_id": project_id,
-            "chapter_id": chapter_id,
-            "session_id": session_id,
-            "dto": dto,
-        })
+        from sqlalchemy.exc import IntegrityError
+        try:
+            self.db.commit()
+        except IntegrityError:
+            self.db.rollback()
+            existing=self.db.scalar(select(AudioTaskPO).where(AudioTaskPO.line_id==line.id,
+                AudioTaskPO.status.in_(['queued','processing','completing'])).limit(1))
+            if existing:return existing
+            raise
+        try:
+            queue.put_nowait({"task_id":task.id,"project_id":project_id,"chapter_id":chapter_id,
+                "session_id":session_id,"run_token":token,"request":request})
+        except Exception:
+            task.status='failed';task.error_code='ENQUEUE_FAILED'
+            task.error_message='入队失败，请显式重试';line.status='pending'
+            self.db.commit()
+            raise
         return task
+
+    def claim(self, task_id, token):
+        result=self.db.execute(update(AudioTaskPO).where(AudioTaskPO.id==task_id,
+            AudioTaskPO.run_token==token,AudioTaskPO.status=='queued').values(status='processing',started_at=datetime.now(timezone.utc)))
+        self.db.commit()
+        return result.rowcount==1
+
+    def complete(self, task_id, token, path):
+        from app.services.speech.request import prepare_request
+        from app.services.timeline_service import TimelineService
+        import soundfile as sf
+        info=sf.info(path)
+        if info.frames<=0:
+            raise ValueError('配音结果不是有效音频')
+        self.db.expire_all()
+        task=self.db.get(AudioTaskPO,task_id)
+        if not task or task.run_token!=token or task.status!='processing':
+            return False
+        if path != task.audio_path:
+            raise ValueError('结果路径不属于当前 attempt')
+        # Claim the completion before reading current dependencies. SQLite's write
+        # transaction prevents an edit from interleaving with adoption.
+        claimed=self.db.execute(update(AudioTaskPO).where(AudioTaskPO.id==task_id,
+            AudioTaskPO.run_token==token,AudioTaskPO.status=='processing').values(status='completing'))
+        if claimed.rowcount!=1:
+            self.db.rollback();return False
+        try:
+            line=self.db.get(LinePO,task.line_id)
+            try:
+                _,_,current=prepare_request(self.db,task.project_id,task.line_id)
+            except ValueError:
+                current=None
+            current_input=current==task.input_fingerprint
+            version={'id':token,'label':f'版本 {len(line.audio_versions or [])+1}', 'kind':'generated',
+                'audio_path':path,'task_id':task.id,'input_fingerprint':task.input_fingerprint,
+                'input_snapshot':task.input_snapshot,'text':(task.input_snapshot or {}).get('prepared',{}).get('original_text'),
+                'created_at':datetime.now(timezone.utc).isoformat(), 'stale':not current_input}
+            line.audio_versions=[*(line.audio_versions or []),version]
+            if current_input:
+                line.active_audio_version_id=token;line.active_audio_variant_id=None
+                line.audio_path=path;line.status='done';line.is_done=1
+                TimelineService.invalidate_line(self.db,line.id,commit=False)
+            else:
+                line.status='pending';line.is_done=0
+            task.status='done' if current_input else 'stale'
+            task.completed_at=datetime.now(timezone.utc)
+            self.db.commit()
+            return current_input
+        except Exception:
+            self.db.rollback();raise
+
+    def fail(self, task_id, token, message, code='TTS_GENERATION_FAILED'):
+        self.db.rollback()
+        task=self.db.get(AudioTaskPO,task_id)
+        if not task or task.run_token!=token or task.status not in {'queued','processing'}:
+            return
+        from app.services.tts_trace_service import redact
+        task.status='failed';task.error_code=code;task.error_message=redact(message)
+        task.completed_at=datetime.now(timezone.utc)
+        line=self.db.get(LinePO,task.line_id)
+        if line and line.status=='processing':
+            line.status='failed';line.is_done=0
+        self.db.commit()
 
     def create_skipped(
         self, project_id: int, chapter_id: int, line: LinePO, session_id: str | None = None,
@@ -106,12 +193,20 @@ class AudioTaskService:
         return [self.serialize(task, line) for task, line in rows]
 
     def summary(self, session_id: str) -> dict[str, Any]:
-        tasks = self.list_for_session(session_id)
+        attempts = self.list_for_session(session_id)
+        latest = {task['line_id']:task for task in attempts}
+        tasks = list(latest.values())
         counts = {key: 0 for key in ["queued", "processing", "done", "failed", "skipped", "cancelled"]}
         for task in tasks:
             counts[task["status"]] = counts.get(task["status"], 0) + 1
-        total = len(tasks)
-        completed = counts["done"] + counts["skipped"]
+        execution_total=len(tasks)
+        execution_completed=counts["done"]+counts["skipped"]
+        session=self.db.get(ChatSessionPO,session_id)
+        lines=list(self.db.scalars(select(LinePO).where(LinePO.chapter_id==session.chapter_id,
+            LinePO.should_speak!=0,LinePO.track.notin_(['sfx','bgm'])))) if session.chapter_id else []
+        from app.services.production.audio_state import generation_state
+        total=len(lines)
+        completed=sum(not generation_state(self.db,line)['needs_generation'] for line in lines)
         return {
             "session_id": session_id,
             "counts": counts,
@@ -119,6 +214,8 @@ class AudioTaskService:
             "completed": completed,
             "progress": round(completed / total * 100) if total else 0,
             "tasks": tasks,
+            "attempt_count":sum(item["attempt"] for item in attempts),
+            "execution_progress": round(execution_completed / execution_total * 100) if execution_total else 0,
         }
 
     def latest_for_line(self, session_id: str, line_id: int) -> AudioTaskPO | None:
@@ -170,6 +267,10 @@ class AudioTaskService:
         }
 
     def _validate_context(self, project_id: int, chapter_id: int, line: LinePO, session_id: str | None) -> None:
+        from app.models.po import ChapterPO
+        chapter=self.db.get(ChapterPO,chapter_id)
+        if not chapter or chapter.project_id!=project_id:
+            raise ValueError("章节不属于目标项目")
         if line.chapter_id != chapter_id:
             raise ValueError("台词不属于目标章节")
         if session_id:

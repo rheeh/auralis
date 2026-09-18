@@ -106,90 +106,25 @@ class DramaAdaptationService:
             )
         return list(self.db.execute(stmt).scalars().all())
 
-    def commit_run(self, run_id: int, chapter_title: str | None = None, replace_chapter_lines: bool = True) -> ChapterPO:
-        run = self.get_run(run_id)
-        if not run:
-            raise ValueError("改编运行记录不存在")
-        if run.session_id and run.is_conversational:
-            from app.services.drama_commit_service import DramaCommitService
-            result = DramaCommitService(self.db).commit_session(
-                run.session_id, chapter_title=chapter_title, replace_chapter_lines=replace_chapter_lines
-            )
-            return self.db.get(ChapterPO, result["chapter_id"])
-        if not run.final_json:
-            raise ValueError("改编结果不存在，无法写入项目")
-
-        project = self.project_repository.get_by_id(run.project_id)
-        if not project:
-            raise ValueError("项目不存在")
-
-        script = self._normalize_script(run.final_json)
-        if any(scene.get("performancePlan") for scene in script.get("scenes", [])):
-            from app.workflows.drama.schemas import DramaScript
-            script = DramaScript.model_validate(script).model_dump()
-        target_title = chapter_title or script.get("title") or run.title
-        chapter = self.chapter_repository.get_by_name(target_title, run.project_id)
-        if chapter:
-            self.chapter_repository.update(
-                chapter.id,
-                {
-                    "title": target_title,
-                    "project_id": run.project_id,
-                    "text_content": self._script_to_text(script),
-                },
-            )
-            self.db.refresh(chapter)
-        else:
-            chapter = self.chapter_repository.create(
-                ChapterPO(project_id=run.project_id, title=target_title, text_content=self._script_to_text(script))
-            )
-
-        if replace_chapter_lines:
-            TimelineService.clear_chapter_timeline(self.db, chapter.id)
-            self.line_repository.delete_all_by_chapter_id(chapter.id)
-
-        audio_path = os.path.join(project.project_root_path or getConfigPath(), str(run.project_id), str(chapter.id), "audio")
-        os.makedirs(audio_path, exist_ok=True)
-
-        emotions = {item.name: item.id for item in self.emotion_repository.get_all()}
-        strengths = {item.name: item.id for item in self.strength_repository.get_all()}
-
-        existing_orders = [line.line_order or 0 for line in self.line_repository.get_all(chapter.id)] if not replace_chapter_lines else []
-        order = max(existing_orders, default=0) + 1
-        performances = []
-        for scene in script.get("scenes", []):
-            scene_title = scene.get("title") or "未命名场景"
-            scene_lines, role_names = [], {}
-            for line in scene.get("lines", []):
-                speaker = self._speaker_name(line)
-                role = self._ensure_role(run.project_id, speaker)
-                po = LinePO(
-                    chapter_id=chapter.id,
-                    role_id=role.id,
-                    line_order=order,
-                    text_content=str(line.get("text") or "").strip(),
-                    emotion_id=emotions.get(str(line.get("emotion") or "").strip()) or emotions.get("平静"),
-                    strength_id=strengths.get(str(line.get("strength") or "").strip()) or strengths.get("微弱"),
-                    line_type=self._line_type(line),
-                    track=self._track(line),
-                    should_speak=1 if bool(line.get("shouldSpeak", line.get("should_speak", True))) else 0,
-                    scene_title=scene_title,
-                    sound_tags=script_sound_tags(line.get("soundTags") or line.get("sound_tags"), line.get("soundPrompt") or line.get("text")) if self._line_type(line) in {"sfx","bgm"} else [],
-                    sound_prompt=str(line.get("soundPrompt") or line.get("sound_prompt") or "").strip() or None,
-                    voice_profile=str(line.get("voiceProfile") or line.get("voice_profile") or "").strip() or None,
-                    production_note=str(line.get("productionNote") or line.get("production_note") or "").strip() or None,
-                    audio_events=line.get("audioEvents") or line.get("audio_events") or None,
-                )
-                created = self.line_repository.create(po)
-                self.line_repository.update(created.id, {"audio_path": os.path.join(audio_path, f"id_{created.id}.wav")})
-                scene_lines.append(created)
-                role_names[role.id] = role.name
-                order += 1
-            performances.append(bind_scene_performance(scene, scene_lines, role_names, run.source_text, run.instruction))
-        save_chapter_performances(chapter, performances, replace=replace_chapter_lines)
-
-        self._update_run(run, chapter_id=chapter.id, status="committed", current_stage="committed")
-        return chapter
+    def commit_run(self, run_id: int, chapter_title: str | None = None, replace_chapter_lines: bool = False,
+                   *, target_chapter_id=None, expected_version=None, confirm_replace=False) -> ChapterPO:
+        from app.models.po import ChatSessionPO
+        from app.services.drama_commit_service import DramaCommitService
+        run=self.get_run(run_id)
+        if not run or not run.final_json:
+            raise ValueError('改编结果不存在，无法写入项目')
+        if run.committed_at and run.chapter_id:
+            return self.db.get(ChapterPO,run.chapter_id)
+        if not run.session_id:
+            run.final_json=self._normalize_script(run.final_json)
+            session=ChatSessionPO(id=f'legacy_run_{run.id}',project_id=run.project_id,
+                adaptation_run_id=run.id,title=run.title,source_text=run.source_text,
+                instruction=run.instruction,current_stage='script_draft_ready')
+            self.db.add(session);run.session_id=session.id
+            self.db.commit()
+        result=DramaCommitService(self.db).commit_session(run.session_id,chapter_title,replace_chapter_lines,
+            target_chapter_id=target_chapter_id,expected_version=expected_version,confirm_replace=confirm_replace)
+        return self.db.get(ChapterPO,result['chapter_id'])
 
     def _make_llm(self, project) -> LLMEngine:
         provider = self.llm_provider_repository.get_by_id(project.llm_provider_id)

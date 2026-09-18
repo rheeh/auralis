@@ -8,6 +8,8 @@ Auralis 是一个本地优先的 AI 广播剧生产工作台，可将小说等�
 
 快速入口：[在线体验](#在线体验) · [图文使用教程：0907 便利店](#tutorial-0907) · [本地运行](#本地运行) · [常见问题](#tutorial-faq)
 
+文档导航：[产品范围](PROJECT.md) · [当前架构与调用链](docs/project-map.md) · [开发约定](AGENTS.md) · [验收与剩余项](BACKLOG.md)
+
 ## 在线体验
 
 [▶ 体验《雨夜来件》导演 Demo](https://rheeh.github.io/auralis/#/demo)
@@ -324,7 +326,7 @@ Auralis 采用 Vue 3 + FastAPI + SQLAlchemy/SQLite 的本地优先架构。主�
 
 ## 本地运行
 
-环境要求：macOS 或 Linux、Python 3.12、Node.js、npm 和 FFmpeg。
+环境要求：macOS 或 Linux、Python 3.12、Node.js 22、npm 和 FFmpeg。首次安装测试依赖使用 `SonicVale/.venv/bin/pip install -r SonicVale/requirements-test.txt`。
 
 启动后端和前端：
 
@@ -340,7 +342,7 @@ Auralis 采用 Vue 3 + FastAPI + SQLAlchemy/SQLite 的本地优先架构。主�
 API 文档: http://127.0.0.1:8200/docs
 ```
 
-运行完整验证：
+运行隔离的离线工程检查（不调用模型、不读取真实工程库）：
 
 ```bash
 ./scripts/verify.sh
@@ -375,10 +377,6 @@ CHAT_EVENT_REPLAY_LIMIT=100
 ```
 
 Provider 密钥应通过应用界面或本地环境文件配置。密钥、运行数据库、生成音频、虚拟环境和前端构建产物不会提交到 Git。
-
-## 验证范围
-
-`scripts/verify.sh` 检查后端导入与语法、FastAPI 路由注册、广播剧工作流与结构化模型输出、TTS 声音指导与音频版本逻辑、本地 Demo 生成路径、Electron 脚本语法和前端生产构建。
 
 ## 许可证与来源
 

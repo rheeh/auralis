@@ -263,7 +263,8 @@ class SpeechDirectionTest(unittest.TestCase):
                 with patch('app.core.tts_runtime.SessionLocal', self.Session), patch('app.core.tts_runtime.manager.broadcast', new=AsyncMock()), \
                      patch('app.core.tts_engine.requests.post', return_value=response) as post:
                     task = asyncio.create_task(tts_worker(app))
-                    await app.state.tts_queue.put({'project_id':self.project.id, 'dto':dto})
+                    from app.services.audio_task_service import AudioTaskService
+                    AudioTaskService(self.db).enqueue(app.state.tts_queue,self.project.id,self.chapter.id,line,dto)
                     await asyncio.wait_for(app.state.tts_queue.join(), timeout=10)
                     task.cancel()
                     try: await task
@@ -273,13 +274,15 @@ class SpeechDirectionTest(unittest.TestCase):
         row = self.db.scalar(select(TTSGenerationPO).order_by(TTSGenerationPO.created_at.desc()))
         self.assertEqual(row.status, 'succeeded', row.error_message)
         self.assertEqual(row.request_json['payload'], post.call_args.kwargs['json'])
-        self.assertEqual(row.input_snapshot['tts_text'], self.lines[2].text_content)
+        self.assertEqual(row.input_snapshot['prepared']['tts_text'], self.lines[2].text_content)
         self.assertTrue(row.audio_version_id); self.assertGreater(row.result_json['bytes'], 100)
         asyncio.run(run_one(True)); self.db.expire_all()
         row = self.db.scalar(select(TTSGenerationPO).order_by(TTSGenerationPO.created_at.desc()))
         self.assertEqual(row.status, 'failed'); self.assertEqual(row.response_json['body']['request_id'], 'fixture-error')
         self.lines[2].text_content = '（只有指令）'; self.db.commit()
-        post = asyncio.run(run_one()); self.db.expire_all()
-        row = self.db.scalar(select(TTSGenerationPO).order_by(TTSGenerationPO.created_at.desc()))
-        self.assertEqual(row.status, 'failed'); self.assertIsNone(row.request_json)
-        self.assertEqual(row.input_snapshot['original_text'], '（只有指令）'); post.assert_not_called()
+        with patch('app.core.tts_engine.requests.post') as post:
+            from app.services.audio_task_service import AudioTaskService
+            with self.assertRaisesRegex(ValueError, '为空'):
+                AudioTaskService(self.db).enqueue(asyncio.Queue(),self.project.id,self.chapter.id,self.lines[2],
+                    LineCreateDTO(chapter_id=self.chapter.id))
+            post.assert_not_called()

@@ -1,3 +1,4 @@
+from app.services import factory as service_factory
 from typing import List
 
 import requests
@@ -40,9 +41,7 @@ router = APIRouter(prefix="/voices", tags=["Voices"])
 # 依赖注入（实际项目可用 DI 容器）
 
 def get_voice_service(db: Session = Depends(get_db)) -> VoiceService:
-    repository = VoiceRepository(db)
-    multi_emotion_voice_repository = MultiEmotionVoiceRepository(db)
-    return VoiceService(repository, multi_emotion_voice_repository)
+    return service_factory.get_voice_service(db)
 def get_tts_provider_service(db: Session = Depends(get_db)) -> TTSProviderService:
     repository = TTSProviderRepository(db)
     return TTSProviderService(repository)
@@ -206,7 +205,7 @@ def get_all_voices(tts_provider_id: int, voice_service: VoiceService = Depends(g
         res = [VoiceResponseDTO(**e.__dict__) for e in entities]
         return Res(data=res, code=200, message="查询成功")
     else:
-        return Res(data=[], code=404, message="项目不存在音色")
+        return Res(data=[], code=200, message="项目不存在音色")
 
 
 @router.post("", response_model=Res[VoiceResponseDTO],

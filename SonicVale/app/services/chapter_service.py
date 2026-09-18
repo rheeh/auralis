@@ -104,17 +104,20 @@ class ChapterService:
         if not chapter:
             return False
 
-        # 先删时间线、资产和台词，再删章节，避免留下孤儿记录。
+        from app.services.production.chapter_lifecycle import prepare_removal
+        from app.models.po import ChatSessionPO, AdaptationRunPO
+        from sqlalchemy import update
         db = self.repository.db
-        project = ProjectRepository(db).get_by_id(chapter.project_id)
-        if project:
-            chapter_path = os.path.join(project.project_root_path, str(project.id), str(chapter_id))
-            if os.path.exists(chapter_path):
-                shutil.rmtree(chapter_path)
-                logging.info("已删除目录及内容: %s", chapter_path)
-        TimelineService.clear_chapter_timeline(db, chapter_id)
-        LineRepository(db).delete_all_by_chapter_id(chapter_id)
-        return self.repository.delete(chapter_id)
+        try:
+            prepare_removal(db, chapter_id)
+            for model in (ChatSessionPO, AdaptationRunPO):
+                db.execute(update(model).where(model.chapter_id==chapter_id).values(chapter_id=None))
+            db.delete(chapter)
+            db.commit()
+            return True
+        except Exception:
+            db.rollback()
+            raise
 
     # 先获取章节内容
     def split_text(self, chapter_id: int, max_length: int = 1500) -> List[str]:

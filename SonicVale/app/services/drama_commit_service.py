@@ -24,7 +24,9 @@ class DramaCommitService:
         self,
         session_id: str,
         chapter_title: str | None = None,
-        replace_chapter_lines: bool = True,
+        replace_chapter_lines: bool = False,
+        *, target_chapter_id: int | None = None, expected_version: str | None = None,
+        confirm_replace: bool = False,
     ) -> dict[str, Any]:
         session = self.db.get(ChatSessionPO, session_id)
         if not session or session.deleted_at is not None:
@@ -38,12 +40,26 @@ class DramaCommitService:
         if run.committed_at and run.chapter_id:
             return self._existing_summary(session, run)
 
+        target_id = target_chapter_id or session.chapter_id
+        from app.services.production.chapter_lifecycle import chapter_version, prepare_removal
+        if target_id:
+            target = self.db.get(ChapterPO, target_id)
+            if not target or target.project_id != session.project_id:
+                raise ValueError("目标章节不属于当前项目")
+            if not (target_chapter_id and confirm_replace and expected_version):
+                raise ValueError("覆盖必须显式指定章节 ID、版本并确认替换全部台词和时间线")
+            if chapter_version(self.db, target_id) != expected_version:
+                raise ValueError("章节已发生变化，请重新检查覆盖范围")
+        elif replace_chapter_lines:
+            raise ValueError("替换必须指定目标章节 ID")
+
         lease_token = uuid4().hex
         now = datetime.now(timezone.utc)
         lease = self.db.execute(
             update(ChatSessionPO)
             .where(
                 ChatSessionPO.id == session_id,
+                ChatSessionPO.current_stage == session.current_stage,
                 or_(ChatSessionPO.running_token.is_(None), ChatSessionPO.lease_expires_at < now),
             )
             .values(running_token=lease_token, lease_expires_at=now + timedelta(minutes=10))
@@ -53,21 +69,19 @@ class DramaCommitService:
             raise ValueError("会话正在提交，请勿重复点击")
         self.db.expire(session)
 
-        project = self.db.get(ProjectPO, session.project_id)
-        if not project:
-            raise ValueError("项目不存在")
-        script = DramaScript.model_validate(run.final_json).model_dump()
-
         try:
+            project = self.db.get(ProjectPO, session.project_id)
+            if not project:
+                raise ValueError("项目不存在")
+            script = DramaScript.model_validate(run.final_json).model_dump()
             session.current_stage = "committing"
             target_title = chapter_title or script.get("title") or run.title
-            chapter = self.db.get(ChapterPO, session.chapter_id) if session.chapter_id else None
-            if chapter and chapter.project_id != session.project_id:
-                raise ValueError("目标章节不属于当前项目")
-            if not chapter:
-                chapter = self.db.execute(
-                    select(ChapterPO).where(ChapterPO.project_id == session.project_id, ChapterPO.title == target_title)
-                ).scalar_one_or_none()
+            chapter = self.db.get(ChapterPO, target_id) if target_id else None
+            if chapter:
+                if chapter_version(self.db, target_id) != expected_version:
+                    raise ValueError("章节已发生变化，请重新检查覆盖范围")
+                if replace_chapter_lines:
+                    prepare_removal(self.db, chapter.id)
             if not chapter:
                 chapter = ChapterPO(project_id=session.project_id, title=target_title)
                 self.db.add(chapter)
@@ -75,9 +89,6 @@ class DramaCommitService:
 
             chapter.title = target_title
             chapter.text_content = self._script_to_text(script)
-            if replace_chapter_lines:
-                TimelineService.clear_chapter_timeline(self.db, chapter.id)
-                self.db.execute(delete(LinePO).where(LinePO.chapter_id == chapter.id))
 
             roles = {
                 role.name: role

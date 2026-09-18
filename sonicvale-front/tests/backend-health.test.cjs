@@ -1,0 +1,10 @@
+const test=require('node:test')
+const assert=require('node:assert/strict')
+const {isAuralisHealth}=require('../electron/backend-health.cjs')
+test('health validates identity, status and runtime readiness',()=>{
+  assert.equal(isAuralisHealth(200,'<html>another app</html>'),false)
+  assert.equal(isAuralisHealth(404,'{}'),false)
+  assert.equal(isAuralisHealth(200,JSON.stringify({application:'other',api_version:1,ready:true})),false)
+  assert.equal(isAuralisHealth(200,JSON.stringify({application:'auralis',api_version:1,ready:false})),false)
+  assert.equal(isAuralisHealth(200,JSON.stringify({application:'auralis',api_version:1,ready:true})),true)
+})

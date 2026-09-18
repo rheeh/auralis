@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.services.production.audio_state import generation_state
 
 import json
 import re
@@ -211,12 +212,15 @@ class ProductionAssistantAgent:
         if existing:
             return existing
 
-        observations: list[dict[str, Any]] = []
+        saved_turn=dict(user_message.payload_json or {})
+        observations: list[dict[str, Any]] = list(saved_turn.get("tool_results",[]))
         ui_actions: list[dict[str, Any]] = []
         reply = ""
         executed_calls: set[str] = set()
         terminal_tool_completed = False
         try:
+            if saved_turn.get('pending_tool'):
+                raise WorkflowConflictError('上次工具执行中断，结果尚不确定；请检查项目和任务状态，系统不会自动重放')
             for _ in range(self.MAX_ROUNDS):
                 try:
                     plan = self._plan(session, user_message.content or "", observations)
@@ -233,12 +237,20 @@ class ProductionAssistantAgent:
                     if signature in executed_calls:
                         continue
                     executed_calls.add(signature)
-                    result = self._execute_tool(session, call)
-                    observations.append({
-                        "tool": call.name,
-                        "arguments": call.arguments,
-                        "result": result,
-                    })
+                    from app.services.assistant.contracts import WRITE_TOOLS
+                    if call.name in WRITE_TOOLS and re.search(r'只(?:查询|查看|读|看)|不要(?:修改|生成|操作)',user_message.content or ''):
+                        raise ValueError('本轮仅查询，拒绝写操作')
+                    previous=next((o for o in observations if o['tool']==call.name and o['arguments']==call.arguments),None)
+                    if previous:
+                        result=previous['result']
+                    else:
+                        user_message.payload_json={**(user_message.payload_json or {}),'tool_results':observations,
+                            'pending_tool':{'tool':call.name,'arguments':call.arguments}}
+                        self.db.commit()
+                        result = self._execute_tool(session, call)
+                        observations.append({'tool':call.name,'arguments':call.arguments,'result':result})
+                        user_message.payload_json={**(user_message.payload_json or {}),'tool_results':list(observations),'pending_tool':None}
+                        self.db.commit()
                     ui_actions.extend(result.get("ui_actions") or [])
                     terminal_tool_completed = terminal_tool_completed or call.name in self.TERMINAL_TOOLS
                 if terminal_tool_completed:
@@ -263,13 +275,13 @@ class ProductionAssistantAgent:
                 "ui_actions": self._dedupe_ui_actions(ui_actions),
             }
         except (WorkflowLLMError, WorkflowConflictError, ValueError) as exc:
-            reply = f"这次没有执行成功：{exc}"
+            reply = ("部分操作已完成："+self._summarize_results(observations)+"；后续操作失败：" if observations else "这次没有执行成功：")+str(exc)
             message_type = "error"
-            payload = {"in_reply_to": user_message_id, "error": str(exc)}
+            payload = {"in_reply_to": user_message_id, "error": str(exc), "tool_results":observations,"ui_actions":self._dedupe_ui_actions(ui_actions)}
         except Exception:
-            reply = "制作助手暂时无法完成这条指令。项目数据没有被进一步修改，请稍后重试。"
+            reply = ("部分操作已完成："+self._summarize_results(observations)+"。" if observations else "")+"本轮中断，请检查工具结果与任务状态；未自动重放操作。"
             message_type = "error"
-            payload = {"in_reply_to": user_message_id, "error": "ASSISTANT_TURN_FAILED"}
+            payload = {"in_reply_to": user_message_id, "error": "ASSISTANT_TURN_FAILED", "tool_results":observations,"ui_actions":self._dedupe_ui_actions(ui_actions)}
 
         row = ChatMessagePO(
             id=f"msg_{uuid4().hex}",
@@ -343,6 +355,8 @@ class ProductionAssistantAgent:
         return str(raw.get("reply") or draft_reply or self._summarize_results(observations)).strip()
 
     def _execute_tool(self, session: ChatSessionPO, call: AssistantToolCall) -> dict[str, Any]:
+        from app.services.assistant.contracts import validate_arguments
+        call.arguments=validate_arguments(call.name,call.arguments)
         handlers = {
             "get_project_status": self._get_project_status,
             "list_roles_and_voices": self._list_roles_and_voices,
@@ -451,19 +465,18 @@ class ProductionAssistantAgent:
         note_supplied = "production_note" in args
         if not text_supplied and not note_supplied:
             raise ValueError("至少需要提供新台词文本或制作备注")
+        changes = {}
         if text_supplied:
             text = str(args.get("text") or "").strip()
             if not text:
                 raise ValueError("可朗读台词不能为空")
             if re.search(r"[()（）\[\]【】]", text):
                 raise ValueError("朗读文本不能包含括号提示，请把提示放到制作备注")
-            line.text_content = text
-            line.status = "pending"
-            line.is_done = 0
-            line.active_audio_variant_id = None
+            changes["text_content"] = text
         if note_supplied:
-            line.production_note = str(args.get("production_note") or "").strip() or None
-        self.db.commit()
+            changes["production_note"] = str(args.get("production_note") or "").strip() or None
+        from app.services.factory import get_line_service
+        get_line_service(self.db).update_line(line.id, changes)
         self.db.refresh(line)
         return self._ok(
             f"已更新第 {line.line_order} 句",
@@ -517,7 +530,7 @@ class ProductionAssistantAgent:
         created: list[str] = []
         skipped = 0
         for line in lines:
-            if not self._is_speakable(line) or line.status == "done":
+            if not self._is_speakable(line) or not generation_state(self.db,line)['needs_generation']:
                 skipped += 1
                 continue
             latest = service.latest_for_line(session.id, line.id)
@@ -540,11 +553,8 @@ class ProductionAssistantAgent:
         if not self._is_speakable(line):
             raise WorkflowConflictError("音效或 BGM 轨不能生成角色配音")
         if "prompt" in args:
-            line.production_note = str(args.get("prompt") or "").strip() or None
-        line.status = "pending"
-        line.is_done = 0
-        line.active_audio_variant_id = None
-        self.db.commit()
+            from app.services.factory import get_line_service
+            get_line_service(self.db).update_line(line.id,{'production_note':str(args.get('prompt') or '').strip() or None})
         service = AudioTaskService(self.db)
         latest = service.latest_for_line(session.id, line.id)
         if latest and latest.status in {"queued", "processing"}:

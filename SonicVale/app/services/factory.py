@@ -43,3 +43,22 @@ def get_strength_service(db):
 
 def get_multi_emotion_voice_service(db):
     return MultiEmotionVoiceService(MultiEmotionVoiceRepository(db))
+
+
+def get_chapter_service(db):
+    from app.repositories.chapter_repository import ChapterRepository
+    from app.services.chapter_service import ChapterService
+    return ChapterService(ChapterRepository(db))
+
+def get_prompt_service(db):
+    from app.repositories.prompt_repository import PromptRepository
+    from app.services.prompt_service import PromptService
+    return PromptService(PromptRepository(db))
+
+def get_llm_service(db):
+    from app.services.llm_provider_service import LLMProviderService
+    return LLMProviderService(LLMProviderRepository(db))
+
+def get_tts_service(db):
+    from app.services.tts_provider_service import TTSProviderService
+    return TTSProviderService(TTSProviderRepository(db))

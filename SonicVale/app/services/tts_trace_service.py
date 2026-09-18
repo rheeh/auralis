@@ -12,23 +12,23 @@ from sqlalchemy.orm import sessionmaker
 from app.models.po import TTSGenerationPO
 
 
-def redact(value, secrets=(), depth=0):
+def redact(value, secrets=(), depth=0, *, bounded=True):
     """Store inspectable inputs, never credentials, signed URLs or audio blobs."""
-    if depth > 12:
+    if bounded and depth > 12:
         return "[depth limit]"
     if isinstance(value, dict):
         result = {}
-        for key, item in list(value.items())[:200]:
+        for key, item in (list(value.items())[:200] if bounded else value.items()):
             name = str(key).lower()
             if re.search(r"api.?key|authorization|^auth$|secret|password|cookie|token|signature|credential|^key$", name):
                 result[str(key)] = "[redacted]"
             elif name in {"audio_base64", "audio_data"} or (name in {"data", "audio"} and isinstance(item, str) and len(item) > 512):
                 result[str(key)] = "[audio omitted]"
             else:
-                result[str(key)] = redact(item, secrets, depth + 1)
+                result[str(key)] = redact(item, secrets, depth + 1, bounded=bounded)
         return result
     if isinstance(value, (list, tuple)):
-        return [redact(item, secrets, depth + 1) for item in value[:300]]
+        return [redact(item, secrets, depth + 1, bounded=bounded) for item in (value[:300] if bounded else value)]
     if isinstance(value, bytes):
         return {"bytes": len(value), "sha256": hashlib.sha256(value).hexdigest()}
     if isinstance(value, str):
@@ -45,7 +45,7 @@ def redact(value, secrets=(), depth=0):
             # Credentials can be embedded in the authority as well as query.
             return urlunsplit((parts.scheme, parts.netloc.split("@")[-1], parts.path, "", ""))
         value = re.sub(r"(?:https?|wss?)://[^\s\"<>]+", clean_url, value)
-        return value[:24000] + ("…[truncated]" if len(value) > 24000 else "")
+        return value[:24000] + ("…[truncated]" if len(value) > 24000 else "") if bounded else value
     return value if value is None or isinstance(value, (int, float, bool)) else str(type(value).__name__)
 
 

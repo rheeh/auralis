@@ -1,3 +1,4 @@
+from app.services import factory as service_factory
 import os
 import tempfile
 
@@ -59,12 +60,7 @@ def get_sound_library_service(db: Session = Depends(get_db)) -> SoundLibraryServ
 
 
 def get_line_service(db: Session = Depends(get_db)) -> LineService:
-    return LineService(
-        LineRepository(db),
-        RoleRepository(db),
-        TTSProviderRepository(db),
-        LLMProviderRepository(db),
-    )
+    return service_factory.get_line_service(db)
 
 
 @router.get("/assets", response_model=Res[list[dict]])

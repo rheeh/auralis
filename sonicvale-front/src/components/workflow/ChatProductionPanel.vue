@@ -69,7 +69,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
-import { API_BASE_URL } from '../../api/config'
+import { API_BASE_URL, localMediaUrl } from '../../api/config'
 import {
   cancelChatSession, commitChatSession, confirmChatDraft, createChatSession,
   fetchChatHistory, fetchChatSession, resumeChatSession, sendChatMessage,
@@ -151,7 +151,7 @@ function openProject(){router.push(`/projects/${snapshot.value.project_id}/overv
 function startPolling(){clearInterval(pollTimer);pollTimer=setInterval(async()=>{await refresh();if(!isGenerating.value&&!isSubmitting.value&&!assistantPending.value)clearInterval(pollTimer)},2200)}
 function connectSocket(){
   if(!snapshot.value)return;if(socket)socket.close();clearTimeout(reconnectTimer)
-  const api=new URL(API_BASE_URL);const protocol=api.protocol==='https:'?'wss':'ws';socket=new WebSocket(`${protocol}://${api.host}/ws/projects/${snapshot.value.project_id}/sessions/${snapshot.value.session_id}`)
+  const api=new URL(API_BASE_URL);const protocol=api.protocol==='https:'?'wss':'ws';socket=new WebSocket(localMediaUrl(`${protocol}://${api.host}/ws/projects/${snapshot.value.project_id}/sessions/${snapshot.value.session_id}`))
   socket.onopen=()=>{reconnectDelay=1000;socket.send(JSON.stringify({type:'ping'}))}
   socket.onmessage=async(event)=>{try{const data=JSON.parse(event.data);if(data.event_type){await refresh();if(['role_draft_ready','script_draft_ready','workflow_failed','workflow_completed'].includes(data.event_type))await refreshHistory()}}catch{}}
   socket.onclose=()=>{if(snapshot.value&&!['completed','cancelled'].includes(snapshot.value.current_stage)){reconnectTimer=setTimeout(connectSocket,reconnectDelay);reconnectDelay=Math.min(reconnectDelay*2,15000)}}

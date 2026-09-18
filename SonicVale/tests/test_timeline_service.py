@@ -94,7 +94,7 @@ class TimelineServiceTest(unittest.TestCase):
 
         with engine.connect() as conn:
             self.assertEqual(conn.execute(text("SELECT name FROM projects WHERE id = 7")).scalar_one(), "旧项目")
-            self.assertEqual(conn.execute(text("SELECT MAX(version) FROM schema_migrations")).scalar_one(), 8)
+            self.assertEqual(conn.execute(text("SELECT MAX(version) FROM schema_migrations")).scalar_one(), 11)
             columns = {row[1] for row in conn.execute(text("PRAGMA table_info(projects)"))}
             self.assertIn("project_root_path", columns)
             line_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(lines)"))}

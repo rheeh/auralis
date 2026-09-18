@@ -107,6 +107,11 @@ class DramaWorkflowTest(unittest.TestCase):
         queue = asyncio.Queue(maxsize=4)
         audio_service = AudioTaskService(self.db)
         dto = LineCreateDTO.model_validate({column.name: getattr(voice_line, column.name) for column in LinePO.__table__.columns})
+        from app.models.po import TTSProviderPO
+        provider=TTSProviderPO(name="Offline edge",provider_type="edge",api_base_url="http://unused.invalid",status=1)
+        self.db.add(provider);self.db.flush()
+        self.db.get(ProjectPO,self.project_id).tts_provider_id=provider.id
+        self.db.commit()
         task = audio_service.enqueue(queue, self.project_id, first["chapter_id"], voice_line, dto, session_id)
         self.assertEqual(queue.qsize(), 1)
         self.assertEqual(task.status, "queued")

@@ -16,7 +16,7 @@ from sqlalchemy import Engine, inspect, text
 
 
 SCHEMA_MIGRATIONS_TABLE = "schema_migrations"
-CURRENT_SCHEMA_VERSION = 8
+CURRENT_SCHEMA_VERSION = 11
 
 
 def _table_exists(engine: Engine, table_name: str) -> bool:
@@ -157,6 +157,38 @@ def _migration_008_scene_performance(engine: Engine) -> None:
     _add_columns(engine, "chapters", {"performance_plan": "JSON"})
 
 
+def _migration_009_generation_snapshot(engine: Engine) -> None:
+    _add_columns(engine, "audio_tasks", {"run_token": "TEXT", "input_fingerprint": "TEXT", "input_snapshot": "JSON"})
+
+
+def _migration_010_explicit_voice(engine: Engine) -> None:
+    from app.core.voice_binding import legacy_voice_keys
+    _add_columns(engine, "voices", {"provider_voice_id":"TEXT"})
+    if not _table_exists(engine,"voices"):
+        return
+    parsed=ambiguous=0
+    with engine.begin() as conn:
+        for row in conn.execute(text('SELECT id,description FROM voices WHERE provider_voice_id IS NULL')):
+            keys=legacy_voice_keys(row.description)
+            if len(keys)==1:
+                conn.execute(text('UPDATE voices SET provider_voice_id=:voice WHERE id=:id'),{'voice':next(iter(keys)),'id':row.id})
+                parsed+=1
+            elif len(keys)>1:ambiguous+=1
+    logging.info('音色迁移: 明确 %s，歧义保留 %s',parsed,ambiguous)
+
+
+def _migration_011_single_active_attempt(engine: Engine) -> None:
+    if not _table_exists(engine,'audio_tasks'):
+        return
+    with engine.begin() as conn:
+        # An upgrade only starts under the exclusive instance lock. Old in-memory
+        # queues are gone; do not silently resubmit uncertain provider calls.
+        if _table_exists(engine,'lines'):
+            conn.execute(text("UPDATE lines SET status='pending',is_done=0 WHERE id IN (SELECT line_id FROM audio_tasks WHERE status IN ('queued','processing','completing'))"))
+        conn.execute(text("UPDATE audio_tasks SET status='failed',run_token=NULL,error_code='PROCESS_INTERRUPTED',error_message='升级前任务已中断，请显式重试' WHERE status IN ('queued','processing','completing')"))
+        conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_active_audio_task_line ON audio_tasks(line_id) WHERE status IN ('queued','processing','completing')"))
+
+
 MIGRATIONS = {
     1: _migration_001_legacy_columns,
     2: _migration_002_timeline_foundation,
@@ -166,6 +198,9 @@ MIGRATIONS = {
     6: _migration_006_clip_playback_rate,
     7: _migration_007_speech_context_and_traces,
     8: _migration_008_scene_performance,
+    9: _migration_009_generation_snapshot,
+    10: _migration_010_explicit_voice,
+    11: _migration_011_single_active_attempt,
 }
 
 

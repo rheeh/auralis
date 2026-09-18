@@ -1,3 +1,4 @@
+from app.services import factory as service_factory
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -22,18 +23,12 @@ router = APIRouter(prefix="/roles", tags=["Roles"])
 # 依赖注入（实际项目可用 DI 容器）
 
 def get_role_service(db: Session = Depends(get_db)) -> RoleService:
-    repository = RoleRepository(db)
-    return RoleService(repository)
+    return service_factory.get_role_service(db)
 def get_project_service(db: Session = Depends(get_db)) -> ProjectService:
-    repository = ProjectRepository(db)
-    return ProjectService(repository)
+    return service_factory.get_project_service(db)
 
 def get_line_service(db: Session = Depends(get_db)) -> LineService:
-    repository = LineRepository(db)
-    role_repository = RoleRepository(db)
-    tts_provider_repository = TTSProviderRepository(db)
-    llm_provider_repository = LLMProviderRepository(db)
-    return LineService(repository, role_repository, tts_provider_repository, llm_provider_repository)
+    return service_factory.get_line_service(db)
 @router.post("", response_model=Res[RoleResponseDTO],
              summary="创建角色",
              description="根据项目ID创建角色，角色名称在同一项目下不可重复" )
@@ -81,7 +76,7 @@ def get_all_roles(project_id: int, role_service: RoleService = Depends(get_role_
         res = [RoleResponseDTO(**e.__dict__) for e in entities]
         return Res(data=res, code=200, message="查询成功")
     else:
-        return Res(data=[], code=404, message="项目不存在角色")
+        return Res(data=[], code=200, message="项目不存在角色")
 
 # 修改，传入的参数是id
 @router.put("/{role_id}", response_model=Res[RoleCreateDTO],
@@ -105,8 +100,6 @@ def update_role(role_id: int, dto: RoleCreateDTO, role_service: RoleService = De
 def delete_role(role_id: int, role_service: RoleService = Depends(get_role_service),line_service: LineService = Depends(get_line_service)):
     success = role_service.delete_role(role_id)
     if success:
-        # 获取改角色下所有的台词
-        line_service.clear_role_id(role_id)
         return Res(data=None, code=200, message="删除成功")
     else:
         return Res(data=None, code=400, message="删除失败或角色不存在")

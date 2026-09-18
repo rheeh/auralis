@@ -111,7 +111,7 @@ async def commit_adaptation_run(
     service: DramaAdaptationService = Depends(get_drama_adaptation_service),
 ):
     try:
-        chapter = service.commit_run(dto.run_id, dto.chapter_title, dto.replace_chapter_lines)
+        chapter = service.commit_run(dto.run_id, dto.chapter_title, dto.replace_chapter_lines, target_chapter_id=dto.target_chapter_id, expected_version=dto.expected_version, confirm_replace=dto.confirm_replace)
         run = service.get_run(dto.run_id)
         return Res(
             data=DramaAdaptationResponseDTO(

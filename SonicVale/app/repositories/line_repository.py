@@ -33,17 +33,18 @@ class LineRepository:
         return data
 
 
-    def update(self, line_id: int, line_data: dict) -> Optional[LinePO]:
+    def update(self, line_id: int, line_data: dict, *, commit: bool = True) -> Optional[LinePO]:
         """更新单行台词信息"""
         line = self.get_by_id(line_id)
         if not line:
             return None
         for key, value in line_data.items():
-            if value is not None:  # 只更新不为空的字段
-                setattr(line, key, value)
+            setattr(line, key, value)
 
-        self.db.commit()
-        self.db.refresh(line)
+        self.db.flush()
+        if commit:  # Explicit legacy boundary; new commands own their transaction.
+            self.db.commit()
+            self.db.refresh(line)
         return line
 
     def delete(self, line_id: int) -> bool:

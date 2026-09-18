@@ -1,3 +1,4 @@
+import { localMediaUrl } from './config'
 import request, { API_BASE_URL } from './config'
 
 export function getSoundLibraryAssets(params = {}) {
@@ -33,7 +34,7 @@ export function deleteSoundLibraryAsset(assetId) {
 
 export function getSoundLibraryAudioUrl(assetId, version = 0) {
   const query = version ? `?v=${encodeURIComponent(version)}` : ''
-  return `${API_BASE_URL}sound-library/assets/${encodeURIComponent(assetId)}/audio${query}`
+  return localMediaUrl(`${API_BASE_URL}sound-library/assets/${encodeURIComponent(assetId)}/audio${query}`)
 }
 
 export const matchSounds = payload => request.post('/sound-library/matches', payload, { timeout: 15000 })

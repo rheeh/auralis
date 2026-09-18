@@ -2428,7 +2428,6 @@ async function deleteLine(row) {
 async function updateLineRole(row) {
     if (!row?.id || row.role_id === null) return
     const res = await lineAPI.updateLine(row.id, {
-        chapter_id: row.chapter_id,
         role_id: row.role_id,
     })
 
@@ -2454,7 +2453,6 @@ async function updateLineText(row) {
 
     try {
         const res = await lineAPI.updateLine(row.id, {
-            chapter_id: row.chapter_id,
             text_content: row.text_content,
         })
 
@@ -2967,7 +2965,6 @@ async function loadEnums() {
 async function updateLineEmotion(row) {
     if (!row?.id) return
     const res = await lineAPI.updateLine(row.id, {
-        chapter_id: row.chapter_id,
         emotion_id: row.emotion_id,
     })
     if (res?.code === 200) {
@@ -2981,7 +2978,6 @@ async function updateLineEmotion(row) {
 async function updateLineStrength(row) {
     if (!row?.id) return
     const res = await lineAPI.updateLine(row.id, {
-        chapter_id: row.chapter_id,
         strength_id: row.strength_id,
     })
     if (res?.code === 200) {
@@ -3871,25 +3867,8 @@ function attachResizableHeader(col) {
     }
 })
 
-async function updateLineIsDone(row, val) {
-    // ✅ 修正判断逻辑
-    if (!row || !row.id) return
-
-    try {
-        const res = await lineAPI.updateLine(row.id, {
-            chapter_id: row.chapter_id,
-            is_done: val,
-        })
-
-        if (res?.code === 200) {
-            ElMessage.success('台词完成度已更新')
-        } else {
-            ElMessage.error(res?.message || '台词完成度更新失败')
-        }
-    } catch (err) {
-        console.error('更新台词完成度出错:', err)
-        ElMessage.error('请求异常，请稍后重试')
-    }
+async function updateLineIsDone(row) {
+    ElMessage.info('完成状态由当前配音结果决定，请生成或选用音频版本')
 }
 
 import { decodeUtf8OrGbk } from "../utils/utf8-or-gbk.js";

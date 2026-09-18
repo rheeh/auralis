@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "electron": "electron .",
     "start": "concurrently \"npm run dev\" \"npm run electron\"",
-    "electron-build": "vite build && electron-builder"
+    "electron-build": "vite build && electron-builder",
+    "test": "node scripts/test-all.cjs"
   },
   "build": {
     "appId": "com.local.auralis",
@@ -27,7 +28,9 @@
       {
         "from": "../assets/audio/cc0",
         "to": "assets/audio/cc0",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "asar": true,

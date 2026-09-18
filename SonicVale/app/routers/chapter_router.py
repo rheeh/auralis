@@ -1,3 +1,4 @@
+from app.services import factory as service_factory
 # 初始化 router
 import asyncio
 import io
@@ -50,44 +51,31 @@ router = APIRouter(prefix="/chapters", tags=["Chapters"])
 # 依赖注入（实际项目可用 DI 容器）
 
 def get_chapter_service(db: Session = Depends(get_db)) -> ChapterService:
-    repository = ChapterRepository(db)  # ✅ 传入 db
-    return ChapterService(repository)
+    return service_factory.get_chapter_service(db)
 
 def get_line_service(db: Session = Depends(get_db)) -> LineService:
-    repository = LineRepository(db)
-    role_repository = RoleRepository(db)
-    tts_provider_repository = TTSProviderRepository(db)
-    llm_provider_repository = LLMProviderRepository(db)
-    return LineService(repository, role_repository, tts_provider_repository, llm_provider_repository)
+    return service_factory.get_line_service(db)
 
 def get_project_service(db: Session = Depends(get_db)) -> ProjectService:
-    repository = ProjectRepository(db)
-    return ProjectService(repository)
+    return service_factory.get_project_service(db)
 
 def get_voice_service(db: Session = Depends(get_db)) -> VoiceService:
-    repository = VoiceRepository(db)
-    multi_emotion_voice_repository = MultiEmotionVoiceRepository(db)
-    return VoiceService(repository,multi_emotion_voice_repository)
+    return service_factory.get_voice_service(db)
 
 def get_role_service(db: Session = Depends(get_db)) -> RoleService:
-    repository = RoleRepository(db)
-    return RoleService(repository)
+    return service_factory.get_role_service(db)
 
 def get_emotion_service(db: Session = Depends(get_db)) -> EmotionService:
-    repository = EmotionRepository(db)
-    return EmotionService(repository)
+    return service_factory.get_emotion_service(db)
 
 def get_strength_service(db: Session = Depends(get_db)) -> StrengthService:
-    repository = StrengthRepository(db)
-    return StrengthService(repository)
+    return service_factory.get_strength_service(db)
 
 def get_multi_emotion_voice_service(db: Session = Depends(get_db)) -> MultiEmotionVoiceService:
-    repository = MultiEmotionVoiceRepository(db)
-    return MultiEmotionVoiceService(repository)
+    return service_factory.get_multi_emotion_voice_service(db)
 
 def get_prompt_service(db: Session = Depends(get_db)) -> PromptService:
-    repository = PromptRepository(db)
-    return PromptService(repository)
+    return service_factory.get_prompt_service(db)
 
 @router.post("", response_model=Res[ChapterResponseDTO],
              summary="创建章节",
@@ -136,7 +124,7 @@ async def get_all_chapters(project_id: int, chapter_service: ChapterService = De
         res = [ChapterResponseDTO(**e.__dict__) for e in entities]
         return Res(data=res, code=200, message="查询成功")
     else:
-        return Res(data=[], code=404, message="项目不存在章节")
+        return Res(data=[], code=200, message="项目不存在章节")
 
 # 修改，传入的参数是id
 @router.put("/{chapter_id}", response_model=Res[ChapterCreateDTO],

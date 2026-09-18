@@ -1,3 +1,4 @@
+from app.services import factory as service_factory
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List
 
@@ -16,8 +17,7 @@ router = APIRouter(prefix="/llm_providers", tags=["LLMProviders"])
 # 依赖注入（实际LLM供应商可用 DI 容器）
 
 def get_llm_service(db: Session = Depends(get_db)) -> LLMProviderService:
-    repository = LLMProviderRepository(db)  # ✅ 传入 db
-    return LLMProviderService(repository)
+    return service_factory.get_llm_service(db)
 
 
 

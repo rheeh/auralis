@@ -1,3 +1,4 @@
+from app.services import factory as service_factory
 from typing import List
 
 from fastapi import APIRouter, Depends
@@ -19,20 +20,15 @@ from app.services.voice_service import VoiceService
 router = APIRouter(prefix="/multi_emotion_voices", tags=["MultiEmotionVoice"])
 
 def get_multi_emotion_voice_service(db: Session = Depends(get_db)) -> MultiEmotionVoiceService:
-    repository = MultiEmotionVoiceRepository(db)
-    return MultiEmotionVoiceService(repository)
+    return service_factory.get_multi_emotion_voice_service(db)
 def get_voice_service(db: Session = Depends(get_db)) -> VoiceService:
-    repository = VoiceRepository(db)
-    multi_emotion_voice_repository = MultiEmotionVoiceRepository(db)
-    return VoiceService(repository, multi_emotion_voice_repository)
+    return service_factory.get_voice_service(db)
 
 def get_emotion_service(db: Session = Depends(get_db)) -> EmotionService:
-    repository = EmotionRepository(db)
-    return EmotionService(repository)
+    return service_factory.get_emotion_service(db)
 
 def get_strength_service(db: Session = Depends(get_db)) -> StrengthService:
-    repository = StrengthRepository(db)
-    return StrengthService(repository)
+    return service_factory.get_strength_service(db)
 
 # 根据voice_id获取多音色
 @router.get("/voice_id/{voice_id}", response_model=Res[List[MultiEmotionVoiceResponseDTO]],summary="根据voice_id获取多音色", description="根据voice_id获取多音色")

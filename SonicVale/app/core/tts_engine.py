@@ -106,7 +106,7 @@ class TTSEngine:
         :return: 模型信息
         """
         url = f"{self.base_url}/v1/models"
-        resp = requests.get(url)
+        resp = requests.get(url, timeout=30)
         resp.raise_for_status()
         return resp.json()
 
@@ -118,7 +118,7 @@ class TTSEngine:
         """
         url = f"{self.base_url}/v1/check/audio"
         params = {"file_name": filename}
-        resp = requests.get(url, params=params)
+        resp = requests.get(url, params=params, timeout=30)
         resp.raise_for_status()
         return resp.json().get("exists", False)
 

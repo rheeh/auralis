@@ -140,15 +140,15 @@ export async function handleDemoRequest(config) {
   if (method === 'get' && url === '/emotions') return ok([{ id: 8, name: '平静' }])
   if (method === 'get' && url === '/strengths') return ok([{ id: 3, name: '中等' }, { id: 4, name: '较强' }])
   if (method === 'get' && url === `/chat/sessions/${sessionId}/audio-tasks`) return ok({ total: audioTasks.length, completed: completedLineIds.size, counts: { done: completedLineIds.size, pending: audioTasks.length - completedLineIds.size }, tasks: audioTasks })
-  if (method === 'post' && url === `/chat/sessions/${sessionId}/audio-tasks/generate`) return ok({ created: 0 }, 'test4 的现有音频已载入')
-  if (method === 'post' && new RegExp(`/chat/sessions/${sessionId}/audio-tasks/lines/\\d+/regenerate`).test(url)) return ok({ queued: true })
+  if (method === 'post' && url === `/chat/sessions/${sessionId}/audio-tasks/generate`) throw new Error('静态 Demo 使用预生成音频，不提供实时配音')
+  if (method === 'post' && new RegExp(`/chat/sessions/${sessionId}/audio-tasks/lines/\\d+/regenerate`).test(url)) throw new Error('静态 Demo 使用预生成音频，不提供实时配音')
   if (method === 'post' && url === `/chapters/add-smart-role-and-voice/${projectId}/${chapterId}`) return ok(true)
   if (method === 'put' && /\/lines\/\d+$/.test(url)) {
     const line = lines.find((item) => url.endsWith(`/${item.id}`))
     if (line) Object.assign(line, body)
     return ok(line)
   }
-  return ok(null, `静态 Demo 已忽略 ${method.toUpperCase()} ${url}`)
+  throw new Error(`静态 Demo 不支持 ${method.toUpperCase()} ${url}`)
 }
 
 export function resetDemo() { stage = 'awaiting_role_confirmation' }

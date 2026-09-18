@@ -72,20 +72,30 @@ class RoleService:
         # 防止改变project_id
         if po.project_id != project_id:
             return False
-        voice_changed = "default_voice_id" in data and data["default_voice_id"] != po.default_voice_id
-        self.repository.update(role_id, data)
-        if voice_changed:
-            lines = list(self.repository.db.execute(select(LinePO).where(LinePO.role_id == role_id)).scalars())
-            for line in lines:
-                if line.should_speak != 0 and line.track not in {"sfx", "bgm"}:
-                    line.status, line.is_done = "pending", 0
-            self.repository.db.commit()
-            for line in lines:
-                TimelineService.invalidate_line(self.repository.db, line.id, "角色音色已变化，需要重新配音")
+        voice_changed = any(key in data and data[key]!=getattr(po,key,None) for key in ('default_voice_id','tts_route','edge_voice'))
+        db=self.repository.db
+        try:
+            for key,value in data.items():setattr(po,key,value)
+            if voice_changed:
+                lines=list(db.scalars(select(LinePO).where(LinePO.role_id==role_id)))
+                for line in lines:
+                    if line.should_speak!=0 and line.track not in {'sfx','bgm'}:
+                        line.status,line.is_done='pending',0
+                    TimelineService.invalidate_line(db,line.id,'角色音色已变化，需要重新配音',commit=False)
+            db.commit()
+        except Exception:
+            db.rollback();raise
         return True
 
     def delete_role(self, role_id: int) -> bool:
-        """删除角色
-        """
-        res = self.repository.delete(role_id)
-        return res
+        from app.repositories.line_repository import LineRepository
+        from app.services.production.line_commands import LineCommands
+        role=self.repository.get_by_id(role_id)
+        if role is None:return False
+        db=self.repository.db
+        try:
+            LineCommands(LineRepository(db)).clear_role(role_id,commit=False)
+            db.delete(role);db.commit()
+        except Exception:
+            db.rollback();raise
+        return True

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.services.production.audio_state import generation_state
 
 import asyncio
 from uuid import uuid4
@@ -64,18 +65,7 @@ def _run_assistant(session_id: str, message_id: str, queue) -> None:
         db.close()
 
 
-class _ThreadsafeQueueProxy:
-    """Schedule asyncio queue writes from FastAPI's background worker thread."""
-
-    def __init__(self, queue, loop: asyncio.AbstractEventLoop):
-        self.queue = queue
-        self.loop = loop
-
-    def full(self) -> bool:
-        return bool(self.queue.maxsize and self.queue.qsize() >= self.queue.maxsize)
-
-    def put_nowait(self, item) -> None:
-        self.loop.call_soon_threadsafe(self.queue.put_nowait, item)
+from app.runtime.queue import ThreadsafeQueueProxy as _ThreadsafeQueueProxy
 
 
 @router.post("/projects/{project_id}/chapters/{chapter_id}/workspace", response_model=Res[dict])
@@ -228,7 +218,7 @@ async def generate_session_audio(
         if latest and latest.status in {"queued", "processing"}:
             skipped += 1
             continue
-        if not force and line.status == "done" and line.audio_path:
+        if not force and not generation_state(db,line)['needs_generation']:
             skipped += 1
             continue
         if q.full():
@@ -294,11 +284,8 @@ async def regenerate_line_audio(
         return _error(409, "台词不属于当前已完成会话")
     if not line.should_speak or line.track in {"sfx", "bgm"}:
         return _error(409, "当前声音轨不能生成角色配音")
-    line.production_note = dto.prompt.strip() or None
-    line.active_audio_variant_id = None
-    line.status = "pending"
-    line.is_done = 0
-    db.commit()
+    from app.services.factory import get_line_service
+    get_line_service(db).update_line(line.id,{'production_note':dto.prompt.strip() or None})
     service = AudioTaskService(db)
     latest = service.latest_for_line(session_id, line_id)
     line_dto = LineCreateDTO.model_validate({column.name: getattr(line, column.name) for column in LinePO.__table__.columns})
@@ -394,7 +381,8 @@ def resume(session_id: str, tasks: BackgroundTasks, service: ChatSessionService 
 @router.post("/sessions/{session_id}/commit", response_model=Res[dict])
 def commit(session_id: str, dto: ChatCommitDTO, db: Session = Depends(get_db)):
     try:
-        result = DramaCommitService(db).commit_session(session_id, dto.chapter_title, dto.replace_chapter_lines)
+        result = DramaCommitService(db).commit_session(session_id, dto.chapter_title, dto.replace_chapter_lines,
+            target_chapter_id=dto.target_chapter_id, expected_version=dto.expected_version, confirm_replace=dto.confirm_replace)
         from app.workflows.drama.events import WorkflowEventPublisher
         from app.models.po import ChatSessionPO
         session = db.get(ChatSessionPO, session_id)

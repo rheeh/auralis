@@ -1,3 +1,4 @@
+from app.services import factory as service_factory
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List
 
@@ -17,8 +18,7 @@ router = APIRouter(prefix="/prompts", tags=["Prompts"])
 # 依赖注入（实际提示词可用 DI 容器）
 
 def get_service(db: Session = Depends(get_db)) -> PromptService:
-    repository = PromptRepository(db)  # ✅ 传入 db
-    return PromptService(repository)
+    return service_factory.get_prompt_service(db)
 
 
 

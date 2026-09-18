@@ -1,3 +1,4 @@
+from app.services import factory as service_factory
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -18,8 +19,7 @@ router = APIRouter(prefix="/strengths", tags=["Strengths"])
 # 依赖注入（实际项目可用 DI 容器）
 
 def get_strength_service(db: Session = Depends(get_db)) -> StrengthService:
-    repository = StrengthRepository(db)
-    return StrengthService(repository)
+    return service_factory.get_strength_service(db)
 
 @router.post("", response_model=Res[StrengthResponseDTO],
              summary="创建情绪强弱枚举",

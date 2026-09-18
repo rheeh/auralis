@@ -1,232 +1,93 @@
-# app/tts_worker.py
+"""Bounded local executor. Only ordinary request data crosses the thread boundary."""
 import asyncio
 import logging
-from fastapi import FastAPI
-
 from app.core.ws_manager import manager
 from app.db.database import SessionLocal
-from app.services.factory import get_voice_service, get_emotion_service, get_strength_service
-from app.services.factory import get_multi_emotion_voice_service
-from app.services.factory import get_line_service, get_role_service, get_project_service
-from app.models.po import ChatSessionPO
-from app.core.tts_guidance import emotion_text_to_vector
+from app.models.po import ChatSessionPO, AudioTaskPO
 from app.services.audio_task_service import AudioTaskService
-from app.services.production_configuration import effective_provider_id
-from app.services.speech_direction_service import SpeechDirectionService
-from app.services.tts_trace_service import TTSTraceService, TTSRequestRecorder
+from app.services.tts_trace_service import TTSTraceService, TTSRequestRecorder, redact
+from app.integrations.tts.prepared import execute_prepared
 from app.workflows.drama.events import WorkflowEventPublisher
 
-TTS_TIMEOUT_SECONDS = 1200  # 可调
-async def tts_worker(app: FastAPI):
-    q = app.state.tts_queue
-    ex = app.state.tts_executor
+TTS_TIMEOUT_SECONDS = 1200
+
+def _record_failure(service,task_id,token,message,code='TTS_FAILED'):
+    try:
+        service.db.rollback()
+        service.fail(task_id,token,message,code)
+    except Exception:
+        service.db.rollback()
+        logging.exception('Could not persist failed task %s; startup recovery will reconcile it',task_id)
+
+
+async def _notify(db, task, remaining):
+    # Notifications are best effort after durable business completion. Failure
+    # here must never turn a completed generation into failed or kill the loop.
+    try:
+        if task.session_id:
+            session=db.get(ChatSessionPO,task.session_id)
+            if session:
+                WorkflowEventPublisher(db).publish(session,'tts_task_updated',{
+                    'task_id':task.id,'line_id':task.line_id,'status':task.status,'attempt':task.attempt,
+                    'error_message':task.error_message,'queue_size':remaining})
+        await manager.broadcast({'event':'line_update','project_id':task.project_id,
+            'session_id':task.session_id,'line_id':task.line_id,'task_id':task.id,
+            'status':task.status,'progress':remaining})
+    except Exception:
+        db.rollback()
+        logging.warning('Task notification failed for %s',task.id)
+
+async def tts_worker(app):
+    queue=app.state.tts_queue
     while True:
-        item = await q.get()
-        if isinstance(item, dict):
-            project_id = item["project_id"]
-            session_id = item.get("session_id")
-            task_id = item.get("task_id")
-            dto = item["dto"]
-        else:
-            project_id, dto = item
-            session_id = None
-            task_id = None
-        db = SessionLocal()
-        task_service = AudioTaskService(db)
-        trace_service = TTSTraceService(db)
-        generation_id = None
-        trace_secrets = ()
+        item=await queue.get()
+        db=SessionLocal()
+        service=AudioTaskService(db)
+        task_id=None;token=None
+        generation_id=None
         try:
-            line_service = get_line_service(db)
-            task = task_service.mark(task_id, "processing") if task_id else None
-            if task:
-                _publish_task_event(db, task, q.qsize())
-            if dto.should_speak == 0 or dto.track in {"sfx", "bgm"} or dto.line_type in {"sfx", "bgm"}:
-                if dto.id:
-                    line_service.update_line(dto.id, {"status": "pending", "is_done": 1})
-                task = task_service.mark(task_id, "skipped") if task_id else None
-                if task:
-                    _publish_task_event(db, task, q.qsize())
-                await manager.broadcast({
-                    "event": "line_update",
-                    "project_id": project_id,
-                    "session_id": session_id,
-                    "task_id": task_id,
-                    "line_id": dto.id,
-                    "status": "skipped",
-                    "progress": q.qsize(),
-                    "meta": "素材轨不进入 TTS，请导入或制作音效/BGM 文件"
-                })
-                await manager.broadcast({
-                    "event": "tts_queue_rest",
-                    "queue_rest": q.qsize(),
-                    "project_id": project_id
-                })
+            if not isinstance(item,dict):raise ValueError('Invalid queue item')
+            task_id=item.get('task_id');token=item.get('run_token')
+            if not task_id or not service.claim(task_id,token):
                 continue
-
-            role_service = get_role_service(db)
-            voice_service = get_voice_service(db)
-            multi_emotion_service = get_multi_emotion_voice_service(db)
-            project_service = get_project_service(db)
-            emotion_service = get_emotion_service(db)
-            strength_service = get_strength_service(db)
-
-
-            # line_service.update_line(dto.id, {"status": "processing"})
-            await manager.broadcast({
-                "event": "line_update",
-                "project_id": project_id,
-                "session_id": session_id,
-                "task_id": task_id,
-                "line_id": dto.id,
-                "status": "processing",
-                "progress": q.qsize() + 1,  # +1 包含当前正在处理的任务
-                "meta": f"角色 {dto.role_id} 开始生成"
-            })
-
-            role = role_service.get_role(dto.role_id)
-            voice = voice_service.get_voice(role.default_voice_id) if role and role.default_voice_id else None
-            reference_path = voice.reference_path if voice else None
-
-
-            # if voice.is_multi_emotion == 1:
-            #     # 使用多音色
-            #     multi_emotion = multi_emotion_service.get_multi_emotion_voice_by_voice_id_emotion_id_strength_id(voice.id, dto.emotion_id, dto.strength_id)
-            #     if multi_emotion is not None:
-            #         reference_path = multi_emotion.reference_path
-
-            # 9.13
-            emotion = emotion_service.get_emotion(dto.emotion_id) if dto.emotion_id else None
-            strength = strength_service.get_strength(dto.strength_id) if dto.strength_id else None
-            # 拼接
-            # emo_text = f"{strength.name}的{emotion.name} "
-            # if emotion.name is "解说":
-            #     emo_text = None
-            emotion_name = emotion.name if emotion else None
-            strength_name = strength.name if strength else None
-            emo_text = None
-            emo_vector = emotion_text_to_vector(emotion_name or "", strength_name or "")
-
-            project = project_service.get_project(project_id)
-            generation_id = trace_service.begin(project_id, dto.chapter_id, dto.id, task_id, {
-                "original_text": dto.text_content, "production_note": dto.production_note,
-                "emotion_id": dto.emotion_id, "strength_id": dto.strength_id,
-            })
-            prepared = SpeechDirectionService(db).prepare(project_id, dto.id, dto)
-            from app.models.po import TTSProviderPO
-            actual_provider = db.get(TTSProviderPO, prepared["provider_id"])
-            trace_secrets = (actual_provider.api_key or "",)
-            recorder = TTSRequestRecorder(db.get_bind(), generation_id, trace_secrets)
-            recorder("prepared", prepared)
-
-            # Preserve the currently generated take before the canonical output
-            # path is overwritten by a regeneration.
-            if dto.id:
-                line_service.ensure_generated_audio_version(dto.id)
-
-            loop = asyncio.get_running_loop()
-            audio_result = await asyncio.wait_for(
-                loop.run_in_executor(
-                    ex,
-                    line_service.generate_audio,
-                    reference_path,
-                    effective_provider_id(project, voice),
-                    dto.text_content,
-                    emo_text,
-                    emo_vector,
-                    dto.audio_path,
-                    role,
-                    voice,
-                    dto.line_type,
-                    dto.track,
-                    emotion_name,
-                    strength_name,
-                    dto.production_note,
-                    prepared,
-                    recorder,
-                ),
-                timeout=TTS_TIMEOUT_SECONDS
-            )
-
-            generated_version = line_service.register_generated_audio_version(dto.id, dto.audio_path, {
-                "text": dto.text_content,
-                "prompt": dto.production_note,
-                "emotion_id": dto.emotion_id,
-                "strength_id": dto.strength_id,
-                "voice_id": role.default_voice_id if role else None,
-                "task_id": task_id,
-                "generation_id": generation_id,
-            }) if dto.id else None
-            trace_service.finish(generation_id, audio=audio_result,
-                                 version_id=(generated_version or {}).get("id"), secrets=trace_secrets)
-
-            line_service.update_line(dto.id, {"status": "done", "is_done": 1})
-            task = task_service.mark(task_id, "done", audio_path=dto.audio_path) if task_id else None
-            if task:
-                _publish_task_event(db, task, q.qsize())
-            await manager.broadcast({
-                "event": "line_update",
-                "project_id": project_id,
-                "session_id": session_id,
-                "task_id": task_id,
-                "line_id": dto.id,
-                "status": "done",
-                "progress":  q.qsize(),
-                "meta": "生成完成",
-                "audio_path": dto.audio_path,
-                "audio_version_id": (generated_version or {}).get("id"),
-            })
-            # 发送给前端，队列中剩余的数量
-            await manager.broadcast({
-                "event": "tts_queue_rest",
-                "queue_rest": q.qsize(),
-                "project_id": project_id
-            })
-
-        except Exception as e:
-            if generation_id:
-                db.rollback()
-                try:
-                    trace_service.finish(generation_id, error=e, secrets=trace_secrets)
-                except Exception:
-                    db.rollback()
-                    logging.error("无法更新配音记录 %s 的失败状态", generation_id)
+            task=db.get(AudioTaskPO,task_id)
+            await _notify(db,task,queue.qsize())
+            request=item['request']
+            secrets=(request['provider'].get('api_key') or '',)
+            trace=TTSTraceService(db)
+            generation_id=trace.begin(task.project_id,task.chapter_id,task.line_id,task.id,task.input_snapshot)
+            recorder=TTSRequestRecorder(db.get_bind(),generation_id,secrets)
+            db.commit()  # release read transaction before provider I/O
+            future=asyncio.get_running_loop().run_in_executor(app.state.tts_executor,execute_prepared,request,recorder)
             try:
-                line_service.update_line(dto.id, {"status": "failed"})
+                audio=await asyncio.wait_for(asyncio.shield(future),timeout=TTS_TIMEOUT_SECONDS)
+            except asyncio.TimeoutError:
+                service.fail(task_id,token,'等待配音超时；底层请求可能仍在运行','TTS_TIMEOUT')
+                # Do not free a concurrency slot while its native thread is alive.
+                # Late output remains isolated in its own attempt path.
+                try:
+                    await asyncio.shield(future)
+                except Exception:
+                    logging.warning('Timed-out provider terminated for %s',task_id)
+                continue
+            adopted=service.complete(task_id,token,request['output_path'])
+            try:
+                trace.finish(generation_id,audio=audio,version_id=token,secrets=secrets)
             except Exception:
-                pass
-            task = task_service.mark(task_id, "failed", error=e) if task_id else None
-            if task:
-                _publish_task_event(db, task, q.qsize())
-            await manager.broadcast({
-                "event": "line_update",
-                "project_id": project_id,
-                "session_id": session_id,
-                "task_id": task_id,
-                "line_id": dto.id,
-                "status": "failed",
-                "progress":  q.qsize(),
-                "meta": f"失败: {e}"
-            })
-
+                db.rollback();logging.warning('Trace completion failed for %s',task_id)
+            await _notify(db,task,queue.qsize())
+        except asyncio.CancelledError:
+            if task_id:
+                _record_failure(service,task_id,token,'进程关闭，请检查历史产物后显式重试','PROCESS_INTERRUPTED')
+            raise
+        except Exception as exc:
+            if task_id:
+                _record_failure(service,task_id,token,redact(str(exc),locals().get('secrets',())))
+            if generation_id:
+                try:
+                    TTSTraceService(db).finish(generation_id,error=exc,secrets=locals().get('secrets',()))
+                except Exception:
+                    db.rollback();logging.warning('Trace failure recording failed for %s',task_id)
+            logging.warning('Audio attempt failed: %s',task_id)
         finally:
-
-            db.close()
-            q.task_done()
-
-
-def _publish_task_event(db, task, queue_size: int) -> None:
-    if not task.session_id:
-        return
-    session = db.get(ChatSessionPO, task.session_id)
-    if not session:
-        return
-    WorkflowEventPublisher(db).publish(session, "tts_task_updated", {
-        "task_id": task.id,
-        "line_id": task.line_id,
-        "status": task.status,
-        "attempt": task.attempt,
-        "error_message": task.error_message,
-        "audio_path": task.audio_path,
-        "queue_size": queue_size,
-    })
+            db.close();queue.task_done()

@@ -1,3 +1,4 @@
+from app.services import factory as service_factory
 import asyncio
 import os
 import logging
@@ -31,7 +32,7 @@ from app.services.role_service import RoleService
 from app.services.voice_service import VoiceService
 from app.models.po import LinePO
 from app.services.audio_task_service import AudioTaskService
-from app.dto.line_dto import LineTypeChangeDTO
+from app.dto.line_dto import LineTypeChangeDTO, LineUpdateDTO, LinePublicCreateDTO
 from app.services.line_type_service import LineTypeService
 
 router = APIRouter(prefix="/lines", tags=["Lines"])
@@ -48,31 +49,22 @@ def change_line_type(line_id: int, dto: LineTypeChangeDTO, db: Session = Depends
 # 依赖注入（实际项目可用 DI 容器）
 
 def get_line_service(db: Session = Depends(get_db)) -> LineService:
-    repository = LineRepository(db)
-    role_repository = RoleRepository(db)
-    tts_repository = TTSProviderRepository(db)
-    llm_repository = LLMProviderRepository(db)
-    return LineService(repository, role_repository, tts_repository, llm_repository)
+    return service_factory.get_line_service(db)
 def get_project_service(db: Session = Depends(get_db)) -> ProjectService:
-    repository = ProjectRepository(db)
-    return ProjectService(repository)
+    return service_factory.get_project_service(db)
 
 def get_chapter_service(db: Session = Depends(get_db)) -> ChapterService:
-    repository = ChapterRepository(db)
-    return ChapterService(repository)
+    return service_factory.get_chapter_service(db)
 
 def get_voice_service(db: Session = Depends(get_db)) -> VoiceService:
-    repository = VoiceRepository(db)
-    multi_emotion_voice_repository = MultiEmotionVoiceRepository(db)
-    return VoiceService(repository, multi_emotion_voice_repository)
+    return service_factory.get_voice_service(db)
 
 def get_role_service(db: Session = Depends(get_db)) -> RoleService:
-    repository = RoleRepository(db)
-    return RoleService(repository)
+    return service_factory.get_role_service(db)
 @router.post("/{project_id}", response_model=Res[LineResponseDTO],
              summary="创建台词",
              description="根据项目ID创建台词" )
-def create_line(project_id:int,dto: LineCreateDTO, line_service: LineService = Depends(get_line_service),
+def create_line(project_id:int,dto: LinePublicCreateDTO, line_service: LineService = Depends(get_line_service),
                    project_service: ProjectService = Depends(get_project_service),
                     chapter_service : ChapterService = Depends(get_chapter_service)):
     """创建台词"""
@@ -85,7 +77,7 @@ def create_line(project_id:int,dto: LineCreateDTO, line_service: LineService = D
             return Res(data=None, code=400, message=f"项目 '{project_id}' 不存在")
 
         chapter = chapter_service.get_chapter(dto.chapter_id)
-        if chapter is None:
+        if chapter is None or chapter.project_id != project_id:
             return Res(data=None, code=400, message=f"章节 '{dto.chapter_id}' 不存在")
         # 调用 Service 创建项目（返回 True/False）
 
@@ -250,18 +242,17 @@ def get_all_lines(chapter_id: int, line_service: LineService = Depends(get_line_
         return Res(data=[], code=200, message="章节不存在台词")
 
 # 修改，传入的参数是id
-@router.put("/{line_id}", response_model=Res[LineCreateDTO],
+@router.put("/{line_id}", response_model=Res[LineResponseDTO],
             summary="修改台词信息",
             description="根据台词id修改台词信息,并且不能修改章节id")
-def update_line(line_id: int, dto: LineCreateDTO, line_service: LineService = Depends(get_line_service)):
-    line = line_service.get_line(line_id)
-    if line is None:
-        return Res(data=None, code=404, message="台词不存在")
-    res = line_service.update_line(line_id, dto.dict(exclude_unset=True))
-    if res:
-        return Res(data=dto, code=200, message="修改成功")
-    else:
-        return Res(data=None, code=400, message="修改失败")
+def update_line(line_id: int, dto: LineUpdateDTO, line_service: LineService = Depends(get_line_service)):
+    if line_service.get_line(line_id) is None:
+        raise HTTPException(status_code=404, detail="台词不存在")
+    try:
+        line_service.update_line(line_id, dto.model_dump(exclude_unset=True))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return Res(data=LineResponseDTO(**line_service.get_line(line_id).__dict__), message="修改成功")
 
 
 # 根据id，删除
@@ -306,10 +297,7 @@ def update_line_audio_path(
     dto: LineCreateDTO,  # 关键：明确从 body 读取“数组”
     line_service: LineService = Depends(get_line_service),
 ):
-    res = line_service.update_audio_path(line_id,dto)
-    if not res:
-        return Res(data=None, code=400, message="更新失败")
-    return Res(data=res, code=200, message="更新成功")
+    raise HTTPException(status_code=409,detail="历史路径重命名已停用；请使用 /audio-versions/{version_id}/activate 或 /attach-audio")
 
 @router.post("/{line_id}/attach-audio", response_model=Res[dict])
 def attach_audio_asset(

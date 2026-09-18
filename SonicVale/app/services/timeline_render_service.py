@@ -36,10 +36,20 @@ class TimelineRenderService:
         timeline = TimelineService(self.db).get_chapter_timeline(project_id, chapter_id)
         self._validate_timeline(timeline, clips, assets)
 
+        from types import SimpleNamespace
+        import copy
+        def freeze(row):
+            return SimpleNamespace(**{column.name:copy.deepcopy(getattr(row,column.name)) for column in row.__table__.columns})
+        project,chapter=freeze(project),freeze(chapter)
+        clips=[freeze(clip) for clip in clips]
+        assets={key:freeze(asset) for key,asset in assets.items()}
+        tracks=[freeze(track) for track in tracks]
+        render_fingerprint=self._render_fingerprint(clips,assets)
+        self.db.commit()  # no live ORM state or transaction across FFmpeg
         duration_ms = max(clip.start_ms + clip.duration_ms for clip in clips)
         output_dir = self._output_dir(project, chapter)
         output_dir.mkdir(parents=True, exist_ok=True)
-        output_path = output_dir / "timeline_mix.wav"
+        output_path = output_dir / f"timeline_mix_{uuid4().hex}.wav"
         manifest_path = output_dir / "timeline_render_manifest.json"
         temp_output = output_dir / f".timeline_mix_{uuid4().hex}.wav"
         active_clips = [clip for clip in clips if not clip.is_muted]
@@ -54,7 +64,6 @@ class TimelineRenderService:
             temp_output.unlink(missing_ok=True)
             raise
 
-        render_fingerprint = self._render_fingerprint(clips, assets)
         rendered_at = datetime.now(timezone.utc).isoformat()
         manifest = {
             "schema_version": 2,
@@ -84,6 +93,7 @@ class TimelineRenderService:
             },
             "clips": [self._manifest_clip(clip, assets[clip.asset_id]) for clip in clips],
         }
+        self._write_json_atomic(output_path.with_suffix(".json"), manifest)
         self._write_json_atomic(manifest_path, manifest)
         return self._result_payload(manifest, output_path, manifest_path)
 
@@ -94,12 +104,15 @@ class TimelineRenderService:
         output_dir = self._output_dir(project, chapter)
         output_path = output_dir / "timeline_mix.wav"
         manifest_path = output_dir / "timeline_render_manifest.json"
-        if not output_path.is_file() or not manifest_path.is_file():
+        if not manifest_path.is_file():
             raise FileNotFoundError("当前章节还没有时间线混音成片")
         try:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
             raise ValueError("时间线渲染清单已损坏，请重新渲染") from exc
+        output_path=Path(manifest.get('output',{}).get('path',output_path))
+        if output_path.resolve().parent!=output_dir.resolve() or not output_path.is_file():
+            raise ValueError('成片路径无效或文件不存在')
         if (manifest.get("render_fingerprint") != self._render_fingerprint(clips, assets)
                 or (manifest.get("source_fingerprint") and
                     manifest["source_fingerprint"] != timeline["source_fingerprint"])):
@@ -231,6 +244,7 @@ class TimelineRenderService:
                 command,
                 check=True,
                 capture_output=True,
+                timeout=600,
                 text=True,
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
             )

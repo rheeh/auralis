@@ -1,0 +1,27 @@
+name: Offline engineering checks
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: sonicvale-front/package-lock.json
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg ripgrep
+      - run: python -m venv SonicVale/.venv
+      - run: SonicVale/.venv/bin/pip install -r SonicVale/requirements-test.txt
+      - run: npm ci --prefix sonicvale-front
+      - name: Isolated tests, FFmpeg smoke, normal and Demo builds
+        run: ./scripts/verify.sh

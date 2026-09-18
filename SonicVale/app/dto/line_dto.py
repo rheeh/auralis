@@ -97,3 +97,26 @@ class LineResponseDTO(BaseModel):
     subtitle_path : Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+
+class LineUpdateDTO(BaseModel):
+    model_config = {"extra": "forbid"}
+    text_content: str | None = Field(default=None, min_length=1, max_length=10000)
+    role_id: int | None = Field(default=None, gt=0)
+    voice_id: int | None = Field(default=None, gt=0)
+    emotion_id: int | None = Field(default=None, gt=0)
+    strength_id: int | None = Field(default=None, gt=0)
+    production_note: str | None = Field(default=None, max_length=2000)
+    scene_title: str | None = None
+    voice_profile: str | None = None
+    sound_prompt: str | None = None
+    sound_tags: list[str] | None = None
+
+
+class LinePublicCreateDTO(LineUpdateDTO):
+    chapter_id: int = Field(gt=0)
+    text_content: str = Field(min_length=1, max_length=10000)
+    line_order: int | None = Field(default=None, gt=0)
+    line_type: Literal['dialogue','narration','sfx','bgm'] = 'dialogue'
+    track: Literal['voice','narration','sfx','bgm'] = 'voice'
+    should_speak: Literal[0,1] = 1

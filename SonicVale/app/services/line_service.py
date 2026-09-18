@@ -1,5 +1,6 @@
 from __future__ import annotations
 import contextlib
+from app.services.speech import routing as speech_routing
 import hashlib
 import json
 import logging
@@ -36,6 +37,7 @@ from app.repositories.llm_provider_repository import LLMProviderRepository
 from app.core.llm_engine import LLMEngine
 from app.services.timeline_service import TimelineService
 from app.services.audio_selection import selected_audio_path
+from app.integrations.audio import transforms as audio_transforms
 
 import os
 
@@ -69,6 +71,12 @@ class LineService:
         """
         # 手动将entity转化为po
         po = LinePO(**entity.__dict__)
+        if isinstance(self.repository,LineRepository):
+            from app.models.po import ChapterPO
+            chapter=self.repository.db.get(ChapterPO,po.chapter_id)
+            role=self.role_repository.get_by_id(po.role_id) if po.role_id else None
+            if not chapter or (po.role_id and (not role or role.project_id!=chapter.project_id)):
+                raise ValueError('章节或角色归属无效')
         res = self.repository.create(po)
 
         # res(po) --> entity
@@ -85,6 +93,10 @@ class LineService:
         if not po:
             return None
         data = {k: v for k, v in po.__dict__.items() if not k.startswith("_")}
+        if isinstance(self.repository,LineRepository):
+            from app.services.production.audio_state import generation_state
+            if generation_state(self.repository.db,po)['input_current'] is False:
+                data.update(status='pending',is_done=0)
         res = LineEntity(**data)
         return res
 
@@ -93,10 +105,7 @@ class LineService:
         pos = self.repository.get_all(chapter_id)
         # pos -> entities
 
-        entities = [
-            LineEntity(**{k: v for k, v in po.__dict__.items() if not k.startswith("_")})
-            for po in pos
-        ]
+        entities = [self.get_line(po.id) for po in pos]
         return entities
 
     def delete_line(self, line_id: int) -> bool:
@@ -110,7 +119,7 @@ class LineService:
             return False
         db = self.repository.db
         tasks = db.query(AudioTaskPO).filter(AudioTaskPO.line_id == line_id).all()
-        if line.status == "processing" or any(task.status in {"queued", "processing"} for task in tasks):
+        if line.status == "processing" or any(task.status in {"queued", "processing", "completing"} for task in tasks):
             raise ValueError("本句正在等待或生成音频，请任务结束后再删除")
         serialize = lambda row: {column.name: getattr(row, column.name) for column in row.__table__.columns}
         clips = db.query(TimelineClipPO).filter(TimelineClipPO.chapter_id == line.chapter_id).all()
@@ -154,15 +163,15 @@ class LineService:
     def delete_all_lines(self, chapter_id: int) -> bool:
         """删除章节下所有台词
         """
-        # 要移除所有的音频资源
-        for line in self.get_all_lines(chapter_id):
-            if line and line.audio_path:
-                with contextlib.suppress(FileNotFoundError):
-                    os.remove(line.audio_path)
-        db = getattr(self.repository, "db", None)
-        if db is not None:
-            TimelineService.clear_chapter_timeline(db, chapter_id)
-        return self.repository.delete_all_by_chapter_id(chapter_id)
+        from app.services.production.chapter_lifecycle import prepare_removal
+        db = self.repository.db
+        try:
+            prepare_removal(db, chapter_id)
+            db.commit()
+            return True
+        except Exception:
+            db.rollback()
+            raise
 
     # 单个台词新增
     def add_new_line(self, line: LineCreateDTO,project_id,chapter_id,index,emotions_dict, strengths_dict,audio_path):
@@ -194,10 +203,14 @@ class LineService:
 
     # 更新line
     def update_line(self, line_id: int, data: dict) -> bool:
+        from app.services.production.line_commands import LineCommands
+        if isinstance(self.repository, LineRepository):
+            return LineCommands(self.repository).update(line_id, data)
+        # Legacy test/integration repository adapter; production uses LineCommands.
         po = self.repository.get_by_id(line_id)
         if po is None:
             return False
-        if po.track in {"sfx", "bgm"} and "sound_tags" not in data and any(k in data for k in ("sound_prompt", "text_content")):
+        if getattr(po,"track",None) in {"sfx", "bgm"} and "sound_tags" not in data and any(k in data for k in ("sound_prompt", "text_content")):
             data = {**data, "sound_tags": infer_tags(data.get("sound_prompt") or data.get("text_content") or po.sound_prompt)}
         generation_fields = {"text_content", "production_note", "emotion_id", "strength_id", "voice_id"}
         changed = any(key in data and data[key] != getattr(po, key, None) for key in generation_fields)
@@ -211,24 +224,7 @@ class LineService:
     # 生成音频（服务器和本地两种方式）
 
     def resolve_tts_route(self, role=None, line_type: str | None = None, track: str | None = None, emotion_name: str | None = None) -> str:
-        if track in {"sfx", "bgm"} or line_type in {"sfx", "bgm"}:
-            return "skip"
-
-        route = (getattr(role, "tts_route", None) or "auto").lower()
-        if route in {"edge", "cloud"}:
-            return route
-
-        importance = (getattr(role, "role_importance", None) or "supporting").lower()
-        role_name = (getattr(role, "name", None) or "").strip()
-        neutral_emotions = {"", "平静", "自然", "解说", "旁白"}
-
-        if role_name == "旁白" or line_type == "narration":
-            return "edge"
-        if importance in {"lead", "key"}:
-            return "cloud"
-        if emotion_name and emotion_name not in neutral_emotions:
-            return "cloud"
-        return "edge"
+        return speech_routing.resolve_tts_route(role,line_type,track,emotion_name)
 
     def generate_audio(
         self,
@@ -337,16 +333,7 @@ class LineService:
         return audio
 
     def resolve_edge_voice(self, role=None, voice=None) -> str:
-        role_edge_voice = (getattr(role, "edge_voice", None) or "").strip()
-        if role_edge_voice:
-            return role_edge_voice
-
-        description = (getattr(voice, "description", None) or "").strip()
-        match = re.search(r"edge_voice\s*:\s*([^,\s]+)", description)
-        if match:
-            return match.group(1).strip()
-
-        return EdgeTTSEngine.DEFAULT_VOICE
+        return speech_routing.resolve_edge_voice(role,voice)
 
     def generate_cloud_audio(self, reference_path: str,tts_provider_id,content,emo_text:str,emo_vector:list[float],save_path= None, voice=None, instruction: str | None = None, provider_overrides=None, request_observer=None):
         tts_provider = self.tts_provider_repository.get_by_id(tts_provider_id)
@@ -416,50 +403,19 @@ class LineService:
 
     @staticmethod
     def resolve_cosyvoice_voice(voice=None) -> str | None:
-        description = (getattr(voice, "description", None) or "").strip()
-        match = re.search(r"(?:cosyvoice_voice|qwen_voice)\s*:\s*([^,\s]+)", description)
-        return match.group(1).strip() if match else None
+        return speech_routing.resolve_cosyvoice_voice(voice)
 
     # 将角色role_id下所有台词的role_id都置位空
     def clear_role_id(self, role_id: int):
-        # 先获取role_id下所有台词实体
-        pos = self.repository.get_lines_by_role_id(role_id)
-        for po in pos:
-            self.repository.update(po.id, {"role_id": None})
+        from app.services.production.line_commands import LineCommands
+        return LineCommands(self.repository).clear_role(role_id)
 
     def batch_update_line_order(self,line_orders:List[LineOrderDTO]):
-        for line_order in line_orders:
-            self.update_line(line_order.id,{"line_order":line_order.line_order})
-        return True
+        from app.services.production.line_commands import LineCommands
+        return LineCommands(self.repository).reorder(line_orders)
 
     def update_audio_path(self, id, dto) -> bool:
-        try:
-            po = self.get_line(id)
-            old_path = po.audio_path
-            new_path = dto.audio_path
-
-            if not old_path:
-                return False  # 原始路径为空
-
-            if not os.path.exists(old_path):
-                return False  # 原始文件不存在
-
-            if os.path.exists(new_path):
-                return False  # 目标文件已存在，避免覆盖
-
-            # 确保目标目录存在
-            os.makedirs(os.path.dirname(new_path), exist_ok=True)
-
-            # 重命名文件
-            shutil.move(old_path, new_path)
-
-            # 更新数据库
-            self.update_line(id, {"audio_path": new_path})
-            return True
-
-        except Exception as e:
-            logging.exception("[update_audio_path] 失败: %s", e)
-            return False
+        raise ValueError("音频版本路径不可重命名；请使用选用版本或素材导入接口")
 
     def attach_audio_asset(self, line_id: int, source_path: str) -> str:
         po = self.repository.get_by_id(line_id)
@@ -487,10 +443,9 @@ class LineService:
             shutil.copy2(source_path, target_path)
 
         production_note = self._clear_placeholder_note(getattr(po, "production_note", None))
-        po.audio_versions = []
-        po.active_audio_version_id = None
-        po.active_audio_variant_id = None
-        self.repository.update(po.id, {
+        self.update_line(po.id, {
+            "active_audio_version_id": None,
+            "active_audio_variant_id": None,
             "audio_path": target_path,
             "status": "done",
             "is_done": 1,
@@ -499,7 +454,6 @@ class LineService:
             "audio_events": getattr(po, "audio_events", None) or [],
             "audio_variants": getattr(po, "audio_variants", None) or [],
         })
-        self._invalidate_timeline(po.id, "音频素材已替换")
         return target_path
 
     def _is_placeholder_material(self, line) -> bool:
@@ -517,356 +471,23 @@ class LineService:
         ]
         return "\n".join(item for item in lines if item)
 
-    def _convert_audio_to_wav(self, source_path: str, target_path: str, sr: int = 44100, ch: int = 2) -> str:
-        if not os.path.exists(source_path):
-            raise FileNotFoundError(source_path)
-        os.makedirs(os.path.dirname(target_path) or ".", exist_ok=True)
-        cmd = [
-            getFfmpegPath(),
-            "-y",
-            "-i",
-            source_path,
-            "-vn",
-            "-ar",
-            str(sr),
-            "-ac",
-            str(ch),
-            "-c:a",
-            "pcm_s16le",
-            target_path,
-        ]
-        subprocess.run(
-            cmd,
-            check=True,
-            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
-        )
-        return target_path
+    def _convert_audio_to_wav(self, *args, **kwargs):
+        return audio_transforms._convert_audio_to_wav(*args, **kwargs)
 
-    def process_audio_ffmpeg(
-            self,
-            audio_path: str,
-            speed: float = 1.0,
-            volume: float = 1.0,
-            start_ms: int | None = None,
-            end_ms: int | None = None,
-            out_path: str | None = None,
-            keep_format: bool = True,  # 是否保持原文件采样率/声道
-            default_sr: int = 44100,
-            default_ch: int = 2
-    ):
-        """
-        使用 ffmpeg 对音频进行变速 (0.5~2.0)、音量调整、可选裁剪。
-        输出 WAV PCM16。
-        如果 keep_format=True，则保持输入文件的 sr/ch 不变。
-        """
-        ffmpeg_path = getFfmpegPath()
-        if not os.path.exists(audio_path):
-            raise FileNotFoundError(audio_path)
-
-        # 获取原始参数
-        info = sf.info(audio_path)
-        target_sr = info.samplerate if keep_format else default_sr
-        target_ch = info.channels if keep_format else default_ch
-
-        # 参数规整
-        speed = float(np.clip(speed or 1.0, 0.5, 2.0))
-        volume = 1.0 if volume is None else max(0.0, float(volume))
-
-        # 输出路径
-        target_path = out_path or audio_path
-        os.makedirs(os.path.dirname(target_path) or ".", exist_ok=True)
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav",
-                                         dir=os.path.dirname(target_path) or ".") as tmp:
-            tmp_path = tmp.name
-
-        # 构建 ffmpeg 命令
-        filter_chain = [f"atempo={speed}"]
-        if abs(volume - 1.0) > 1e-6:
-            filter_chain.append(f"volume={volume}")
-
-        cmd = [ffmpeg_path, "-y"]
-        if start_ms is not None:
-            cmd.extend(["-ss", str(start_ms / 1000)])
-        cmd.extend(["-i", audio_path])
-        if end_ms is not None:
-            cmd.extend(["-to", str(end_ms / 1000)])
-        cmd.extend([
-            "-af", ",".join(filter_chain),
-            "-ar", str(target_sr),
-            "-ac", str(target_ch),
-            "-c:a", "pcm_s16le",
-            tmp_path
-        ])
-
-        subprocess.run(cmd, check=True,
-                       creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0)
-
-        # 软限幅：避免 clipping
-        data, sr = sf.read(tmp_path, dtype="float32", always_2d=True)
-        peak = float(np.max(np.abs(data)))
-        if peak > 1.0:
-            data = data / peak
-            sf.write(tmp_path, data, sr, format="WAV", subtype="PCM_16")
-
-        os.replace(tmp_path, target_path)
-        return target_path
+    def process_audio_ffmpeg(self, *args, **kwargs):
+        return audio_transforms.process_audio_ffmpeg(*args, **kwargs)
 
 
     # 删除区间进行拼接
-    def process_audio_ffmpeg_cut(
-            self,
-            audio_path: str,
-            speed: float = 1.0,
-            volume: float = 1.0,
-            start_ms: int | None = None,
-            end_ms: int | None = None,
-            silence_sec: float = 0.0,  # 末尾静音时长，单位秒
-            out_path: str | None = None,
-            keep_format: bool = True,  # 是否保持原文件采样率/声道
-            default_sr: int = 44100,
-            default_ch: int = 2
-    ):
-        """
-        使用 ffmpeg 对音频进行变速 (0.5~2.0)、音量调整。
-        删除 [start_ms, end_ms] 区间，并拼接前后音频。
-        输出 WAV PCM16。
-        可在末尾附加 silence_sec 秒静音。
-        """
-        ffmpeg_path = getFfmpegPath()
-        if not os.path.exists(audio_path):
-            raise FileNotFoundError(audio_path)
-
-        # 获取原始参数
-        info = sf.info(audio_path)
-        target_sr = info.samplerate if keep_format else default_sr
-        target_ch = info.channels if keep_format else default_ch
-
-        # 参数规整
-        speed = float(np.clip(speed or 1.0, 0.5, 2.0))
-        volume = 1.0 if volume is None else max(0.0, float(volume))
-
-        # 输出路径
-        target_path = out_path or audio_path
-        os.makedirs(os.path.dirname(target_path) or ".", exist_ok=True)
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav",
-                                         dir=os.path.dirname(target_path) or ".") as tmp:
-            tmp_path = tmp.name
-
-        # 构建 ffmpeg 命令
-        if start_ms is None or end_ms is None or end_ms <= start_ms:
-            # 无剪切
-            if silence_sec > 0:
-                # 添加静音
-                cmd = [
-                    ffmpeg_path, "-y",
-                    "-i", audio_path,
-                    "-f", "lavfi", "-t", str(silence_sec),
-                    "-i", f"anullsrc=channel_layout={'stereo' if target_ch == 2 else 'mono'}:sample_rate={target_sr}",
-                    "-filter_complex",
-                    f"[0:a]atempo={speed},volume={volume}[main];"
-                    f"[main][1:a]concat=n=2:v=0:a=1[out]",
-                    "-map", "[out]",
-                    "-ar", str(target_sr),
-                    "-ac", str(target_ch),
-                    "-c:a", "pcm_s16le",
-                    tmp_path
-                ]
-            elif silence_sec < 0:
-                # 裁掉末尾 abs(silence_sec)
-                cut_dur = info.duration + silence_sec
-                if cut_dur <= 0:
-                    cut_dur = 0  # 整段裁掉
-
-                cmd = [
-                    ffmpeg_path, "-y",
-                    "-i", audio_path,
-                    "-filter_complex",
-                    f"[0:a]atempo={speed},volume={volume},atrim=0:{cut_dur}[out]",
-                    "-map", "[out]",
-                    "-ar", str(target_sr),
-                    "-ac", str(target_ch),
-                    "-c:a", "pcm_s16le",
-                    tmp_path
-                ]
-            else:
-                # 不处理末尾
-                cmd = [
-                    ffmpeg_path, "-y", "-i", audio_path,
-                    "-af", f"atempo={speed},volume={volume}",
-                    "-ar", str(target_sr),
-                    "-ac", str(target_ch),
-                    "-c:a", "pcm_s16le",
-                    tmp_path
-                ]
-
-
-        else:
-
-            # 剪切
-
-            start_sec = start_ms / 1000
-
-            end_sec = end_ms / 1000
-
-            if silence_sec > 0:
-
-                # 拼接 + 添加静音
-
-                cmd = [
-
-                    ffmpeg_path, "-y",
-
-                    "-i", audio_path,
-
-                    "-f", "lavfi", "-t", str(silence_sec),
-
-                    "-i", f"anullsrc=channel_layout={'stereo' if target_ch == 2 else 'mono'}:sample_rate={target_sr}",
-
-                    "-filter_complex",
-
-                    f"[0:a]atrim=0:{start_sec},asetpts=PTS-STARTPTS[first];"
-
-                    f"[0:a]atrim={end_sec},asetpts=PTS-STARTPTS[second];"
-
-                    f"[first][second]concat=n=2:v=0:a=1,atempo={speed},volume={volume}[main];"
-
-                    f"[main][1:a]concat=n=2:v=0:a=1[out]",
-
-                    "-map", "[out]",
-
-                    "-ar", str(target_sr),
-
-                    "-ac", str(target_ch),
-
-                    "-c:a", "pcm_s16le",
-
-                    tmp_path
-
-                ]
-
-            elif silence_sec < 0:
-
-                # 拼接后再裁掉末尾
-
-                cut_dur = info.duration + silence_sec
-                if cut_dur <= 0:
-                    cut_dur = 0  # 整段裁掉
-
-                cmd = [
-
-                    ffmpeg_path, "-y", "-i", audio_path,
-
-                    "-filter_complex",
-
-                    f"[0:a]atrim=0:{start_sec},asetpts=PTS-STARTPTS[first];"
-
-                    f"[0:a]atrim={end_sec},asetpts=PTS-STARTPTS[second];"
-
-                    f"[first][second]concat=n=2:v=0:a=1,atempo={speed},volume={volume},atrim=0:{cut_dur}[out]",
-
-                    "-map", "[out]",
-
-                    "-ar", str(target_sr),
-
-                    "-ac", str(target_ch),
-
-                    "-c:a", "pcm_s16le",
-
-                    tmp_path
-
-                ]
-
-            else:
-
-                # 拼接但不处理末尾
-
-                cmd = [
-
-                    ffmpeg_path, "-y", "-i", audio_path,
-
-                    "-filter_complex",
-
-                    f"[0:a]atrim=0:{start_sec},asetpts=PTS-STARTPTS[first];"
-
-                    f"[0:a]atrim={end_sec},asetpts=PTS-STARTPTS[second];"
-
-                    f"[first][second]concat=n=2:v=0:a=1,atempo={speed},volume={volume}[out]",
-
-                    "-map", "[out]",
-
-                    "-ar", str(target_sr),
-
-                    "-ac", str(target_ch),
-
-                    "-c:a", "pcm_s16le",
-
-                    tmp_path
-
-                ]
-
-        # 执行 ffmpeg
-        subprocess.run(
-            cmd, check=True,
-            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
-        )
-
-        # 软限幅：避免 clipping
-        data, sr = sf.read(tmp_path, dtype="float32", always_2d=True)
-        peak = float(np.max(np.abs(data)))
-        if peak > 1.0:
-            data = data / peak
-            sf.write(tmp_path, data, sr, format="WAV", subtype="PCM_16")
-
-        os.replace(tmp_path, target_path)
-        return target_path
-
-    def process_audio(self, line_id, dto:LineAudioProcessDTO):
-        line = self.get_line(line_id)
-        if line:
-            if not line.audio_path or not os.path.exists(line.audio_path):
-                return False
-            if os.path.splitext(line.audio_path)[1].lower() != ".wav":
-                base = os.path.splitext(line.audio_path)[0]
-                wav_path = f"{base}_processed.wav"
-                self._convert_audio_to_wav(line.audio_path, wav_path)
-                self.update_line(line_id, {"audio_path": wav_path})
-                line.audio_path = wav_path
-        #     读取音频文件
-        #     audio_file =self.process_audio_ffmpeg(line.audio_path, dto.speed, dto.volume,dto.start_ms,dto.end_ms)
-        # 删除拼接
-        #     audio_file = self.process_audio_ffmpeg_cut(line.audio_path, dto.speed, dto.volume, dto.start_ms, dto.end_ms, dto.tail_silence_sec,dto.current_ms)
-            processor = AudioProcessor(line.audio_path)
-            start_ms = dto.start_ms
-            end_ms = dto.end_ms
-            speed = dto.speed
-            volume = dto.volume
-            current_ms = dto.current_ms
-            silence_sec = dto.silence_sec
-            # ---------- (1) 优先裁剪 ----------
-            if start_ms is not None and end_ms is not None and end_ms > start_ms:
-                logging.info("裁剪")
-                processor.cut(start_ms, end_ms)
-
-            # ---------- (2) 插入静音 ----------
-            elif current_ms is not None and silence_sec is not None and silence_sec != 0:
-                logging.info("插入静音")
-                processor.insert_silence(current_ms, silence_sec)
-
-            # ---------- (3) 末尾静音/裁剪 ----------
-            elif current_ms is None and silence_sec is not None and silence_sec != 0:
-                logging.info("末尾静音/裁剪")
-                processor.append_silence(silence_sec)
-
-            # ---------- (4) 音量 + 变速 ----------
-            if speed != 1.0:
-                processor.change_speed(speed)
-            if volume != 1.0:
-                processor.change_volume(volume)
-            logging.info("音频处理完成")
-            return True
-
-        else:
+    def process_audio_ffmpeg_cut(self, *args, **kwargs):
+        return audio_transforms.process_audio_ffmpeg_cut(*args, **kwargs)
+
+    def process_audio(self, line_id, dto: LineAudioProcessDTO):
+        """Legacy URL delegates to non-destructive version creation."""
+        if not self.repository.get_by_id(line_id):
             return False
+        self.create_audio_variant(line_id,LineAudioVariantDTO(**dto.model_dump()))
+        return True
 
     def ensure_generated_audio_version(self, line_id: int) -> dict | None:
         """Archive a legacy source before a regeneration overwrites it."""
@@ -912,12 +533,11 @@ class LineService:
             **(metadata or {}),
         }
         versions.append(version)
-        line.active_audio_variant_id = None
-        self.repository.update(line_id, {
+        self.update_line(line_id, {
+            "active_audio_variant_id": None,
             "audio_versions": versions,
             "active_audio_version_id": version_id,
         })
-        self._invalidate_timeline(line_id, "新的 TTS 版本已生成")
         return version
 
     def get_generated_audio_version(self, line_id: int, version_id: str) -> dict:
@@ -938,9 +558,7 @@ class LineService:
         audio_path = os.path.abspath(os.path.expanduser(version.get("audio_path") or ""))
         if not os.path.isfile(audio_path):
             raise FileNotFoundError("生成音频版本文件不存在")
-        line.active_audio_variant_id = None
-        self.repository.update(line_id, {"active_audio_version_id": version_id})
-        self._invalidate_timeline(line_id, "当前 TTS 版本已切换")
+        self.update_line(line_id, {"active_audio_variant_id": None, "active_audio_version_id": version_id})
         return version
 
     def create_audio_variant(self, line_id: int, dto: LineAudioVariantDTO) -> dict:
@@ -1003,11 +621,10 @@ class LineService:
         }
         variants = list(getattr(line, "audio_variants", None) or [])
         variants.append(variant)
-        self.repository.update(line_id, {
+        self.update_line(line_id, {
             "audio_variants": variants,
             "active_audio_variant_id": variant_id,
         })
-        self._invalidate_timeline(line_id, "新的后期处理版本已生成")
         return variant
 
     def resolve_audio_path(self, line, original: bool = False) -> str:
@@ -1018,8 +635,12 @@ class LineService:
         audio_path = os.path.abspath(os.path.expanduser(variant.get("audio_path") or ""))
         if not os.path.isfile(audio_path):
             raise FileNotFoundError("音频版本文件不存在")
-        self.repository.update(line_id, {"active_audio_variant_id": variant_id})
-        self._invalidate_timeline(line_id, "当前后期处理版本已切换")
+        source=variant.get('source_audio_version_id')
+        if source:
+            self.get_generated_audio_version(line_id,source)
+        changes={'active_audio_variant_id':variant_id}
+        if source:changes['active_audio_version_id']=source
+        self.update_line(line_id,changes)
         return variant
 
     def get_audio_variant(self, line_id: int, variant_id: str) -> dict:
@@ -1040,15 +661,16 @@ class LineService:
         if not variant:
             raise ValueError("音频版本不存在")
         audio_path = os.path.abspath(os.path.expanduser(variant.get("audio_path") or ""))
-        if audio_path and os.path.isfile(audio_path):
-            os.remove(audio_path)
+        # Removing a selection archives its metadata and retains the file.
+        from pathlib import Path
+        history=Path(getConfigPath())/'audio_variant_history'
+        history.mkdir(parents=True,exist_ok=True)
+        (history/f'{line_id}-{variant_id}-{uuid4().hex}.json').write_text(
+            json.dumps({'line_id':line_id,'variant':variant},ensure_ascii=False,indent=2),encoding='utf-8')
         updates = {"audio_variants": [item for item in variants if item.get("id") != variant_id]}
         if getattr(line, "active_audio_variant_id", None) == variant_id:
-            # LineRepository.update intentionally skips None, so clear this tracked
-            # SQLAlchemy attribute directly before the repository commits the row.
-            line.active_audio_variant_id = None
-        self.repository.update(line_id, updates)
-        self._invalidate_timeline(line_id, "后期处理版本已删除")
+            updates["active_audio_variant_id"] = None
+        self.update_line(line_id, updates)
         return True
 
     # 导出音频,合并音频，并且导出字幕

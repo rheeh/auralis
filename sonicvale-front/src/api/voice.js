@@ -1,3 +1,4 @@
+import { localMediaUrl } from './config'
 import request from './config'
 import { API_BASE_URL } from './config'
 
@@ -17,7 +18,7 @@ export function fetchVoice(id) {
 
 export function getVoiceAudioUrl(voiceId, version = 0) {
   const query = version ? `?v=${encodeURIComponent(version)}` : ''
-  return `${API_BASE_URL}voices/${voiceId}/audio${query}`
+  return localMediaUrl(`${API_BASE_URL}voices/${voiceId}/audio${query}`)
 }
 
 // 查询某个 TTS Provider 下的所有音色

@@ -1,4 +1,7 @@
 from __future__ import annotations
+from app.services.audio_selection import selected_audio_path
+from app.services.production.audio_state import generation_state
+from app.services import factory as service_factory
 
 import os
 import shutil
@@ -38,16 +41,13 @@ PLACEHOLDER_MATERIAL_MARKER = "[AURALIS_PLACEHOLDER_MATERIAL]"
 # 依赖注入（实际项目可用 DI 容器）
 
 def get_service(db: Session = Depends(get_db)) -> ProjectService:
-    repository = ProjectRepository(db)  # ✅ 传入 db
-    return ProjectService(repository)
+    return service_factory.get_project_service(db)
 
 def get_chapter_service(db: Session = Depends(get_db)) -> ChapterService:
-    repository = ChapterRepository(db)  # ✅ 传入 db
-    return ChapterService(repository)
+    return service_factory.get_chapter_service(db)
 
 def get_role_service(db: Session = Depends(get_db)) -> RoleService:
-    repository = RoleRepository(db)  # ✅ 传入 db
-    return RoleService(repository)
+    return service_factory.get_role_service(db)
 
 
 @router.post("/", response_model=Res[ProjectResponseDTO],
@@ -139,17 +139,17 @@ def get_project_readiness(project_id: int, db: Session = Depends(get_db)):
     missing_material_lines = [
         _line_ref(line)
         for line in material_lines
-        if not _audio_ready(line.audio_path)
+        if not _audio_ready(selected_audio_path(line))
     ]
     placeholder_material_lines = [
         _line_ref(line)
         for line in material_lines
-        if _audio_ready(line.audio_path) and _is_material_placeholder(line)
+        if _audio_ready(selected_audio_path(line)) and _is_material_placeholder(line)
     ]
     missing_speakable_audio_lines = [
         _line_ref(line)
         for line in speakable_lines
-        if not _audio_ready(line.audio_path) or line.status != "done" or line.is_done != 1
+        if generation_state(db,line)["needs_generation"]
     ]
 
     llm = llm_repository.get_by_id(project.llm_provider_id) if project.llm_provider_id else None
@@ -243,7 +243,7 @@ def repair_project_readiness(
 
     for line in lines:
         try:
-            if sync_audio_status and _audio_ready(line.audio_path):
+            if sync_audio_status and _audio_ready(selected_audio_path(line)) and generation_state(db,line)["input_current"] is not False:
                 if line.status != "done" or line.is_done != 1:
                     line_repository.update(line.id, {"status": "done", "is_done": 1})
                     synced_audio += 1

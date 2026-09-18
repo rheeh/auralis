@@ -1,3 +1,4 @@
+from app.services import factory as service_factory
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List
 
@@ -16,8 +17,7 @@ router = APIRouter(prefix="/tts_providers", tags=["TTSProviders"])
 # 依赖注入（实际TTS供应商可用 DI 容器）
 
 def get_service(db: Session = Depends(get_db)) -> TTSProviderService:
-    repository = TTSProviderRepository(db)  # ✅ 传入 db
-    return TTSProviderService(repository)
+    return service_factory.get_tts_service(db)
 
 
 @router.post("/", response_model=Res[TTSProviderResponseDTO],

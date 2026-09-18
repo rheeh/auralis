@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 from uuid import uuid4
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update, or_
 from sqlalchemy.orm import Session
 
 from app.core.config import DRAMA_WORKFLOW_MAX_ITERATIONS
@@ -74,8 +74,6 @@ class DramaWorkflowService:
     ) -> dict[str, Any]:
         action = WorkflowAction.model_validate(raw_action)
         session = self._session(session_id)
-        self._validate_action(session, action.action)
-
         existing = self.db.execute(
             select(ChatMessagePO).where(
                 ChatMessagePO.session_id == session_id,
@@ -85,17 +83,20 @@ class DramaWorkflowService:
         if existing and record_user_message:
             return self.snapshot(session_id)
 
-        if record_user_message:
-            self._add_message(
-                session_id,
-                "user",
-                "confirm" if action.action.startswith("confirm") else "text",
-                action.feedback or self._action_label(action.action),
-                action.model_dump(),
-                action.client_request_id,
-            )
+        self._validate_action(session, action.action)
+        def operation():
+            if record_user_message:
+                self._add_message(
+                    session_id,
+                    "user",
+                    "confirm" if action.action.startswith("confirm") else "text",
+                    action.feedback or self._action_label(action.action),
+                    action.model_dump(),
+                    action.client_request_id,
+                )
 
-        return self._run_locked(session, lambda: self._dispatch(session, action))
+            return self._dispatch(session, action)
+        return self._run_locked(session, operation)
 
     def resume(self, session_id: str) -> dict[str, Any]:
         session = self._session(session_id)
@@ -140,6 +141,7 @@ class DramaWorkflowService:
         _, run, project = self._context(session.id)
         self._set_stage(session, "parsing")
         parsed = self.source_parser.parse(project, session.source_text or "", session.instruction)
+        self._assert_lease(session.id)
         run.parsed_json = parsed
         run.current_stage = "parsing"
         run.error_message = None
@@ -191,6 +193,7 @@ class DramaWorkflowService:
             previous_roles or None,
             feedback,
         )
+        self._assert_lease(session.id)
         revision = self._save_revision(session.id, run.id, "roles", {"roles": roles}, feedback)
         self._set_stage(
             session,
@@ -231,6 +234,7 @@ class DramaWorkflowService:
             previous_script,
             feedback,
         )
+        self._assert_lease(session.id)
         label = "用户意见稿" if feedback else "初稿"
         source = "user_feedback" if feedback else "ai_initial"
         revision = self._save_script_revision(
@@ -255,16 +259,30 @@ class DramaWorkflowService:
             "label": label,
             "review_status": "reviewing",
         })
+        session.pending_confirm_json={'checkpoint':'initial_review','feedback':feedback}
+        self.db.commit()
+        return self._review_saved_script(session, roles, feedback)
+
+    def _review_saved_script(self, session, roles, feedback):
+        _,run,project=self._context(session.id)
+        script=run.draft_json
+        revision=run.draft_revision
+        checkpoint=(session.pending_confirm_json or {}).get('checkpoint','initial_review')
+        self._set_stage(session,'reviewing_script',pending={'checkpoint':checkpoint,'feedback':feedback})
         review_instruction = "\n".join(part for part in (session.instruction, feedback) if part)
-        initial_review = self.script_reviewer.review(
-            project,
-            run.parsed_json or {},
-            roles,
-            session.source_text or "",
-            script,
-            self.script_drafter._narration_issues(script),
-            review_instruction,
-        )
+        if checkpoint=='repair' and run.review_json:
+            initial_review=run.review_json
+        else:
+            initial_review = self.script_reviewer.review(
+                project,
+                run.parsed_json or {},
+                roles,
+                session.source_text or "",
+                script,
+                self.script_drafter._narration_issues(script),
+                review_instruction,
+            )
+            self._assert_lease(session.id)
         review = initial_review
         repair_applied = False
         self._update_script_revision(
@@ -273,7 +291,10 @@ class DramaWorkflowService:
             review=initial_review,
             status="reviewed" if initial_review.get("passed") else "needs_repair",
         )
-        if not initial_review.get("passed"):
+        if not initial_review.get("passed") and checkpoint!='final_review':
+            run.review_json=initial_review
+            session.pending_confirm_json={'checkpoint':'repair','feedback':feedback}
+            self.db.commit()
             script = self.script_drafter.revise_from_review(
                 project,
                 run.parsed_json or {},
@@ -283,6 +304,7 @@ class DramaWorkflowService:
                 initial_review,
                 review_instruction,
             )
+            self._assert_lease(session.id)
             repair_applied = True
             revision = self._save_script_revision(
                 session.id,
@@ -296,6 +318,7 @@ class DramaWorkflowService:
             run.draft_json = script
             run.review_json = None
             run.draft_revision = revision
+            session.pending_confirm_json={"checkpoint":"final_review","feedback":feedback}
             self.db.commit()
             self._add_message(
                 session.id,
@@ -318,7 +341,8 @@ class DramaWorkflowService:
                 self.script_drafter._narration_issues(script),
                 review_instruction,
             )
-        review["repair_applied"] = repair_applied
+        self._assert_lease(session.id)
+        review["repair_applied"] = repair_applied or checkpoint=="final_review"
         review["initial_score"] = initial_review.get("score")
         self._update_script_revision(session.id, revision, review=review, status="reviewed")
         run.draft_json = script
@@ -383,6 +407,9 @@ class DramaWorkflowService:
         if retry_stage in {"awaiting_role_confirmation"}:
             previous = (self._latest_revision(session.id, "roles") or {}).get("roles", [])
             return self._generate_roles(session, previous_roles=previous, feedback="")
+        if retry_stage == "reviewing_script":
+            return self._review_saved_script(session,self._confirmed_roles(session.id),
+                (session.pending_confirm_json or {}).get('feedback',''))
         if retry_stage in {"generating_script", "awaiting_script_confirmation"}:
             _, run, _ = self._context(session.id)
             return self._generate_script(
@@ -416,7 +443,6 @@ class DramaWorkflowService:
         session.pending_confirm_json = pending
         session.last_error_code = None
         session.last_error_message = None
-        self.db.commit()
         event_type = "awaiting_confirmation" if confirm_type else "stage_started"
         self.events.publish(session, event_type, {"confirm_type": confirm_type} if confirm_type else {"stage": stage})
 
@@ -427,6 +453,11 @@ class DramaWorkflowService:
         except Exception as exc:
             failed_stage = session.current_stage
             logging.exception("对话式改编失败: session=%s stage=%s", session.id, failed_stage)
+            try:
+                self._assert_lease(session.id)
+            except WorkflowConflictError:
+                self.db.rollback()
+                raise
             self._mark_failed(session.id, exc, failed_stage)
             raise
         finally:
@@ -444,7 +475,7 @@ class DramaWorkflowService:
         session.last_error_code = code
         session.last_error_message = message
         session.active_confirm_type = None
-        session.pending_confirm_json = {"type": "retry", "retry_stage": failed_stage}
+        session.pending_confirm_json = {**(session.pending_confirm_json or {}), "type": "retry", "retry_stage": failed_stage}
         if session.adaptation_run_id:
             run = self.db.get(AdaptationRunPO, session.adaptation_run_id)
             if run:
@@ -640,16 +671,30 @@ class DramaWorkflowService:
 
     def _acquire_lease(self, session: ChatSessionPO) -> str:
         now = datetime.now(timezone.utc)
-        expires = session.lease_expires_at
-        if expires and expires.tzinfo is None:
-            expires = expires.replace(tzinfo=timezone.utc)
-        if session.running_token and expires and expires > now:
-            raise WorkflowConflictError("该会话正在执行，请勿重复提交")
         token = uuid4().hex
-        session.running_token = token
-        session.lease_expires_at = now + timedelta(minutes=30)
+        stage=session.current_stage
+        result=self.db.execute(update(ChatSessionPO).where(ChatSessionPO.id==session.id,
+            ChatSessionPO.current_stage==stage,
+            or_(ChatSessionPO.running_token.is_(None),ChatSessionPO.lease_expires_at<now))
+            .values(running_token=token,lease_expires_at=now+timedelta(minutes=30)))
         self.db.commit()
+        if result.rowcount!=1:
+            raise WorkflowConflictError("该会话正在执行或阶段已改变，请勿重复提交")
+        self._lease_token=token
+        self.db.refresh(session)
         return token
+
+    def _assert_lease(self, session_id):
+        token=getattr(self,'_lease_token',None)
+        if token is None:
+            return
+        row=self.db.execute(select(ChatSessionPO.running_token,ChatSessionPO.lease_expires_at)
+                            .where(ChatSessionPO.id==session_id)).one()
+        expires=row.lease_expires_at
+        if expires and expires.tzinfo is None:
+            expires=expires.replace(tzinfo=timezone.utc)
+        if row.running_token!=token or not expires or expires<=datetime.now(timezone.utc):
+            raise WorkflowConflictError('执行租约已失效，旧结果未采用')
 
     def _release_lease(self, session_id: str, token: str) -> None:
         self.db.rollback()

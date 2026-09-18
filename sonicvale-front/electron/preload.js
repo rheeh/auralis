@@ -1,7 +1,7 @@
 // electron/preload.js
 const { contextBridge, ipcRenderer } = require('electron')
-const path = require('path')
-const os = require('os')
+const argument=name=>decodeURIComponent((process.argv.find(value=>value.startsWith(`--${name}=`))||'').split('=').slice(1).join('='))
+contextBridge.exposeInMainWorld('auralisRuntime',{apiBaseUrl:argument('auralis-api'),instanceToken:argument('auralis-token')})
 console.log('[preload] injected, electron:', process.versions.electron)
 
 // 将绝对路径转换成 file:// URL，跨平台可用
@@ -15,7 +15,7 @@ function pathToFileUrl(p) {
 
 // 获取用户主目录
 function getUserHome() {
-  return os.homedir()
+  return argument('auralis-home')
 }
 
 // 暴露给渲染进程的 API

@@ -151,6 +151,7 @@
 </template>
 
 <script setup>
+import { createRequestScope, mergeDraft } from '../features/workspace/composables/requestScope.js'
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -251,8 +252,11 @@ const assistantMission = computed(() => ({
   failed:{title:'当前步骤需要处理',detail:snapshot.value?.last_error_message||'请重试或修改输入。'},
 }[snapshot.value?.current_stage]||{title:'AI 正在推进制作',detail:'处理完成后会自动刷新并显示下一步。'}))
 
+const historyScope=createRequestScope(()=>`${workspaceEpoch}:${snapshot.value?.session_id}`)
+const sessionScope=createRequestScope(()=>workspaceEpoch)
+let roleBaseline=[]
 onMounted(loadWorkspace)
-onBeforeUnmount(() => {workspaceEpoch++;clearTimeout(pollTimer)})
+onBeforeUnmount(() => {workspaceEpoch++;historyScope.dispose();sessionScope.dispose();clearTimeout(pollTimer)})
 
 async function loadWorkspace() {
   const epoch=++workspaceEpoch
@@ -269,7 +273,7 @@ async function loadWorkspace() {
     const requested=Number(route.query.chapter_id)
     if(requested && !chapters.value.some(chapter=>chapter.id===requested))throw new Error('该章节不属于当前项目或已被移除')
     const latest=route.query.session_id?sessions.find(item=>item.session_id===route.query.session_id):requested?sessions.find(item=>item.chapter_id===requested):sessions[0]
-    snapshot.value=null;messages.value=[]
+    snapshot.value=null;messages.value=[];roleEdits.value=[];roleBaseline=[]
     if(latest)await loadSession(latest.session_id,epoch)
     else if(requested || chapters.value.length){const response=await openChapterWorkspace(projectId,requested||chapters.value[0].id);if(response?.code!==200)throw new Error(response?.message||'章节工作台打开失败');if(epoch===workspaceEpoch)await loadSession(response.data.session_id,epoch)}
     if(snapshot.value && epoch===workspaceEpoch){const location=workspaceLocation(projectId,snapshot.value.chapter_id,resolveWorkspaceView(route.query.view,snapshot.value.current_stage,snapshot.value.chapter_id),selectedLineId.value);if(!snapshot.value.chapter_id)location.query.session_id=snapshot.value.session_id;await router.replace(location)}
@@ -281,11 +285,15 @@ function requestId() { return globalThis.crypto?.randomUUID?.() || `${Date.now()
 function startNew(){workspaceEpoch++;clearTimeout(pollTimer);snapshot.value=null;messages.value=[];feedback.value='';assistantBusy.value=false;pendingAssistantMessageId.value='';draft.title='';draft.source_text='';resultView.value='output';workspaceError.value='';router.push({path:route.path,query:{view:'source',new:'1'}})}
 
 async function createSession() {
+  const actionEpoch=workspaceEpoch
+
   if (!sourceChars.value) return
   submitting.value = true
   try {
     const response = await createChatSession({ project_id:projectId, title:draft.title || null, source_text:draft.source_text, instruction:draft.instruction || null })
+    if(actionEpoch!==workspaceEpoch)return
     if (![200,202].includes(response?.code)) throw new Error(response?.message || '创建会话失败')
+    workspaceError.value=''
     snapshot.value = response.data
     await router.replace({path:route.path,query:{view:'script',session_id:response.data.session_id}})
     await refreshHistory()
@@ -294,14 +302,16 @@ async function createSession() {
 }
 
 async function loadSession(sessionId, epoch=workspaceEpoch) {
+  const token=sessionScope.begin()
   const response = await fetchChatSession(sessionId)
-  if (response?.code === 200 && epoch===workspaceEpoch) {
+  if (response?.code === 200 && epoch===workspaceEpoch && sessionScope.current(token)) {
+    workspaceError.value=''
     const nextStage=response.data.current_stage
     snapshot.value=response.data
     if (transitioning.value && nextStage!==transitionFromStage.value) {
       transitioning.value=false;transitionFromStage.value='';transitionStartedAt=0
     }
-    if (nextStage==='awaiting_role_confirmation') roleEdits.value=JSON.parse(JSON.stringify(response.data?.role_drafts?.roles||[]))
+    if (nextStage==='awaiting_role_confirmation'){const incoming=JSON.parse(JSON.stringify(response.data?.role_drafts?.roles||[]));if(!roleEdits.value.length||JSON.stringify(roleEdits.value)===JSON.stringify(roleBaseline))roleEdits.value=incoming;roleBaseline=incoming}
     await refreshHistory();schedulePoll()
   }
 }
@@ -312,7 +322,9 @@ async function refresh() {
 }
 async function refreshHistory() {
   if (!snapshot.value) return
+  const token=historyScope.begin()
   const response = await fetchChatHistory(snapshot.value.session_id,{limit:100})
+  if(!historyScope.current(token))return
   messages.value = response?.code === 200 ? response.data || [] : []
   if (pendingAssistantMessageId.value) {
     const reply=messages.value.find(item=>item.role==='assistant'&&item.payload?.in_reply_to===pendingAssistantMessageId.value)
@@ -325,10 +337,13 @@ async function sendRevision() {
 }
 async function sendSuggestedRevision(message) { await submitRevision(message) }
 async function submitRevision(message) {
+  const actionEpoch=workspaceEpoch
+
   if(!canMessage.value||assistantBusy.value)return
   assistantBusy.value=true;assistantStartedAt.value=Date.now()
   try {
     const response=await sendChatMessage(snapshot.value.session_id,{message,client_request_id:requestId()})
+    if(actionEpoch!==workspaceEpoch)return
     if(![200,202].includes(response?.code))throw new Error(response?.message||'提交失败')
     feedback.value='';pendingAssistantMessageId.value=response.data?.user_message_id||'';await refreshHistory();schedulePoll()
   }catch(error){assistantBusy.value=false;assistantStartedAt.value=0;ElMessage.error(apiError(error,'制作助手处理失败'))}
@@ -336,21 +351,27 @@ async function submitRevision(message) {
 async function confirmRoles(roles) { await submitConfirm('roles','confirm_roles',{roles}) }
 async function confirmScript(script) { autoCommit.value=true;await submitConfirm('script','confirm_script',{script}) }
 async function submitConfirm(confirmType,action,payload) {
+  const actionEpoch=workspaceEpoch
+
   if(actionBusy.value)return
   transitioning.value=true;transitionFromStage.value=snapshot.value.current_stage;transitionStartedAt=Date.now()
   submitting.value=true
   try {
     const response=await confirmChatDraft(snapshot.value.session_id,{confirm_type:confirmType,action,feedback:'',payload,client_request_id:requestId()})
+    if(actionEpoch!==workspaceEpoch)return
     if(![200,202].includes(response?.code))throw new Error(response?.message||'确认失败')
     if(response?.data?.current_stage && response.data.current_stage!==transitionFromStage.value) snapshot.value=response.data
     schedulePoll()
   }catch(error){transitioning.value=false;transitionFromStage.value='';autoCommit.value=false;ElMessage.error(apiError(error,'确认失败'))}finally{submitting.value=false}
 }
 async function commitScript() {
+  const actionEpoch=workspaceEpoch
+
   if (!snapshot.value) return
   submitting.value=true
   try {
-    const response=await commitChatSession(snapshot.value.session_id,{chapter_title:snapshot.value.title,replace_chapter_lines:true,client_request_id:requestId()})
+    const response=await commitChatSession(snapshot.value.session_id,{chapter_title:snapshot.value.title,replace_chapter_lines:false,client_request_id:requestId()})
+    if(actionEpoch!==workspaceEpoch)return
     if(response?.code!==200)throw new Error(response?.message||'写入失败')
     autoCommit.value=false
     await loadSession(snapshot.value.session_id)
@@ -358,8 +379,10 @@ async function commitScript() {
   }catch(error){ElMessage.error(apiError(error,'建立逐句制作失败'))}finally{submitting.value=false}
 }
 async function retry() {
+  const actionEpoch=workspaceEpoch
+
   submitting.value=true
-  try { const response=await resumeChatSession(snapshot.value.session_id);if(![200,202].includes(response?.code))throw new Error(response?.message);schedulePoll() }
+  try { const response=await resumeChatSession(snapshot.value.session_id);if(actionEpoch!==workspaceEpoch)return;if(![200,202].includes(response?.code))throw new Error(response?.message);schedulePoll() }
   catch(error){ElMessage.error(apiError(error,'重试失败'))}finally{submitting.value=false}
 }
 function schedulePoll() {

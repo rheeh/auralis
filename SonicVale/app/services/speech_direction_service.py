@@ -60,9 +60,16 @@ class SpeechDirectionService:
         if row is None:
             row = ProjectSpeechProfilePO(project_id=project_id, revision=0)
             self.db.add(row)
+        if row.settings == dto.model_dump():
+            return self.settings(project_id)
         row.settings = dto.model_dump()
         row.revision += 1
         row.updated_at = datetime.now(timezone.utc)
+        from app.services.timeline_service import TimelineService
+        for line in self.db.scalars(select(LinePO).join(ChapterPO,ChapterPO.id==LinePO.chapter_id).where(ChapterPO.project_id==project_id)):
+            if is_spoken(line):
+                line.status,line.is_done='pending',0
+                TimelineService.invalidate_line(self.db,line.id,'配音设定已变化',commit=False)
         self.db.commit()
         return self.settings(project_id)
 
@@ -75,7 +82,7 @@ class SpeechDirectionService:
         return line, chapter
 
     def prepare(self, project_id, line_id, queued_line=None):
-        from app.services.line_service import LineService
+        from app.services.speech import routing as speech_routing
 
         saved_line, chapter = self.line(project_id, line_id)
         line = queued_line or saved_line
@@ -93,20 +100,19 @@ class SpeechDirectionService:
             raise ValueError("请为角色选择已启用的配音模型")
         params = copy.deepcopy(ConfigurableCloudTTSEngine._parse_params(provider.custom_params))
         model = (provider.model or "").lower()
-        voice_name = LineService.resolve_cosyvoice_voice(voice) or (voice.name if voice else None)
-        route_service = LineService(None, None, None)
-        route = route_service.resolve_tts_route(role, line.line_type, line.track)
+        voice_name = speech_routing.resolve_cosyvoice_voice(voice) or (voice.name if voice else None)
+        route = speech_routing.resolve_tts_route(role, line.line_type, line.track)
         if provider.provider_type == "edge":
             route = "edge"
-        elif LineService.resolve_cosyvoice_voice(voice):
+        elif speech_routing.resolve_cosyvoice_voice(voice):
             route = "cloud"
         emotions = {r.id: r.name for r in self.db.scalars(select(EmotionPO))}
         strengths = {r.id: r.name for r in self.db.scalars(select(StrengthPO))}
         emotion = emotions.get(line.emotion_id, "平静")
         strength = strengths.get(line.strength_id, "微弱")
         # Resolve routing with the same inputs as the production service.
-        if provider.provider_type != "edge" and not LineService.resolve_cosyvoice_voice(voice):
-            route = route_service.resolve_tts_route(role, line.line_type, line.track, emotion)
+        if provider.provider_type != "edge" and not speech_routing.resolve_cosyvoice_voice(voice):
+            route = speech_routing.resolve_tts_route(role, line.line_type, line.track, emotion)
         mode = ("mapped" if route == "edge" else
                 cosyvoice_instruction_mode(model, params, voice_name) if model.startswith("cosyvoice") else
                 "native" if http_instruction_field(model, params) or "{{instruction}}" in json.dumps(params.get("payload") or params.get("body") or {}) else "none")
@@ -253,7 +259,7 @@ class SpeechDirectionService:
         }
 
     def preview(self, project_id, line_id):
-        from app.services.line_service import LineService
+        from app.services.speech import routing as speech_routing
         prepared = self.prepare(project_id, line_id)
         provider = self.db.get(TTSProviderPO, prepared["provider_id"])
         line, _ = self.line(project_id, line_id)
@@ -262,7 +268,7 @@ class SpeechDirectionService:
         if prepared["route"] == "edge":
             prepared["request_preview"] = {
                 "driver": "edge", "text": prepared["tts_text"],
-                "voice": LineService(None, None, None).resolve_edge_voice(role, voice),
+                "voice": speech_routing.resolve_edge_voice(role, voice),
                 **edge_prosody(prepared["emotion"], prepared["effective_strength"], prepared["delivery_note"]),
             }
         elif provider.provider_type in {"fish", "legacy", "index_tts"}:

@@ -1,3 +1,4 @@
+import { localMediaUrl } from './config'
 import request from './config'
 import { API_BASE_URL } from './config'
 
@@ -46,7 +47,7 @@ export function uploadRoleAvatar(sessionId, file) {
 export function getRoleAvatarUrl(sessionId, avatarPath) {
   if (!avatarPath) return ''
   const filename = String(avatarPath).split(/[\\/]/).pop()
-  return `${API_BASE_URL}chat/sessions/${sessionId}/role-avatar/${encodeURIComponent(filename)}`
+  return localMediaUrl(`${API_BASE_URL}chat/sessions/${sessionId}/role-avatar/${encodeURIComponent(filename)}`)
 }
 
 export function fetchChatEvents(sessionId, params = {}) {

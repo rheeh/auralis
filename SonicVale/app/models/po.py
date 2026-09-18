@@ -1,5 +1,5 @@
 
-from sqlalchemy import Boolean, Column, Float, Integer, String, Text, Enum, ForeignKey, DateTime, JSON, Index, UniqueConstraint
+from sqlalchemy import Boolean, Column, Float, Integer, String, Text, Enum, ForeignKey, DateTime, JSON, Index, UniqueConstraint, text
 from datetime import datetime, timezone
 
 from app.db.database import Base
@@ -54,6 +54,7 @@ class VoicePO(Base):
     tts_provider_id = Column(Integer, nullable=True)
     name = Column(String(100), nullable=False)
     reference_path = Column(String(255), nullable=True)
+    provider_voice_id = Column(String(255), nullable=True)
     description = Column(Text, nullable=True)
     # 是否包含多情绪
     is_multi_emotion = Column(Integer, default=0, nullable=False)
@@ -340,6 +341,9 @@ class AudioTaskPO(Base):
     line_id = Column(Integer, ForeignKey("lines.id"), nullable=False, index=True)
     status = Column(String(32), default="queued", nullable=False, index=True)
     attempt = Column(Integer, default=1, nullable=False)
+    run_token = Column(String(64), nullable=True)
+    input_fingerprint = Column(String(64), nullable=True)
+    input_snapshot = Column(JSON, nullable=True)
     error_code = Column(String(80), nullable=True)
     error_message = Column(Text, nullable=True)
     audio_path = Column(String(500), nullable=True)
@@ -351,6 +355,7 @@ class AudioTaskPO(Base):
     completed_at = Column(DateTime, nullable=True)
 
     __table_args__ = (
+        Index("uq_active_audio_task_line", "line_id", unique=True, sqlite_where=text("status IN ('queued','processing','completing')")),
         Index("idx_audio_task_session_status", "session_id", "status"),
         Index("idx_audio_task_chapter_status", "chapter_id", "status"),
     )

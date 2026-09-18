@@ -1,501 +1,111 @@
-# AI 项目架构地图
+# Auralis 当前架构与业务调用链
 
-## 项目概览
+当前事实来源，更新于 2026-09-16。基于 `master@5aed5b8391d848e7e7e1191c551caa882d5de82f` 加本次本地工作区改动；本次没有提交、推送或发布。旧地图保存在 [历史快照](history/project-map-before-reliability-2026-09-16.md)。产品范围见 [PROJECT](../PROJECT.md)，实施状态见 [BACKLOG](../BACKLOG.md)。
 
-### 产品定位
-
-Auralis 是一个本地优先的 AI 广播剧制作系统，基于开源项目 SonicVale 二次开发。它保留 SonicVale 的多角色配音、角色库、音色绑定、批量生成、FFmpeg 音频处理能力，并新增“小说改编为广播剧工程”的 Agent 工作流。产品形态是 Electron 桌面制作台，面向个人创作者把小说正文转成可制作、可配音、可导出的多轨广播剧工程。
-
-### 核心功能
-
-- 项目管理：创建广播剧项目，绑定 LLM Provider、TTS Provider、提示词和项目保存路径。
-- 小说改编：在 Studio 工作台粘贴小说正文，经三阶段 Agent 生成广播剧工程 JSON。
-- 章节管理：按项目维护章节文本，支持导入章节、LLM 拆分台词、第三方 JSON 导入。
-- 角色管理：按项目维护角色，绑定默认音色、角色重要性、TTS 路由和 Edge 音色。
-- 台词管理：维护台词顺序、角色、情绪、强度、音频路径、字幕路径和生成状态。
-- 多轨制作：台词支持 `voice`、`narration`、`sfx`、`bgm` 四类轨道；音效/BGM 不进入 TTS。
-- 音色管理：维护 TTS Provider 下的音色、参考音频、多情绪音色、导入导出和音频处理。
-- 音频生成与处理：后台 TTS 队列生成语音，支持音频附加、裁剪、变速、变音量、字幕矫正。
-- 音频工程底座：`AudioAsset` 统一登记原始 take、后期版本和素材文件；`TimelineTrack`/`TimelineClip` 按真实音频时长生成章节四轨内容概览。
-- 导出系统：按章节导出音频、字幕、表格和制作清单；Demo 脚本可生成完整本地样例工程。
-- 任务队列：展示 TTS 队列状态和广播剧改编运行记录，可将待制作脚本写回项目。
-
-### 技术栈
-
-前端与桌面端：
-
-- Electron 37：桌面壳、后端进程启动、文件/目录选择、打开本地路径。
-- Vue 3 + Vite 7：前端应用和开发服务器。
-- Element Plus：组件库。
-- Vue Router：Hash 路由。
-- Axios：HTTP API 客户端。
-- SortableJS：台词拖拽排序。
-- WaveSurfer.js：波形/音频播放相关能力。
-- localStorage：主题、初始化向导、播放偏好、局部队列和画布视图缓存。
-
-后端：
-
-- FastAPI + Uvicorn：HTTP API 和 WebSocket 服务。
-- SQLAlchemy + SQLite：本地数据库。
-- OpenAI Python SDK：OpenAI-compatible LLM 调用。
-- edge-tts、DashScope、Requests：免费 Edge TTS、阿里云百炼/旧 TTS SDK 和通用 HTTP TTS。
-- soundfile、numpy、FFmpeg：静音素材、音频处理和导出。
-- openpyxl：导出台词表格。
-
-运行与数据：
-
-- 默认后端地址：`http://127.0.0.1:8200`
-- 默认前端地址：`http://127.0.0.1:5173`
-- 默认配置目录：`~/Auralis`
-- Electron 开发模式本地数据目录：`.local-data`
-- SQLite 数据库文件：`app_test.db`
-
-## 目录结构
-
-```text
-.
-├── README.md                         # 项目主说明，包含架构、启动、验证和使用路径
-├── scripts/
-│   ├── dev.sh                        # 安装/检查依赖并启动前后端
-│   ├── seed_demo.py                  # 生成本地 Demo 广播剧工程
-│   └── verify.sh                     # 后端语法、路由、Demo 写入、Electron 和前端构建验证
-├── SonicVale/
-│   ├── requirements.txt              # Python 后端依赖
-│   └── app/
-│       ├── main.py                   # FastAPI 入口、路由注册、数据库初始化、TTS worker 启动、WebSocket
-│       ├── core/                     # 配置、LLM/TTS 引擎、音频处理、字幕、提示词、WebSocket、后台队列
-│       ├── db/                       # SQLAlchemy engine、Session、Base 和 get_db 依赖
-│       ├── models/                   # ORM 持久化模型
-│       ├── dto/                      # 请求/响应 DTO
-│       ├── entity/                   # 业务实体对象
-│       ├── repositories/             # 数据库访问封装
-│       ├── services/                 # 后端业务服务层
-│       └── routers/                  # FastAPI 路由层
-├── sonicvale-front/
-│   ├── package.json                  # Electron/Vue/Vite 依赖和启动/打包脚本
-│   ├── electron/
-│   │   ├── main.js                   # Electron 主进程，检测/启动后端并创建窗口
-│   │   ├── preload.js                # 渲染进程可用的安全桥接能力
-│   │   └── logger.js                 # Electron 日志和编码处理
-│   ├── src/
-│   │   ├── App.vue                   # 应用壳、顶部导航、主题切换、router-view
-│   │   ├── main.js                   # Vue 应用入口
-│   │   ├── style.css                 # 全局样式
-│   │   ├── router/                   # 页面路由配置
-│   │   ├── api/                      # 前端 API 服务层，按后端资源拆分
-│   │   ├── pages/                    # 业务页面
-│   │   ├── components/               # 复用组件和初始化向导组件
-│   │   ├── utils/                    # 小工具函数，如编码检测
-│   │   └── assets/                   # 前端图片和提示音资源
-│   ├── public/                       # Vite public 静态资源
-│   └── resource/                     # Electron 打包资源、许可文件、图标
-├── image/                            # 项目图片素材/说明图片
-├── .local-data/                      # Electron 开发模式下的本地数据库、日志、项目音频、音色缓存
-└── .verify-data/                     # verify.sh 使用的临时验证数据
-```
-
-### 前端 `src` 目录职责
-
-- `src/api`：前端服务层。每个文件对应后端一组资源 API，例如项目、章节、台词、角色、音色、Provider、广播剧改编和队列状态。
-- `src/components`：复用 UI 组件。当前包含 `WaveCellPro.vue` 和初始化设置向导组件。
-- `src/pages`：页面级业务组件，是主要状态和交互逻辑所在位置。
-- `src/router`：Vue Router Hash 路由定义。
-- `src/utils`：工具函数，目前用于 UTF-8/GBK 文本解码。
-- `src/assets`：页面图片、提示音等前端资源。
-- `src/stores`：当前不存在。项目没有引入 Pinia/Vuex，跨页面数据主要来自后端 API，少量 UI 偏好使用 `localStorage`。
-- `src/services`：当前不存在。前端的服务层职责由 `src/api` 承担。
-
-### 后端服务目录职责
-
-- `app/core`：基础能力，包括 `LLMEngine`、`TTSEngine`、`EdgeTTSEngine`、可配置云端 TTS、FFmpeg 路径、音频处理、提示词、WebSocket 管理和 TTS worker。
-- `app/routers`：HTTP/WebSocket 接口入口，负责参数接收、依赖注入和响应包装。
-- `app/services`：业务逻辑层，负责项目、章节、台词、角色、音色、Provider、提示词和广播剧改编。
-- `app/repositories`：数据库 CRUD 封装。
-- `app/models/po.py`：数据库表模型，定义项目、章节、角色、音色、台词、Provider、提示词、改编运行记录等核心数据。
-
-## 核心业务模块
-
-### 项目管理
-
-前端入口：
-
-- `sonicvale-front/src/pages/ProjectList.vue`
-- `sonicvale-front/src/pages/Home.vue`
-- `sonicvale-front/src/api/project.js`
-
-后端入口：
-
-- `SonicVale/app/routers/project_router.py`
-- `SonicVale/app/services/project_service.py`
-- `SonicVale/app/models/po.py` 中的 `ProjectPO`
-
-职责：
-
-- 创建、查询、更新、删除项目。
-- 绑定 LLM Provider、TTS Provider、提示词和项目根路径。
-- 计算项目准备状态，包括 Provider、角色音色、素材轨、可朗读台词音频、导出就绪度。
-- 修复准备状态，例如同步音频状态或创建素材占位。
-- 批量导入章节文本。
-
-### 章节管理
-
-前端入口：
-
-- `sonicvale-front/src/pages/ProjectDubbingDetail.vue`
-- `sonicvale-front/src/api/chapter.js`
-
-后端入口：
-
-- `SonicVale/app/routers/chapter_router.py`
-- `SonicVale/app/services/chapter_service.py`
-- `SonicVale/app/models/po.py` 中的 `ChapterPO`
-
-职责：
-
-- 按项目维护章节。
-- 导入章节文本。
-- 调用 LLM 将章节正文拆成结构化台词。
-- 导出 LLM Prompt。
-- 导入第三方 JSON 台词。
-- 智能匹配角色和音色。
-
-### 角色管理
-
-前端入口：
-
-- `sonicvale-front/src/pages/RolesBoard.vue`
-- `sonicvale-front/src/pages/ProjectDubbingDetail.vue`
-- `sonicvale-front/src/api/role.js`
-
-后端入口：
-
-- `SonicVale/app/routers/role_router.py`
-- `SonicVale/app/services/role_service.py`
-- `SonicVale/app/models/po.py` 中的 `RolePO`
-
-职责：
-
-- 按项目维护角色。
-- 绑定默认音色。
-- 维护角色重要性、TTS 路由和 Edge 音色。
-- 为广播剧改编写入台词时自动创建角色。
-
-### 台词生成
-
-前端入口：
-
-- `sonicvale-front/src/pages/Studio.vue`
-- `sonicvale-front/src/pages/ProjectDubbingDetail.vue`
-- `sonicvale-front/src/api/drama.js`
-- `sonicvale-front/src/api/line.js`
-
-后端入口：
-
-- `SonicVale/app/routers/drama_adaptation_router.py`
-- `SonicVale/app/services/drama_adaptation_service.py`
-- `SonicVale/app/routers/line_router.py`
-- `SonicVale/app/services/line_service.py`
-- `SonicVale/app/models/po.py` 中的 `LinePO` 和 `AdaptationRunPO`
-
-职责：
-
-- Studio 调用广播剧改编 API，创建 `adaptation_runs`。
-- 三阶段 Agent 流程：解析小说、生成台本、整理可播语言。
-- 标准化输出 JSON，生成 scenes、characters、lines。
-- 写入项目章节和台词。
-- 为台词填充 `line_type`、`track`、`should_speak`、`scene_title`、`sound_prompt`、`voice_profile`、`production_note`。
-- 对已有章节台词进行增删改、重排、生成状态更新。
-
-### 音色管理
-
-前端入口：
-
-- `sonicvale-front/src/pages/VoiceManager.vue`
-- `sonicvale-front/src/api/voice.js`
-- `sonicvale-front/src/api/multiEmotionVoice.js`
-
-后端入口：
-
-- `SonicVale/app/routers/voice_router.py`
-- `SonicVale/app/services/voice_service.py`
-- `SonicVale/app/routers/multi_emotion_voice_router.py`
-- `SonicVale/app/services/multi_emotion_voice_service.py`
-- `SonicVale/app/models/po.py` 中的 `VoicePO` 和 `MultiEmotionVoicePO`
-
-职责：
-
-- 管理 TTS Provider 下的音色。
-- 保存参考音频路径和音色描述。
-- 导入/导出音色库 ZIP。
-- 创建 Edge-TTS 常见音色样例。
-- 复制音色和处理参考音频。
-- 管理多情绪音色参考音频。
-
-### 音频轨道
-
-前端入口：
-
-- `sonicvale-front/src/pages/TimelineBoard.vue`
-- `sonicvale-front/src/pages/MediaBoard.vue`
-- `sonicvale-front/src/pages/ProjectDubbingDetail.vue`
-- `sonicvale-front/src/components/WaveCellPro.vue`
-
-后端入口：
-
-- `SonicVale/app/routers/line_router.py`
-- `SonicVale/app/services/line_service.py`
-- `SonicVale/app/core/tts_runtime.py`
-- `SonicVale/app/core/audio_engin.py`
-- `SonicVale/app/services/timeline_service.py`
-- `SonicVale/app/routers/timeline_router.py`
-
-职责：
-
-- 将台词按 `voice`、`narration`、`sfx`、`bgm` 四类轨道展示和制作。
-- 人物声/旁白进入 TTS。
-- 音效/BGM 被标记为素材轨，不进入 TTS，需要导入或制作音频素材。
-- 保存每条台词的 `audio_path` 和 `subtitle_path`。
-- 支持附加音频素材、处理音频和播放检查。
-- TTS worker 根据角色、音色、情绪、强度生成音频并广播状态。
-
-### 导出系统
-
-前端入口：
-
-- `sonicvale-front/src/pages/ProjectDubbingDetail.vue`
-- `sonicvale-front/src/api/line.js`
-
-后端入口：
-
-- `SonicVale/app/routers/line_router.py`
-- `SonicVale/app/services/line_service.py`
-- `scripts/seed_demo.py`
-
-职责：
-
-- 按章节导出合成音频。
-- 支持单条/整体导出参数。
-- 导出字幕并支持拼音匹配矫正、LLM 字幕矫正。
-- Demo 工程生成 `result.wav`、`all_lines.xlsx` 和 `production_manifest.json`。
-
-## 数据流
+## 实际模块图
 
 ```mermaid
 flowchart TD
-    User["创作者"] --> Electron["Electron 桌面壳"]
-    Electron --> Vue["Vue 前端页面"]
-    Electron --> Native["preload / IPC<br/>选择文件、目录、打开路径"]
-
-    Vue --> Api["src/api Axios 服务层<br/>http://127.0.0.1:8200"]
-    Api --> Routers["FastAPI routers"]
-    Routers --> Services["后端 services 业务层"]
-    Services --> Repos["repositories"]
-    Repos --> SQLite["SQLite app_test.db"]
-
-    Services --> Files["本地项目文件<br/>音频、字幕、音色、导出文件"]
-    Services --> LLM["OpenAI-compatible LLM"]
-    Services --> TTS["TTS Provider<br/>Edge / DashScope / HTTP"]
-
-    Vue --> Studio["Studio 小说改编"]
-    Studio --> DramaApi["/drama-adaptation/runs"]
-    DramaApi --> AdaptService["DramaAdaptationService"]
-    AdaptService --> LLM
-    AdaptService --> Runs["adaptation_runs<br/>parsed_json / draft_json / final_json"]
-    AdaptService --> Commit["commit_run"]
-    Commit --> Chapters["chapters"]
-    Commit --> Lines["lines<br/>voice/narration/sfx/bgm"]
-    Commit --> Roles["roles"]
-
-    Vue --> Dubbing["ProjectDubbingDetail 配音工程"]
-    Dubbing --> LineApi["/lines/generate-audio"]
-    LineApi --> Queue["app.state.tts_queue"]
-    Queue --> Worker["tts_worker"]
-    Worker --> TTS
-    Worker --> Audio["生成 audio_path 文件"]
-    Worker --> WS["WebSocket /ws<br/>line_update / tts_queue_rest"]
-    WS --> Dubbing
-
-    Dubbing --> ExportApi["/lines/export-audio"]
-    ExportApi --> ExportFiles["result.wav / subtitles / xlsx / manifest"]
+  UI[Vue ProjectWorkspace / ProductionScriptPanel] --> DATA[useProductionData / requestScope]
+  DATA --> API[api/config + response]
+  API --> HTTP[FastAPI routers]
+  AG[ProductionAssistantAgent + assistant/contracts] --> FACT[services/factory]
+  HTTP --> FACT
+  CLI[CLI / 兼容适配入口] --> FACT
+  FACT --> CMD[production/line_commands + 现有业务 Service]
+  FACT --> FLOW[DramaWorkflowService / DramaCommitService]
+  FLOW --> CH[production/chapter_lifecycle]
+  CMD --> DB[Repositories / SQLAlchemy / SQLite]
+  CH --> DB
+  FLOW --> DB
+  CMD --> TL[TimelineService / TimelineRenderService]
+  FACT --> TASK[AudioTaskService]
+  TASK --> PREP[speech/request + SpeechDirectionService + speech/routing]
+  PREP --> DB
+  TASK --> QUEUE[runtime/queue / 内存有限队列]
+  QUEUE --> WORK[core/tts_runtime worker]
+  WORK --> IO[integrations/tts/prepared / core tts engines]
+  WORK --> TASK
+  TL --> AUDIO[integrations/audio/transforms / FFmpeg]
+  WORK --> TRACE[TTSTraceService / 独立 recorder Session]
+  START[main startup] --> REC[runtime/recovery / 单实例锁]
+  REC --> DB
+  DEMO[DemoStudio / 预生成资源] --> WEB[WebAudio 本地试听和导出]
 ```
 
-## 页面关系
+它仍是一个模块化单体，没有新增服务进程或分布式队列。未机械创建规格中的全部目标目录；低收益的旧路径保留。`main.py` 仍承担较多启动和默认数据初始化；工作流与助手主循环也仍在原 Service 文件内，不能把本轮称为全部模块已拆完。
 
-主路由：
+## 权威写入与事务
 
-- `/home` -> `Home.vue`：首页、最近项目和快捷入口。
-- `/studio` -> `Studio.vue`：小说改编工作台。
-- `/projects` -> `ProjectList.vue`：项目列表和项目创建。
-- `/projects/:id/dubbing` -> `ProjectDubbingDetail.vue`：项目配音工程详情。
-- `/config` -> `ConfigCenter.vue`：LLM/TTS Provider 配置中心。
-- `/voices` -> `VoiceManager.vue`：音色库。
-- `/roles` -> `RolesBoard.vue`：角色声线绑定。
-- `/media` -> `MediaBoard.vue`：素材库。
-- `/timeline` -> `TimelineBoard.vue`：多轨内容概览（读取真实时间线 API，展示真实片段时长/位置；暂未提供拖拽编辑）。
-- `/queue` -> `QueueBoard.vue`：任务队列和改编运行历史。
-- `/prompts` -> `PromptManager.vue`：提示词管理。
+| 用例 | 活跃调用链 | 状态归属 |
+| --- | --- | --- |
+| 修改文本/指导/角色/清空字段 | 页面 PUT / Agent `_update_line` → LineService.update_line → LineCommands.update | 同一次提交更新台词、场景待生成状态、时间线失效 |
+| 类型转换 | type API → LineTypeService → 同一 LineCommands | 先校验/记录历史，保留 take/variants，清空当前选用 |
+| 角色换音色 | role API / Agent → RoleService.update_role | 角色与受影响台词/时间线一起提交 |
+| 选择 take / 后期版本 / 素材 | LineService 对应用例 → update_line | 源 take 关联、当前选择、时间线失效一起提交 |
+| 旧原地音频处理 API | `/lines/process-audio/{id}` → process_audio → create_audio_variant | 改为独立后期版本，不改源文件 |
+| 排序 | LineCommands.reorder | 同章节、正整数、唯一行/位置校验，短事务 |
+| 提交改编 | chat commit / legacy commit_run → DramaCommitService | 条件 lease、前置阶段、新建/显式覆盖、写入事务 |
+| 删除 | LineService / ChapterService / ProjectService | 活动任务拒绝；快照、外键解绑、数据库事务；文件保留或归档 |
+| 编辑时间线 | timeline API → TimelineService.update_clip | 沿用已有手工编辑规则与校验 |
 
-主要跳转关系：
+`LineUpdateDTO`/`LinePublicCreateDTO` 拒绝内部状态、输出路径和版本数组。更新使用 `exclude_unset`，未提供不改，明确 null 清空可空字段。旧 `LineCreateDTO` 暂保留为内部/生成兼容快照。`LineRepository.update(commit=False)` 供新命令使用，默认提交仍是旧调用兼容边界；未全局删仓储 commit。
 
-- 首页 `/home` 可进入项目列表 `/projects`、工作台 `/studio`、具体项目配音工程 `/projects/:id/dubbing`。
-- 项目列表 `/projects` 可进入配置 `/config`、工作台 `/studio?project_id=:id`、配音工程 `/projects/:id/dubbing`。
-- 工作台 `/studio` 完成改编后可跳到配音工程 `/projects/:id/dubbing`，也可跳到角色页 `/roles` 或素材页 `/media`。
-- 配音工程 `/projects/:id/dubbing` 可跳到配置 `/config`、音色库 `/voices`、素材库 `/media`。
-- 角色页 `/roles` 可跳回当前项目配音工程 `/projects/:id/dubbing`。
-- 素材库 `/media` 和多轨内容概览 `/timeline` 可按当前项目/章节跳回配音工程。
-- 队列页 `/queue` 可将改编运行记录写入项目，并跳到对应配音工程。
+并非所有历史写入口已完成同等事务归并，尤其旧导入路径和历史仓储兼容适配仍需审计，见 BACKLOG。测试用无 DB 的旧 repository stub 也仍由 LineService 兼容分支支持。
 
-## 状态管理
+## 一次配音的真实调用链
 
-### 全局状态
+1. API/Agent → AudioTaskService.enqueue。校验项目—章节—台词归属，读取当前数据库输入；不会相信外部 DTO 的状态/路径。
+2. `prepare_request` 复用 SpeechDirectionService.prepare 与纯 voice routing，冻结实际文本、音色/供应商/模型、路由、情绪/强度/指导、上下文、项目设定修订、发音替换、供应商参数及参考音频摘要。
+3. 对完整脱敏快照计算 SHA-256；不让日志的长度截断截掉指纹输入，API key 不参与。凭证仅留在进程内执行请求，不写入持久快照。
+4. 一次 attempt 一个 token 和唯一 `audio/attempts/{line}-{token}.wav`。数据库先记录，再确认入队；入队失败有可恢复状态。SQLite 部分唯一索引限制每句一个活动 attempt。
+5. worker 通过条件更新 claim，在自己的 Session 保存 trace；executor 接收普通 dict 和拥有独立 Session 工厂的 recorder，不持有业务 Session。
+6. 成功后验证音频帧数，条件抢占完成权并重算当前指纹。匹配才选用/标 done；不匹配只追加历史 take，保留当前选择。
+7. 提交后通知。通知/trace 收尾失败不反转已完成业务。超时不能杀死运行中的线程：标失败后继续占用该 worker 槽直到线程结束；晚到文件不会自动选用。
 
-当前前端没有独立 `stores/` 目录，也没有 Pinia/Vuex。全局或跨页面状态主要来自三类来源：
+线程语义参考 [SQLAlchemy Session 隔离](https://docs.sqlalchemy.org/en/20/orm/session_basics.html#is-the-session-thread-safe-is-asyncsession-safe-to-share-in-concurrent-tasks) 和 [Python 3.12 Future 取消](https://docs.python.org/3.12/library/concurrent.futures.html#concurrent.futures.Future.cancel)。实际安装 SQLAlchemy 2.0.44 / Python 3.12.13，未为此升级框架。
 
-- 后端数据库：项目、章节、角色、音色、台词、Provider、提示词、改编运行记录。
-- 后端运行时：`app.state.tts_queue`、`app.state.tts_executor`、`app.state.tts_workers` 保存 TTS 队列和 worker 状态。
-- 浏览器本地存储：主题、初始化向导、默认保存路径、播放偏好、局部 UI 视图状态。
+## 状态与恢复
 
-### 持久化数据
+- `production/audio_state.generation_state` 分开 `has_audio`、`input_current`、`needs_generation` 和 selected IDs。供配置、批量生成、Agent、readiness 与时间线使用。无指纹旧 take 为 unknown，保持历史兼容，不伪造已追溯。
+- 台词/指导改变保守失效同章同场景；项目表演设定改变保守失效本项目。有效 provider/声音改变还会在实时指纹比较时被识别。
+- task 是执行历史；章节进度按当前台词适用性计算，`execution_progress` 单列执行进度。
+- workflow lease 使用条件 SQL、token 与到期检查；外部调用返回后校验 lease。幂等键先于阶段校验，避免成功后的重试被错误拒绝。
+- 初审、返修、返修后复审各保存 checkpoint。恢复不会重复已保存的前序模型调用。
+- `runtime/recovery` 用配置目录单实例锁。启动将遗留队列/执行任务标为 PROCESS_INTERRUPTED，清除过期 lease；不自动重发。Agent 逐工具保存结果与 pending 标记，不确定中断需检查后显式处理。
+- 事件序号使用 SQL 原子递增；阶段/checkpoint 与阶段事件同事务。其他历史发布点仍有先业务提交再记事件的路径，尚未全量合并。
 
-- SQLite：默认保存在 `getConfigPath()/app_test.db`。开发模式下 Electron 会通过 `AURALIS_CONFIG_DIR` 把配置目录指向项目根下 `.local-data`。
-- 项目文件：项目根路径来自 `ProjectPO.project_root_path`；改编写入时音频目录类似 `{project_root_path}/{project_id}/{chapter_id}/audio`。
-- 音色资源：默认可写入配置目录下 `voices/edge-presets` 或用户选择的目录。
-- Provider 快照：Provider 创建、更新、删除会写入 `backups/provider_config_snapshots.jsonl`，用于恢复误删或误覆盖的配置。
-- 日志：后端写入 `getConfigPath()/app.log`。
+## 音频和时间线
 
-### 前端缓存和偏好
+`audio_selection.selected_audio_path` 是播放、后期与时间线共同的当前选音规则。新文件独立，删除后期选择会保存元数据归档并保留文件；素材重新绑定保留旧 take 列表。
 
-- `sv_theme`：深浅色主题。
-- `auralis_setup_default_storage`：初始化向导默认保存路径。
-- `auralis_setup_skipped`：初始化向导跳过状态。
-- `queue_{projectId}`：配音详情页局部任务队列恢复。
-- `canvasViewKey()` 对应的键：配音详情页画布视图设置。
-- `hidden_roles_{projectId}`：配音详情页隐藏角色。
-- `playMode`：播放模式。
-- `completionSoundEnabled`：完成提示音开关。
+时间线沿用原有手工位置/增益/裁剪/淡入淡出规则。输入指纹包含台词、指导和选用源。渲染前冻结普通数据并释放数据库事务，WAV 与 manifest 来自同一冻结快照；渲染期间发生编辑时，旧成片会被当前性检查拒绝。每次混音使用唯一文件名。缺失/过期/占位素材通过现有阶段成片清单呈现。
 
-### 缓存策略现状
+`audioEvents` 能力表：
 
-- API 数据没有统一客户端缓存层，每个页面按需拉取。
-- TTS 进度通过 WebSocket 实时推送，页面刷新后可结合后端状态和局部 `localStorage` 恢复部分 UI。
-- 音频播放 URL 通过版本号参数刷新缓存，避免音频文件更新后浏览器继续播放旧资源。
+| 输入 | 当前行为 | 证据 |
+| --- | --- | --- |
+| `sound_library_placement` 及明确素材、anchor、offset、gain、fade、duration、loop | 确定性写入素材位置并影响实际时间线/FFmpeg | sound library/timeline tests + browser smoke |
+| 情绪/声音指导 | 按 provider 能力发送原生指导或近似映射参数 | speech/scene/guidance tests；不证明真实听感 |
+| 其他自然语言 `audioEvents`（如呼吸、回声、走远） | 仅保留制作备注，UI 标注未自动执行 | ProductionScriptPanel 的事件状态说明 |
 
-## API 与服务层
+## 前端与 Demo
 
-### 前端 API 模块
+`useProductionData` 拥有生产数据、配置、任务轮询与 dirty 草稿；`requestScope` 区分最新查询和操作上下文，章节切换/卸载使迟到响应失效。播放器仍在 ProductionScriptPanel，离开清理；SelectedTakeInfo 展示当前音频的生成文本/指导与适用性。ProjectWorkspace 的 session/history 使用 epoch 和请求 scope。确认/发送动作尚未全部提取为独立 composable。
 
-- `api/config.js`：Axios 实例，统一 `API_BASE_URL`、超时时间、响应解包和错误输出。
-- `api/project.js`：项目 CRUD、项目准备状态、准备状态修复、章节批量导入。
-- `api/chapter.js`：章节 CRUD、章节详情、LLM 拆分台词、Prompt 导出、第三方台词 JSON 导入、智能匹配角色音色。
-- `api/line.js`：台词 CRUD、排序、生成音频、音频 URL、音频附加、音频处理、导出、字幕矫正。
-- `api/drama.js`：广播剧改编运行创建、查询、列表、提交写入项目。
-- `api/provider.js`：LLM/TTS Provider CRUD 和测试。
-- `api/voice.js`：音色 CRUD、导入导出、Edge 预设、音频处理、复制音色。
-- `api/role.js`：角色 CRUD 和按项目查询。
-- `api/prompt.js`：提示词 CRUD、任务类型查询。
-- `api/enums.js`：情绪和强度枚举查询。
-- `api/multiEmotionVoice.js`：多情绪音色 CRUD。
-- `api/queue.js`：TTS 队列状态查询。
-- `api/setup.js`：初始化向导状态聚合、默认保存路径、Edge-TTS Provider 创建、Demo 项目创建。
+`api/response` 统一 HTTP 错误与历史 `{code,message,data}`。普通请求默认 30 秒；同步 FFmpeg render 明确使用更长的独立上限，后台渲染 operation 化仍未做。静态 Demo 未实现端点与实时生成明确报错，DemoStudio 本身只使用预生成音频。
 
-### 后端 Router 模块
+## 配置、启动和迁移
 
-- `project_router.py`：项目 CRUD、准备状态检查/修复、批量导入章节。
-- `chapter_router.py`：章节 CRUD、LLM 拆分、Prompt 导出、第三方 JSON 导入、智能角色音色匹配。
-- `line_router.py`：台词 CRUD、批量排序、音频路径、素材附加、TTS 入队、音频处理、导出、字幕矫正。
-- `drama_adaptation_router.py`：小说改编运行、运行记录列表/详情、提交写入项目。
-- `role_router.py`：角色 CRUD。
-- `voice_router.py`：音色 CRUD、导入导出、处理、复制、Edge 预设。
-- `multi_emotion_voice_router.py`：多情绪音色 CRUD。
-- `llm_provider_router.py`：LLM Provider CRUD 和测试。
-- `tts_provider_router.py`：TTS Provider CRUD 和测试。
-- `prompt_router.py`：提示词 CRUD 和任务类型。
-- `emotion_router.py`、`strength_router.py`：情绪和强度枚举。
-- `queue_router.py`：后端 TTS 队列状态。
+- AURALIS_CONFIG_DIR 决定配置与 `app_test.db`；开发脚本默认 `.local-data` 未改。测试先设临时目录再 import app/engine。
+- frontend 地址来源：桌面 preload 的 `auralisRuntime`→ VITE_API_BASE_URL → 本地 8200。HTTP/媒体/旧 WebSocket 使用同一实例 token。
+- `/health` 返回 Auralis 身份、API 版本、实际 schema、worker 和 FFmpeg 可用性。Electron readiness 检查身份/ready；安全开关恢复，IPC 检查主 frame、文件选择授权和大小，限制导航与新窗口。
+- 当前 schema 11：9 增加 task 快照/token/指纹；10 增加 nullable provider_voice_id，只回填无歧义旧 description；11 建立活动任务唯一索引并标记升级前中断。
+- `scripts/migrate_copy.py` 用 SQLite backup API 复制只读源到新文件，再迁移、integrity_check、foreign_key_check。已验收合成历史库；未打开用户真实库。
+- 迁移后旧代码不能直接保证识别新增语义。回退应停服务、保留新产物、恢复经验证数据库备份；git revert 不是数据回滚。
 
-### 后端 Service 模块
+## 入口保留情况
 
-- `drama_adaptation_service.py`：三阶段 Agent 改编、JSON 解析/标准化、改编运行记录、章节/台词/角色写入。
-- `project_service.py`：项目实体管理和项目保存路径初始化。
-- `chapter_service.py`：章节业务、LLM 拆分台词、文本矫正、角色音色匹配相关逻辑。
-- `line_service.py`：台词业务、音频生成、音频处理、素材附加、导出和字幕矫正。
-- `voice_service.py`：音色业务、音色库导入导出、Edge 预设、音频处理。
-- `role_service.py`：角色业务。
-- `llm_provider_service.py`：LLM Provider 管理、测试和配置快照。
-- `tts_provider_service.py`：TTS Provider 管理、默认 Provider 创建、测试和配置快照。
-- `prompt_service.py`：提示词管理和默认提示词。
-- `provider_backup_service.py`：Provider 配置快照写入。
-- `emotion_service.py`、`strength_service.py`、`multi_emotion_voice_service.py`：枚举和多情绪音色管理。
+活跃：ProjectWorkspace、DemoStudio、FastAPI routers、services/factory、core/tts_runtime、dev.sh、verify.sh、Electron main/preload。兼容：`/studio`、旧 overview/dubbing 路由重定向；legacy adaptation commit 转同一 DramaCommitService；旧 process-audio 转版本创建；旧路径重命名 API 明确拒绝。
 
-### 核心引擎模块
-
-- `core/llm_engine.py`：OpenAI-compatible 文本生成和 JSON 修复辅助。
-- `core/tts_engine.py`：通用 TTS、Edge-TTS、可配置云端 TTS、DashScope CosyVoice/Sambert 支持。
-- `core/tts_runtime.py`：后台 TTS worker，处理队列、跳过素材轨、广播进度。
-- `core/audio_engin.py`：本地音频处理封装。
-- `core/ws_manager.py`：WebSocket 连接管理和广播。
-- `core/config.py`：配置目录和 FFmpeg 路径解析。
-- `core/prompts.py`：默认提示词和 LLM Prompt 组装。
-
-## 新对话快速阅读顺序
-
-AI 重新接手项目时建议先读这 5 个文件：
-
-1. `README.md`：项目目标、主架构、新增能力、启动、验证和使用路径。
-2. `sonicvale-front/src/router/index.js`：前端页面地图和主要业务入口。
-3. `SonicVale/app/main.py`：FastAPI 应用入口、数据库初始化、路由注册、TTS 队列和 WebSocket。
-4. `SonicVale/app/models/po.py`：核心数据模型，理解项目、章节、角色、音色、台词和改编运行记录的关系。
-5. `SonicVale/app/services/drama_adaptation_service.py`：小说改编为广播剧工程的核心流程和写入逻辑。
-
-如果任务涉及配音工程页面，再优先补读：
-
-- `sonicvale-front/src/pages/ProjectDubbingDetail.vue`
-- `SonicVale/app/routers/line_router.py`
-- `SonicVale/app/services/line_service.py`
-
-如果任务涉及桌面启动或本地路径，再补读：
-
-- `sonicvale-front/electron/main.js`
-- `sonicvale-front/electron/preload.js`
-- `SonicVale/app/core/config.py`
-
-## 当前开发阶段
-
-### 已经完成
-
-- Electron + Vue + FastAPI 的本地桌面应用骨架。
-- Electron 开发模式下检测/复用后端，必要时启动 `SonicVale/.venv/bin/python -m uvicorn app.main:app`。
-- FastAPI 路由注册、SQLite 初始化、基础字段迁移和默认数据初始化。
-- 项目、章节、角色、音色、Provider、提示词、情绪、强度等基础 CRUD。
-- Studio 小说改编入口。
-- 三阶段广播剧 Agent 服务：解析小说、生成台本、整理可播语言。
-- 改编运行记录 `adaptation_runs`。
-- 广播剧台词扩展字段：`line_type`、`track`、`should_speak`、`scene_title`、`sound_prompt`、`voice_profile`、`production_note`。
-- 将改编结果写入章节、台词和角色。
-- 项目准备状态检查和修复接口。
-- TTS Provider 兼容配置：Edge、DashScope CosyVoice、DashScope Sambert、通用 HTTP。
-- TTS 后台队列、worker 和 WebSocket 进度推送。
-- 素材轨跳过 TTS 的处理逻辑。
-- 音色库导入导出、Edge 预设音色、多情绪音色和参考音频处理。
-- 多页面工作区：Home、Studio、Projects、Config、Voices、Roles、Media、Timeline、Queue、Prompts、ProjectDubbingDetail。
-- 本地 Demo 工程生成和验证脚本。
-
-### 进行中或已有雏形
-
-- 前端工作台和配音工程的制作流程整合已经存在，但主要状态仍在页面组件内维护。
-- 多轨内容概览已有页面；真实时间线底座已具备四轨、共享资产登记、音频时长计算和统一 `start_ms` 坐标绘制，拖拽编辑尚未开始。
-- Queue 页面已能读取 TTS 队列和改编运行历史，但更完整的任务管理、失败重试和跨页面队列恢复还可继续加强。
-- Provider 配置已有快照机制，但 UI 侧的恢复/版本管理能力还不是独立完整模块。
-- 本地导出链路已经存在，Demo 能生成结果文件；正式导出的清单、素材完整性和多轨混音能力仍可继续产品化。
-
-### 待实现或建议补强
-
-- 建立正式前端状态管理层，例如 Pinia，把项目选择、章节选择、Provider 快照、队列状态和播放偏好从页面组件中抽出。
-- 将前端 API 错误处理、加载状态、重试和消息提示统一封装。
-- 为 `docs/` 补齐 `architecture.md`、`system-design.md` 或更细的后端/前端模块文档。
-- 增加端到端测试或关键页面的交互回归测试。
-- 在现有 SQLite 版本迁移基础上继续增加可回滚前的校验和数据修复记录；不要再把字段迁移写回 `main.py`。
-- 完善素材轨制作能力，例如 SFX/BGM 素材生成、检索、替换、混音和版权来源记录。
-- 完善导出系统的多轨混音、导出预检、失败原因解释和导出历史。
-- 加强 Provider API Key 的本地加密或安全存储策略。
-- 拆分过大的页面组件，尤其是配音工程详情页，降低维护成本。
+`ProjectDubbingDetail.vue`、`ChatProductionPanel.vue` 等历史文件保留，未因体积大删除。LineService 的旧同步供应商方法也仍保留测试/兼容消费者，生产 worker 已改用 prepared adapter；进一步缩减这些路径需要独立消费者审计。

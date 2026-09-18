@@ -176,7 +176,9 @@ class ScenePerformanceTest(unittest.TestCase):
         session = ChatSessionPO(id='scene-commit-test', project_id=f.project.id, adaptation_run_id=run.id,
             chapter_id=f.chapter.id, current_stage='script_draft_ready', title='重逢', source_text='他突然认出了她')
         f.db.add(session); f.db.commit()
-        result = DramaCommitService(f.db).commit_session(session.id)
+        from app.services.production.chapter_lifecycle import chapter_version
+        result = DramaCommitService(f.db).commit_session(session.id, replace_chapter_lines=True,
+                target_chapter_id=session.chapter_id, expected_version=chapter_version(f.db,session.chapter_id), confirm_replace=True)
         f.db.expire_all(); chapter = f.db.get(ChapterPO, result['chapter_id'])
         entry = chapter.performance_plan['scenes'][0]
         lines = list(f.db.scalars(select(LinePO).where(LinePO.chapter_id == chapter.id).order_by(LinePO.line_order)))
@@ -190,7 +192,8 @@ class ScenePerformanceTest(unittest.TestCase):
         second_session = ChatSessionPO(id='scene-append-test', project_id=f.project.id, adaptation_run_id=second_run.id,
             chapter_id=chapter.id, current_stage='script_draft_ready', title='续写', source_text='他突然认出了她')
         f.db.add(second_session); f.db.commit()
-        DramaCommitService(f.db).commit_session(second_session.id, replace_chapter_lines=False)
+        DramaCommitService(f.db).commit_session(second_session.id, replace_chapter_lines=False,
+            target_chapter_id=chapter.id, expected_version=chapter_version(f.db,chapter.id), confirm_replace=True)
         f.db.expire_all()
         all_lines = list(f.db.scalars(select(LinePO).where(LinePO.chapter_id == chapter.id).order_by(LinePO.line_order)))
         self.assertEqual([line.line_order for line in all_lines], list(range(1, 9)))
@@ -204,7 +207,7 @@ class ScenePerformanceTest(unittest.TestCase):
         f.test_worker_writes_success_failure_and_preparation_error_without_network()
         from app.models.po import TTSGenerationPO
         row = f.db.scalar(select(TTSGenerationPO).where(TTSGenerationPO.status == 'succeeded'))
-        self.assertEqual(row.input_snapshot['context']['scene_performance']['status'], 'current')
+        self.assertEqual(row.input_snapshot['prepared']['context']['scene_performance']['status'], 'current')
         instruction = row.request_json['payload']['input']['instruction']
         self.assertIn('再次确认', instruction)
         self.assertNotIn('未来高潮才激烈哭喊', instruction)
@@ -219,5 +222,5 @@ class ScenePerformanceTest(unittest.TestCase):
         apply_schema_migrations(engine); apply_schema_migrations(engine)
         with engine.connect() as conn:
             self.assertEqual(tuple(conn.execute(text('SELECT text_content, performance_plan FROM chapters WHERE id=1')).one()), ('旧台本', None))
-            self.assertEqual(conn.execute(text('SELECT MAX(version) FROM schema_migrations')).scalar_one(), 8)
+            self.assertEqual(conn.execute(text('SELECT MAX(version) FROM schema_migrations')).scalar_one(), 11)
         engine.dispose()

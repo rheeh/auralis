@@ -41,7 +41,11 @@ class ChatConfirmDTO(BaseModel):
 
 class ChatCommitDTO(BaseModel):
     chapter_title: str | None = None
-    replace_chapter_lines: bool = True
+    model_config = {"extra": "forbid"}
+    replace_chapter_lines: bool = False
+    target_chapter_id: int | None = None
+    expected_version: str | None = None
+    confirm_replace: bool = False
     client_request_id: str = Field(min_length=1, max_length=128)
 
 

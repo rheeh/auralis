@@ -11,6 +11,7 @@ class VoiceEntity:
     name: str
     tts_provider_id: int
     id: Optional[int] = None
+    provider_voice_id: Optional[str] = None
     reference_path : Optional[str] = None
     description : Optional[str] = None
     is_multi_emotion : Optional[int] = 0

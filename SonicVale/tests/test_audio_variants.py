@@ -130,7 +130,8 @@ class AudioVariantTest(unittest.TestCase):
             self.assertEqual(service.resolve_audio_path(line), slow["audio_path"])
 
             self.assertTrue(service.delete_audio_variant(7, slow["id"]))
-            self.assertFalse(os.path.exists(slow["audio_path"]))
+            # Removing the UI selection now archives metadata and retains the immutable file.
+            self.assertTrue(os.path.exists(slow["audio_path"]))
             self.assertEqual([item["id"] for item in line.audio_variants], [fast["id"]])
             self.assertIsNone(line.active_audio_variant_id)
             self.assertEqual(service.resolve_audio_path(line), source)
