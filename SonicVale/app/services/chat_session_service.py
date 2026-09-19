@@ -168,6 +168,7 @@ class ChatSessionService:
         return [{
             "id": row.id, "role": row.role, "message_type": row.message_type,
             "content": row.content, "payload": row.payload_json or {}, "created_at": row.created_at,
+            "turn_status": 'queued' if row.turn_status=='scheduled' else row.turn_status,
         } for row in rows]
 
     def events(self, session_id: str, after_sequence: int = 0, limit: int = 100) -> list[dict[str, Any]]:

@@ -27,8 +27,14 @@ await expect(page.getByRole('button',{name:'下载 WAV',exact:true})).toBeVisibl
 const wavResponse=page.waitForResponse(r=>r.url().includes('/timeline/render/audio'),{timeout:5000});
 await page.getByRole('button',{name:'下载 WAV',exact:true}).click();
 const response=await wavResponse;
-assert.equal(response.status(),200);assert.match(response.headers()['content-type'],/audio\/wav/);
+assert([200,206].includes(response.status()));assert.match(response.headers()['content-type'],/audio\/wav/);
+if(response.status()===206)assert.match(response.headers()['content-range'],/^bytes \d+-\d+\/\d+$/);
+// Media elements may request a Range concurrently with the download. Validate
+// the full file too; accepting 206 alone would not establish a complete WAV.
+const complete=await context.request.get(response.url());
+assert.equal(complete.status(),200);
+const body=await complete.body();assert.equal(body.subarray(0,4).toString(),'RIFF');assert.equal(body.subarray(8,12).toString(),'WAVE');
 await page.reload();
 await expect(page.getByRole('button',{name:'下载 WAV',exact:true})).toBeVisible({timeout:10000});
 assert.deepEqual(errors,[]);
-return {passed:true,wavStatus:response.status(),errors,text:(await page.locator('main').innerText()).slice(0,850)};
+return {passed:true,wavStatus:complete.status(),mediaStatus:response.status(),wavBytes:body.length,errors,text:(await page.locator('main').innerText()).slice(0,850)};

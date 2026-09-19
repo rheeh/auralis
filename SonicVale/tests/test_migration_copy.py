@@ -21,12 +21,18 @@ class MigrationCopyTest(unittest.TestCase):
                 db.add(po.ProjectPO(id=1,name='历史工程',project_root_path=tmp));db.flush()
                 db.add(po.ChapterPO(id=1,project_id=1,title='保留章节'));db.flush()
                 db.add(po.LinePO(id=1,chapter_id=1,text_content='历史句',audio_path=str(audio),status='done',is_done=1));db.commit()
+                db.add(po.ChatSessionPO(id='old-session',project_id=1,chapter_id=1,current_stage='completed'));db.flush()
+                db.add(po.ChatMessagePO(id='old-turn',session_id='old-session',role='user',client_request_id='old-request',
+                    payload_json={'source':'production_assistant','pending_tool':{'tool':'update_line','arguments':{'line_id':1}}}))
+                db.commit()
             engine.dispose()
             with sqlite3.connect(source) as db:
                 db.execute('DROP INDEX uq_active_audio_task_line')
                 for column in ['run_token','input_fingerprint','input_snapshot']:
                     db.execute(f'ALTER TABLE audio_tasks DROP COLUMN {column}')
                 db.execute('ALTER TABLE voices DROP COLUMN provider_voice_id')
+                db.execute('ALTER TABLE chat_messages DROP COLUMN turn_status')
+                db.execute('ALTER TABLE chat_messages DROP COLUMN turn_token')
                 db.execute('PRAGMA user_version=8')
             before=hashlib.sha256(source.read_bytes()).hexdigest()
             script=Path(__file__).resolve().parents[2]/'scripts/migrate_copy.py'
@@ -36,4 +42,7 @@ class MigrationCopyTest(unittest.TestCase):
             with sqlite3.connect(target) as db:
                 self.assertEqual(db.execute('SELECT audio_path FROM lines WHERE id=1').fetchone()[0],str(audio))
                 self.assertEqual(db.execute('PRAGMA foreign_key_check').fetchall(),[])
+                status,payload=db.execute("SELECT turn_status,payload_json FROM chat_messages WHERE id='old-turn'").fetchone()
+                self.assertEqual(status,'interrupted')
+                self.assertIn('pending_tool',payload)
             self.assertEqual(audio.read_bytes(),b'original take retained')

@@ -73,6 +73,7 @@ class TimelineRenderService:
             "chapter_title": chapter.title,
             "timeline_status": timeline["status"],
             "source_fingerprint": timeline["source_fingerprint"],
+            "audio_sources":timeline['audio_sources'],
             "is_partial": bool(timeline["missing_lines"]),
             "missing_lines": timeline["missing_lines"],
             "render_fingerprint": render_fingerprint,

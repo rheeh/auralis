@@ -36,7 +36,7 @@ from app.repositories.tts_provider_repository import TTSProviderRepository
 from app.repositories.llm_provider_repository import LLMProviderRepository
 from app.core.llm_engine import LLMEngine
 from app.services.timeline_service import TimelineService
-from app.services.audio_selection import selected_audio_path
+from app.services.audio_selection import selected_audio_path, resolve_selected_audio
 from app.integrations.audio import transforms as audio_transforms
 
 import os
@@ -566,7 +566,8 @@ class LineService:
         line = self.repository.get_by_id(line_id)
         if not line:
             raise ValueError("台词不存在")
-        source_path = self.resolve_audio_path(line, original=True)
+        source_resolution = resolve_selected_audio(line, original=True)
+        source_path = source_resolution['path']
         if not source_path or not os.path.isfile(source_path):
             raise FileNotFoundError("该台词还没有可处理的原始音频")
 
@@ -615,7 +616,7 @@ class LineService:
             "silence_sec": float(dto.silence_sec or 0),
             "current_ms": dto.current_ms,
             "region_action": region_action or None,
-            "source_audio_version_id": getattr(line, "active_audio_version_id", None),
+            "source_audio_version_id": source_resolution['source_version_id'],
             "audio_path": target_path,
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
@@ -738,6 +739,7 @@ class LineService:
             "active_audio_variant_id": getattr(line, "active_audio_variant_id", None),
             "is_placeholder_material": self._is_placeholder_material(line),
             "audio_path": self.resolve_audio_path(line),
+            "audio_resolution": resolve_selected_audio(line),
             "subtitle_path": getattr(line, "subtitle_path", None),
             "status": getattr(line, "status", None),
             "is_done": bool(getattr(line, "is_done", 0)),

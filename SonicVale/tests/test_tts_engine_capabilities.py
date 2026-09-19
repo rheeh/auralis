@@ -8,6 +8,25 @@ from app.core.tts_engine import ConfigurableCloudTTSEngine
 
 
 class ConfigurableCloudTTSEngineCapabilityTests(unittest.TestCase):
+    def test_cosyvoice_transport_has_completion_timeout(self):
+        engine=self.make_engine('cosyvoice-v1')
+        with patch('dashscope.audio.tts_v2.SpeechSynthesizer') as synthesizer, patch.object(engine,'_write_audio'):
+            synthesizer.return_value.call.return_value=b'a'*200
+            engine._synthesize_dashscope_cosyvoice('固定文本','unused.wav','longanyang')
+            self.assertGreater(synthesizer.return_value.call.call_args.kwargs.get('timeout_millis',0),0)
+
+    def test_legacy_reference_check_and_upload_already_have_timeouts(self):
+        from app.core.tts_engine import TTSEngine
+        engine=TTSEngine('http://unused.invalid')
+        with tempfile.TemporaryDirectory() as directory, patch('app.core.tts_engine.requests.get') as get, patch('app.core.tts_engine.requests.post') as post:
+            path=Path(directory)/'reference.wav';path.write_bytes(b'fixture')
+            get.return_value.json.return_value={'exists':True}
+            post.return_value.json.return_value={'code':200}
+            self.assertTrue(engine.check_audio_exists(str(path)))
+            engine.upload_audio(str(path))
+            self.assertEqual(get.call_args.kwargs['timeout'],30)
+            self.assertEqual(post.call_args.kwargs['timeout'],30)
+
     def test_qwen_voice_identifier_survives_user_display_name_change(self):
         from app.services.line_service import LineService
         voice = SimpleNamespace(name="我的男主角", description="系统音色,Qwen3-TTS,qwen_voice:Moon")

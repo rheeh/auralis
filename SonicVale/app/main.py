@@ -78,6 +78,7 @@ async def local_origin_boundary(request, call_next):
 
 @app.get('/health')
 def health():
+    from app.core.tts_runtime import execution_health
     from app.db.migrations import CURRENT_SCHEMA_VERSION
     from sqlalchemy import text
     from app.core.config import getFfmpegPath
@@ -86,8 +87,10 @@ def health():
     workers=getattr(app.state,'tts_workers',[])
     worker_ready=bool(workers) and all(not worker.done() for worker in workers)
     ffmpeg_ready=os.path.isfile(getFfmpegPath())
+    execution=execution_health(app)
     return {'application':'auralis','api_version':1,'schema_version':version,
             'worker_ready':worker_ready,'ffmpeg_available':ffmpeg_ready,
+            'tts_execution':execution,'tts_degraded':execution['blocked_slots']>0,
             'ready':version==CURRENT_SCHEMA_VERSION and worker_ready and ffmpeg_ready}
 
 

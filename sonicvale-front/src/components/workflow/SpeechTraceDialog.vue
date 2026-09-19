@@ -42,7 +42,7 @@ const tab = ref('preview'), loading = ref(false), loadingMore = ref(false), prev
 let requestRevision = 0
 const json = value => JSON.stringify(value, null, 2)
 const message = exc => exc.response?.data?.detail || exc.message || '读取失败'
-const statusLabel = status => ({ succeeded: '生成成功', failed: '生成失败', preparing: '准备中 / 未完成', requesting: '请求已发出 / 未完成' })[status] || status
+const statusLabel = status => ({ succeeded: '生成成功', failed: '生成失败', timed_out:'等待超时 / 结果未采用', interrupted:'进程中断 / 结果待检查', preparing: '准备中 / 未完成', requesting: '请求已发出 / 未完成' })[status] || status
 const formatTime = value => value ? new Date(/[Zz]|[+-]\d\d:\d\d$/.test(value) ? value : `${value}Z`).toLocaleString('zh-CN') : ''
 async function load() {
   if (!props.lineId) return

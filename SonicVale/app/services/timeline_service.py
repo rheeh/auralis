@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from app.core.audio_metadata import probe_audio
-from app.services.audio_selection import selected_audio_path
+from app.services.audio_selection import selected_audio_path, resolve_selected_audio
 
 import hashlib
 import json
@@ -144,6 +144,7 @@ class TimelineService:
             "chapter_id": chapter_id,
             "chapter_title": chapter.title,
             "source_fingerprint": source_fingerprint,
+            "audio_sources":{str(line.id):resolve_selected_audio(line) for line in lines.values()},
             "line_count": len(lines),
             "missing_lines": missing_lines,
             "missing_line_count": len(missing_lines),
@@ -495,7 +496,8 @@ class TimelineService:
     def _source_fingerprint(cls, lines) -> str:
         source = []
         for line in sorted(lines, key=lambda item: (item.line_order or 0, item.id or 0)):
-            path = cls._normalise_path(cls._selected_audio_path(line))
+            resolution=resolve_selected_audio(line)
+            path = cls._normalise_path(resolution['path'])
             stat = None
             try:
                 file_stat = os.stat(path)
@@ -509,8 +511,7 @@ class TimelineService:
                 "path": path,
                 "stat": stat,
                 "input": [getattr(line,key,None) for key in ("text_content","production_note","role_id","voice_id","emotion_id","strength_id","is_done","audio_events")],
-                "active_version": line.active_audio_version_id,
-                "active_variant": line.active_audio_variant_id,
+                "audio_resolution":resolution,
             })
         return hashlib.sha256(json.dumps({"layout": "overlay_v2", "lines": source}, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
 

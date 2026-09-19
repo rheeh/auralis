@@ -140,13 +140,14 @@ class DramaWorkflowService:
     def _start_pipeline(self, session: ChatSessionPO) -> dict[str, Any]:
         _, run, project = self._context(session.id)
         self._set_stage(session, "parsing")
-        parsed = self.source_parser.parse(project, session.source_text or "", session.instruction)
-        self._assert_lease(session.id)
-        run.parsed_json = parsed
-        run.current_stage = "parsing"
-        run.error_message = None
-        self.db.commit()
-        self._add_message(session.id, "assistant", "status", "小说解析完成，正在生成角色草稿。", {"stage": "parsing"})
+        if not run.parsed_json:
+            parsed = self.source_parser.parse(project, session.source_text or "", session.instruction)
+            self._assert_lease(session.id)
+            run.parsed_json = parsed
+            run.current_stage = "parsing"
+            run.error_message = None
+            self.db.commit()
+            self._add_message(session.id, "assistant", "status", "小说解析完成，正在生成角色草稿。", {"stage": "parsing"})
         return self._generate_roles(session, previous_roles=None, feedback="")
 
     def _dispatch(self, session: ChatSessionPO, action: WorkflowAction) -> dict[str, Any]:

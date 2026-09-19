@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from uuid import uuid4
 from urllib.parse import urlsplit, urlunsplit
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import sessionmaker
 
 from app.models.po import TTSGenerationPO
@@ -63,8 +63,8 @@ class TTSRequestRecorder:
                 raise RuntimeError("配音生成记录不存在，已停止本次请求")
             if event == "request":
                 row.request_json = redact(data, self.secrets)
-                if row.status == "preparing":
-                    row.status = "requesting"
+                db.execute(update(TTSGenerationPO).where(TTSGenerationPO.id==self.generation_id,
+                    TTSGenerationPO.status=='preparing').values(status='requesting'))
             elif event == "response":
                 row.response_json = redact(data, self.secrets)
             elif event == "prepared":
@@ -92,6 +92,19 @@ class TTSTraceService:
         row.error_message = redact(str(error), secrets) if error else None
         row.result_json = redact(audio, secrets) if audio is not None else None
         row.completed_at = datetime.now(timezone.utc)
+        self.db.commit()
+
+    def execution_ended(self, generation_id, *, status, execution_state, error, result=None, secrets=()):
+        self.db.expire_all()
+        row = self.db.get(TTSGenerationPO, generation_id)
+        if not row:
+            return
+        row.status = status
+        row.audio_version_id = None
+        row.error_message = redact(str(error), secrets)
+        row.result_json = redact({**(row.result_json or {}), **(result or {}),
+            'execution_state':execution_state, 'observed_at':datetime.now(timezone.utc).isoformat()}, secrets)
+        row.completed_at = row.completed_at or datetime.now(timezone.utc)
         self.db.commit()
 
     def list(self, project_id, line_id=None, limit=30, before=None):

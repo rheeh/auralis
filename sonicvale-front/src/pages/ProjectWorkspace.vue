@@ -115,9 +115,15 @@
 
         <WorkflowErrorCard v-else-if="snapshot.current_stage === 'failed'" :message="snapshot.last_error_message" :loading="actionBusy" @retry="retry" />
 
+        <section v-else-if="snapshot.current_stage === 'awaiting_role_confirmation'">
+          <div v-if="roleConflict" role="alert">
+            <p>收到新版人物草稿，本地编辑已保留。请选择本次确认使用的内容。</p>
+            <el-button @click="resolveRoleConflict('local')">保留本地编辑</el-button>
+            <el-button @click="resolveRoleConflict('server')">使用新版本</el-button>
+          </div>
         <RoleDraftConfirmCard
-          v-else-if="snapshot.current_stage === 'awaiting_role_confirmation'"
-          :roles="roleDrafts"
+          :roles="roleEdits"
+          :conflicted="roleConflict"
           :session-id="snapshot.session_id"
           :revision="snapshot.pending_confirm?.revision"
           :loading="actionBusy"
@@ -125,6 +131,7 @@
           @update:roles="roleEdits=$event"
           @confirm="confirmRoles"
         />
+        </section>
 
         <section v-else-if="snapshot.current_stage === 'script_draft_ready'" class="commit-state">
           <div><p class="eyebrow">台本已确认</p><h3>正在建立逐句制作单元</h3><p>写入后，每句台词会直接显示角色音色、生成状态和试听结果。</p></div>
@@ -152,9 +159,10 @@
 
 <script setup>
 import { createRequestScope, mergeDraft } from '../features/workspace/composables/requestScope.js'
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch, provide } from 'vue'
+import { createProductionDrafts, useRoleDrafts } from '../features/workspace/composables/workspaceDrafts.js'
+import { useRoute, useRouter, onBeforeRouteUpdate, onBeforeRouteLeave } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Document, Refresh } from '@element-plus/icons-vue'
 import {
   openChapterWorkspace,
@@ -211,7 +219,11 @@ const autoCommit = ref(false)
 const resultView = ref('output')
 const transitioning = ref(false)
 const transitionFromStage = ref('')
-const roleEdits = ref([])
+const roleState=useRoleDrafts()
+const roleEdits=roleState.roles, roleConflict=roleState.conflict
+const resolveRoleConflict=roleState.resolve
+const productionDrafts=createProductionDrafts()
+provide('productionDrafts',productionDrafts)
 const productionRef = ref(null)
 const voiceRevision = ref(0)
 let pollTimer = null
@@ -229,7 +241,7 @@ const assistantPlaceholder = computed(() => ({
   completed:'例如：查看缺失音频、修改第12句、给对应角色换音色并重新生成……',
   failed:'可以询问失败原因，或让助手检查当前项目状态……',
 }[snapshot.value?.current_stage] || '可以随时询问当前进度或告诉制作助手下一步要做什么……'))
-const roleEditsReady = computed(() => roleEdits.value.filter(role=>role.selected!==false).length>0 && roleEdits.value.filter(role=>role.selected!==false).every(role=>role.default_voice_id))
+const roleEditsReady = computed(() => !roleConflict.value && roleEdits.value.filter(role=>role.selected!==false).length>0 && roleEdits.value.filter(role=>role.selected!==false).every(role=>role.default_voice_id))
 const isGenerating = computed(() => ['created','parsing','generating_script','reviewing_script','committing'].includes(snapshot.value?.current_stage))
 const activeStage = computed(() => {
   const stage = snapshot.value?.current_stage
@@ -254,7 +266,22 @@ const assistantMission = computed(() => ({
 
 const historyScope=createRequestScope(()=>`${workspaceEpoch}:${snapshot.value?.session_id}`)
 const sessionScope=createRequestScope(()=>workspaceEpoch)
-let roleBaseline=[]
+let discardApproved=false
+async function confirmDiscard(){
+  if(!productionDrafts.dirty()&&!roleState.dirty.value&&!roleConflict.value)return true
+  try{
+    await ElMessageBox.confirm('有尚未保存的台词、指导或人物编辑。离开当前章节会放弃这些编辑。','保留未保存编辑',{confirmButtonText:'放弃编辑并离开',cancelButtonText:'留在当前章节',type:'warning'})
+    discardApproved=true;return true
+  }catch{return false}
+}
+onBeforeRouteUpdate((to,from)=>{
+  const context=r=>`${r.params.id}:${r.query.chapter_id||''}:${r.query.session_id||''}:${r.query.new||''}`
+  return context(to)===context(from)?true:confirmDiscard()
+})
+onBeforeRouteLeave(confirmDiscard)
+function warnBeforeUnload(event){if(productionDrafts.dirty()||roleState.dirty.value){event.preventDefault();event.returnValue=''}}
+onMounted(()=>window.addEventListener('beforeunload',warnBeforeUnload))
+onBeforeUnmount(()=>window.removeEventListener('beforeunload',warnBeforeUnload))
 onMounted(loadWorkspace)
 onBeforeUnmount(() => {workspaceEpoch++;historyScope.dispose();sessionScope.dispose();clearTimeout(pollTimer)})
 
@@ -273,7 +300,8 @@ async function loadWorkspace() {
     const requested=Number(route.query.chapter_id)
     if(requested && !chapters.value.some(chapter=>chapter.id===requested))throw new Error('该章节不属于当前项目或已被移除')
     const latest=route.query.session_id?sessions.find(item=>item.session_id===route.query.session_id):requested?sessions.find(item=>item.chapter_id===requested):sessions[0]
-    snapshot.value=null;messages.value=[];roleEdits.value=[];roleBaseline=[]
+    snapshot.value=null;messages.value=[]
+    if(discardApproved){productionDrafts.clear();roleState.reset();discardApproved=false}
     if(latest)await loadSession(latest.session_id,epoch)
     else if(requested || chapters.value.length){const response=await openChapterWorkspace(projectId,requested||chapters.value[0].id);if(response?.code!==200)throw new Error(response?.message||'章节工作台打开失败');if(epoch===workspaceEpoch)await loadSession(response.data.session_id,epoch)}
     if(snapshot.value && epoch===workspaceEpoch){const location=workspaceLocation(projectId,snapshot.value.chapter_id,resolveWorkspaceView(route.query.view,snapshot.value.current_stage,snapshot.value.chapter_id),selectedLineId.value);if(!snapshot.value.chapter_id)location.query.session_id=snapshot.value.session_id;await router.replace(location)}
@@ -282,7 +310,7 @@ async function loadWorkspace() {
 }
 
 function requestId() { return globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}` }
-function startNew(){workspaceEpoch++;clearTimeout(pollTimer);snapshot.value=null;messages.value=[];feedback.value='';assistantBusy.value=false;pendingAssistantMessageId.value='';draft.title='';draft.source_text='';resultView.value='output';workspaceError.value='';router.push({path:route.path,query:{view:'source',new:'1'}})}
+async function startNew(){if(!await confirmDiscard())return;workspaceEpoch++;clearTimeout(pollTimer);snapshot.value=null;productionDrafts.clear();roleState.reset();discardApproved=false;messages.value=[];feedback.value='';assistantBusy.value=false;pendingAssistantMessageId.value='';draft.title='';draft.source_text='';resultView.value='output';workspaceError.value='';router.push({path:route.path,query:{view:'source',new:'1'}})}
 
 async function createSession() {
   const actionEpoch=workspaceEpoch
@@ -311,7 +339,7 @@ async function loadSession(sessionId, epoch=workspaceEpoch) {
     if (transitioning.value && nextStage!==transitionFromStage.value) {
       transitioning.value=false;transitionFromStage.value='';transitionStartedAt=0
     }
-    if (nextStage==='awaiting_role_confirmation'){const incoming=JSON.parse(JSON.stringify(response.data?.role_drafts?.roles||[]));if(!roleEdits.value.length||JSON.stringify(roleEdits.value)===JSON.stringify(roleBaseline))roleEdits.value=incoming;roleBaseline=incoming}
+    if(nextStage==='awaiting_role_confirmation')roleState.accept(sessionId,response.data.pending_confirm?.revision,response.data.role_drafts?.roles||[])
     await refreshHistory();schedulePoll()
   }
 }
@@ -328,7 +356,9 @@ async function refreshHistory() {
   messages.value = response?.code === 200 ? response.data || [] : []
   if (pendingAssistantMessageId.value) {
     const reply=messages.value.find(item=>item.role==='assistant'&&item.payload?.in_reply_to===pendingAssistantMessageId.value)
+    const turn=messages.value.find(item=>item.id===pendingAssistantMessageId.value)
     if(reply){assistantBusy.value=false;assistantStartedAt.value=0;pendingAssistantMessageId.value='';await applyAssistantActions(reply.payload?.ui_actions||[])}
+    else if(turn?.turn_status==='interrupted'){assistantBusy.value=false;assistantStartedAt.value=0;pendingAssistantMessageId.value='';ElMessage.warning(turn.payload?.interruption||'本轮已中断，请先检查项目结果；不会自动重放写操作')}
   }
 }
 async function sendRevision() {
@@ -348,7 +378,7 @@ async function submitRevision(message) {
     feedback.value='';pendingAssistantMessageId.value=response.data?.user_message_id||'';await refreshHistory();schedulePoll()
   }catch(error){assistantBusy.value=false;assistantStartedAt.value=0;ElMessage.error(apiError(error,'制作助手处理失败'))}
 }
-async function confirmRoles(roles) { await submitConfirm('roles','confirm_roles',{roles}) }
+async function confirmRoles(roles) { if(roleConflict.value)return;const submitted=JSON.parse(JSON.stringify(roles));if(await submitConfirm('roles','confirm_roles',{roles:submitted}))roleState.saved(submitted) }
 async function confirmScript(script) { autoCommit.value=true;await submitConfirm('script','confirm_script',{script}) }
 async function submitConfirm(confirmType,action,payload) {
   const actionEpoch=workspaceEpoch
@@ -361,7 +391,7 @@ async function submitConfirm(confirmType,action,payload) {
     if(actionEpoch!==workspaceEpoch)return
     if(![200,202].includes(response?.code))throw new Error(response?.message||'确认失败')
     if(response?.data?.current_stage && response.data.current_stage!==transitionFromStage.value) snapshot.value=response.data
-    schedulePoll()
+    schedulePoll();return true
   }catch(error){transitioning.value=false;transitionFromStage.value='';autoCommit.value=false;ElMessage.error(apiError(error,'确认失败'))}finally{submitting.value=false}
 }
 async function commitScript() {

@@ -1,8 +1,21 @@
 # 架构整理与可靠性状态
 
-2026-09-16，基于任务书的 master@5aed5b8。已落地核心修复，但**不是所有 B0–B6 门槛都已完成验收**。此文件是唯一实时状态表；[原任务书](docs/development/reliability/Auralis_Implementation_Brief.md)仅为实施规格。
+更新于 2026-09-19；首轮基于 master@5aed5b8，后续在 5a44ee7 上完成 R1–R6 定向修复。已落地核心修复，但**不是所有 B0–B6 门槛都已完成验收**。此文件是唯一实时状态表；[原任务书](docs/development/reliability/Auralis_Implementation_Brief.md)仅为实施规格。
 
-## 问题登记
+## 本轮 R1–R6
+
+均已复现并完成针对性修复，详见 [触发场景、调用链、测试和限制](docs/development/reliability/followup-5a44ee7.md)。
+
+- R1：新指导重生成原子拒绝活动任务，409 不落库；前端保留输入。
+- R2：Agent turn 数据库调度/执行领取、步骤键、中断保留、失效 token 拒绝晚到工具。
+- R3：人物草稿唯一所有者与 revision 冲突选择；保存快照；视图间保留、章节离开保护。
+- R4：created 重启后可显式继续；角色生成重试复用解析。
+- R5：超时/晚到/中断 trace 与任务一致，执行槽位可观测；CosyVoice 完成等待上界。
+- R6：实际文件与来源统一解析，标签、时间线、导出一致。
+
+R7 轮询失败恢复及请求量测量、R8 依赖漏洞分类/可达性核查保留为后续，未自动升级依赖。
+
+## 首轮问题登记
 
 | ID | 状态 | 事实与记录 |
 | --- | --- | --- |
@@ -26,7 +39,7 @@
 | CFG-01 | 已实施/工程测试 | 共享 routing、builder、显式音色迁移；真实 provider 未测试。[B6](docs/development/reliability/B6-runtime-docs.md) |
 | CFG-02 | 已实施/浏览器验收 | Runtime API、健康身份与 worker/FFmpeg；桌面实际复用未验收。[B6](docs/development/reliability/B6-runtime-docs.md) |
 | SEC-01 | 实现并局部验收 | Origin/token 与 Electron 安全开关/IPC；打包端尚未实测。[B6](docs/development/reliability/B6-runtime-docs.md) |
-| TEST-01 | 本地完成 | 准确发现测试、隔离入口、离线 CI、Pages 检查前置；未远程运行。[验收](docs/development/reliability/verification.md) |
+| TEST-01 | 本地完成 | 准确发现测试、隔离入口、离线 CI、Pages 检查前置；5a44ee7 的远程 checks 已核实通过，见本轮记录。[验收](docs/development/reliability/verification.md) |
 | EVAL-01 | 边界完成 | 原报告保留，未新增真实调用或听感分数，不以旧报告证明新策略。 |
 
 ## 必须保留的未完成清单
@@ -36,7 +49,7 @@
 3. 扩展进程强杀/重启、并发确认/提交、事件落库失败及 trace 异常等故障矩阵；将剩余历史“业务提交后另记事件”路径逐步合并。
 4. 补只读孤儿产物检查工具与归档恢复流程。当前失败 attempt 的独立文件、task 路径、删除快照和历史音频都保留，不自动清理。
 5. 实测打包 Electron 的安全模式、媒体/IPC、同端口实例 token 复用及 Windows 锁；当前不能声称桌面分发已验收。
-6. 真实历史数据库与真实供应商/听感验证未执行，受本次“不触碰真实库/不调用模型”边界限制；远程 CI/Pages 未运行，受“不推送/不发布”边界限制。它们不是本地假模型测试可替代的证据。
+6. 真实历史数据库与真实供应商/听感验证未执行，受本次“不触碰真实库/不调用模型”边界限制；5a44ee7 的远程 CI 已通过；Pages 未重新发布。它们不是本地假模型测试可替代的证据。
 
 ## 交付资料
 

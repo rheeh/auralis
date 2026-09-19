@@ -288,6 +288,8 @@ class ChatMessagePO(Base):
     content = Column(Text, nullable=True)
     payload_json = Column(JSON, nullable=True)
     client_request_id = Column(String(128), nullable=True)
+    turn_status = Column(String(32), nullable=True)
+    turn_token = Column(String(64), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
     __table_args__ = (

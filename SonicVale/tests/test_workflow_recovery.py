@@ -10,6 +10,37 @@ class WorkflowRecoveryTest(unittest.TestCase):
     tearDown=fixtures.DramaWorkflowTest.tearDown
     _workflow=fixtures.DramaWorkflowTest._workflow
 
+    def test_created_session_restart_waits_for_explicit_http_resume(self):
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+        from unittest.mock import patch
+        from app.db.database import get_db
+        from app.routers.chat_router import router
+        from app.runtime.recovery import recover_interrupted
+        sid=ChatSessionService(self.db).create(ChatSessionCreateDTO(project_id=self.project_id,source_text='固定故事'))['session_id']
+        self.db.close();self.db=self.Session()
+        recover_interrupted(self.db)
+        state=ChatSessionService(self.db).get(sid)
+        self.assertEqual(state['current_stage'],'failed')
+        self.assertEqual(state['pending_confirm']['retry_stage'],'created')
+        workflow=self._workflow()
+        workflow.source_parser.parse=Mock(wraps=workflow.source_parser.parse)
+        app=FastAPI();app.include_router(router);app.dependency_overrides[get_db]=lambda:self.db
+        with TestClient(app) as client, patch('app.routers.chat_router._run_action',side_effect=workflow.submit_action):
+            for _ in range(2):
+                self.assertEqual(client.post(f'/chat/sessions/{sid}/resume').status_code,202)
+        self.assertEqual(workflow.source_parser.parse.call_count,1)
+        self.assertEqual(workflow.snapshot(sid)['current_stage'],'awaiting_role_confirmation')
+
+    def test_role_generation_failure_reuses_saved_parse(self):
+        sid=ChatSessionService(self.db).create(ChatSessionCreateDTO(project_id=self.project_id,source_text='固定故事'))['session_id']
+        workflow=self._workflow()
+        workflow.role_drafter.generate=Mock(side_effect=ValueError('fake roles unavailable'))
+        with self.assertRaises(ValueError):workflow.start(sid)
+        resumed=self._workflow()
+        resumed.source_parser.parse=Mock(side_effect=AssertionError('saved parse must be reused'))
+        self.assertEqual(resumed.resume(sid)['current_stage'],'awaiting_role_confirmation')
+
     def test_review_failure_retries_saved_draft_only(self):
         snapshot=ChatSessionService(self.db).create(ChatSessionCreateDTO(project_id=self.project_id,source_text='固定故事'))
         workflow=self._workflow();sid=snapshot['session_id'];roles=workflow.start(sid)

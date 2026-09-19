@@ -614,7 +614,7 @@ class ConfigurableCloudTTSEngine:
         self._observe("request", {"driver": "dashscope_cosyvoice", "text": text,
                                    "options": {**kwargs, "format": str(kwargs["format"])}})
         synthesizer = SpeechSynthesizer(**kwargs)
-        audio_bytes = synthesizer.call(text)
+        audio_bytes = synthesizer.call(text, timeout_millis=180000)
         self._observe("response", {"request_id": getattr(synthesizer, "get_last_request_id", lambda: "")(),
                                     "audio_bytes": len(audio_bytes or b""), "response_kind": "audio"})
         if not audio_bytes:

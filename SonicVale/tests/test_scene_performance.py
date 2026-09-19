@@ -222,5 +222,5 @@ class ScenePerformanceTest(unittest.TestCase):
         apply_schema_migrations(engine); apply_schema_migrations(engine)
         with engine.connect() as conn:
             self.assertEqual(tuple(conn.execute(text('SELECT text_content, performance_plan FROM chapters WHERE id=1')).one()), ('旧台本', None))
-            self.assertEqual(conn.execute(text('SELECT MAX(version) FROM schema_migrations')).scalar_one(), 11)
+            self.assertEqual(conn.execute(text('SELECT MAX(version) FROM schema_migrations')).scalar_one(), 12)
         engine.dispose()

@@ -1,4 +1,5 @@
-import { ref, reactive, watch, onBeforeUnmount } from 'vue'
+import { ref, reactive, watch, onBeforeUnmount, inject } from 'vue'
+import { createProductionDrafts } from './workspaceDrafts.js'
 import { ElMessage } from 'element-plus'
 import { createRequestScope, mergeDraft } from './requestScope.js'
 import { fetchSessionAudioTasks, fetchChapterProductionConfiguration } from '../../../api/drama'
@@ -11,13 +12,16 @@ import { fetchAllEmotions, fetchAllStrengths } from '../../../api/enums'
 export function useProductionData(props, onFocus) {
 const roles=ref([]),voices=ref([]),providers=ref([]),lines=ref([]),productionConfiguration=ref([])
 const emotions=ref([]),strengths=ref([]),loading=ref(false)
-const roleVoiceMap=reactive({}),audioSummary=reactive({total:0,completed:0,counts:{},tasks:[]}),promptMap=reactive({}),editMap=reactive({})
+const roleVoiceMap=reactive({}),audioSummary=reactive({total:0,completed:0,counts:{},tasks:[]})
+const drafts=inject('productionDrafts',null)||createProductionDrafts()
+const {promptMap,editMap,editBaseline,promptBaseline}=drafts
+drafts.activate(`${props.projectId}:${props.chapterId}`)
 const requestScope=createRequestScope(()=>`${props.projectId}:${props.chapterId}:${props.sessionId}`)
-const editBaseline={},promptBaseline={}
 let pollTimer=null
 watch(()=>[props.projectId,props.sessionId,props.chapterId],()=>{
   requestScope.invalidate();clearTimeout(pollTimer)
-  for(const map of [editMap,promptMap,editBaseline,promptBaseline,roleVoiceMap])Object.keys(map).forEach(key=>delete map[key])
+  drafts.activate(`${props.projectId}:${props.chapterId}`)
+  Object.keys(roleVoiceMap).forEach(key=>delete roleVoiceMap[key])
   lines.value=[];productionConfiguration.value=[];loading.value=false;loadAll()
 })
 onBeforeUnmount(()=>{requestScope.dispose();clearTimeout(pollTimer)})

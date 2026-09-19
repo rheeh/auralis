@@ -73,6 +73,7 @@
                 <el-input v-model="promptMap[line.id]" size="small" placeholder="单句声音提示词：如更克制、语速稍慢、压低声音……" clearable />
                 <el-button size="small" :type="hasAudio(line)?'default':'primary'" :disabled="!configurationFor(line)?.enabled" :loading="regeneratingId===line.id" @click="regenerate(line)">{{ hasAudio(line) ? '按当前指导重新生成本句' : '生成本句音频' }}</el-button>
               </div>
+              <p v-if="regenerationConflicts[line.id]" role="status">{{ regenerationConflictText(line.id) }}</p>
               <small v-if="isSpeakable(line)" class="tts-guidance-hint" :class="{edge:isEdgeLine(line)}">{{ guidanceHint(line) }}</small>
               <div v-if="isSpeakable(line)&&expandedLineIds.has(line.id)" class="line-editor" @click.stop>
                 <div class="metadata-editor">
@@ -90,10 +91,10 @@
                 <WaveCellPro v-if="hasAudio(line)" :key="`${line.id}-${audioVersion}`" :src="originalLineAudioUrl(line.id)" variant-mode @confirm="payload=>processLine(line,payload)" />
                 <div v-if="line.audio_variants?.length" class="variant-list">
                   <header><strong>处理版本</strong><small>每个版本都从原始音频生成，互不覆盖</small></header>
-                  <div v-for="variant in line.audio_variants" :key="variant.id" class="variant-item" :class="{active:line.active_audio_variant_id===variant.id}">
-                    <span><strong>{{ variant.label }} <el-tag v-if="line.active_audio_variant_id===variant.id" size="small" type="success">当前采用</el-tag></strong><small>{{ variant.region_action==='speed'?`局部 ${variant.start_ms/1000}–${variant.end_ms/1000}s`:`整段 ${variant.speed}x` }} · {{ variant.volume }}x 音量</small></span>
+                  <div v-for="variant in line.audio_variants" :key="variant.id" class="variant-item" :class="{active:activeVariantId(line)===variant.id}">
+                    <span><strong>{{ variant.label }} <el-tag v-if="activeVariantId(line)===variant.id" size="small" type="success">当前采用</el-tag></strong><small>{{ variant.region_action==='speed'?`局部 ${variant.start_ms/1000}–${variant.end_ms/1000}s`:`整段 ${variant.speed}x` }} · {{ variant.volume }}x 音量</small></span>
                     <audio controls preload="none" :src="getAudioVariantUrl(line.id,variant.id,audioVersion)" />
-                    <el-button v-if="line.active_audio_variant_id!==variant.id" size="small" plain type="primary" @click="activateVariant(line,variant)">设为当前</el-button>
+                    <el-button v-if="activeVariantId(line)!==variant.id" size="small" plain type="primary" @click="activateVariant(line,variant)">设为当前</el-button>
                     <el-button size="small" text type="danger" @click="removeVariant(line,variant)">删除</el-button>
                   </div>
                 </div>
@@ -155,6 +156,14 @@ const props=defineProps({sessionId:{type:String,required:true},projectId:{type:N
 const emit=defineEmits(['open-timeline'])
 const {roles,voices,providers,lines,productionConfiguration,emotions,strengths,loading,roleVoiceMap,audioSummary,promptMap,editMap,editBaseline,requestScope,loadAll}=useProductionData(props,focusLine)
 const traceOpen=ref(false),traceLineId=ref(null)
+const regenerationConflicts=reactive({})
+function regenerationConflictText(id){
+  const task=regenerationConflicts[id]
+  if(!task)return ''
+  const current=taskForLine(id)
+  const active=!current||['queued','processing','completing'].includes(current.status)
+  return `${active?'已有配音任务执行中':'上次任务已结束，可重新提交'}；本地新指导已保留、尚未保存。执行指导：${task.input_snapshot?.prepared?.production_note||'无'}（输入 ${task.input_fingerprint?.slice(0,8)||task.task_id}）`
+}
 const canGenerateAll=computed(()=>productionConfiguration.value.length>0 && productionConfiguration.value.every(item=>item.enabled))
 function configurationFor(line){return productionConfiguration.value.find(item=>item.line_id===line.id)}
 function instructionLabel(mode){return {native:'支持表演指令',structured:'支持结构化指令',mapped:'仅映射语速等参数',none:'不支持表演指令'}[mode]||'能力未确认'}
@@ -257,14 +266,30 @@ function taskForLine(id){return(audioSummary.tasks||[]).find(task=>task.line_id=
 function lineAudioUrl(id){return getLineAudioUrl(id,audioVersion.value)}function originalLineAudioUrl(id){return getLineAudioUrl(id,audioVersion.value,true)}function waveHeight(id,i){return 22+((Number(id||1)*13+i*17)%70)}
 function emotionName(id){return emotions.value.find(item=>item.id===id)?.name||'待补'}function strengthName(id){return strengths.value.find(item=>item.id===id)?.name||'待补'}
 function generatedAudioVersions(line){const versions=line.audio_versions||[];return versions.length?versions:hasAudio(line)?[{id:'__legacy__',label:'版本 1'}]:[]}
-function activeGeneratedVersionId(line){const versions=generatedAudioVersions(line);return versions.some(item=>item.id===line.active_audio_version_id)?line.active_audio_version_id:versions.at(-1)?.id}
-function activeVariant(line){return(line.audio_variants||[]).find(item=>item.id===line.active_audio_variant_id)||null}function audioVersionLabel(line){return !hasAudio(line)?'待生成':activeVariant(line)?'处理版':'原音'}
+function activeGeneratedVersionId(line){const config=configurationFor(line);return config?config.selected_version_id:line.active_audio_version_id}
+function activeVariantId(line){const config=configurationFor(line);return config?config.selected_variant_id:line.active_audio_variant_id}
+function activeVariant(line){return(line.audio_variants||[]).find(item=>item.id===activeVariantId(line))||null}function audioVersionLabel(line){return !hasAudio(line)?'待生成':activeVariant(line)?'处理版':'原音'}
 async function selectGeneratedVersion(line,versionId){const operation=requestScope.capture();if(!versionId||versionId==='__legacy__'||versionId===activeGeneratedVersionId(line))return;versionSwitchingId.value=line.id;try{const response=await activateGeneratedAudioVersion(line.id,versionId);if(!requestScope.sameContext(operation))return;if(response?.code!==200)throw new Error(response?.message||'切换失败');if(playingLineId.value===line.id){player.pause();player.removeAttribute('src');player.load();playingLineId.value=null;currentTime.value=0;duration.value=0}line.active_audio_version_id=versionId;line.active_audio_variant_id=null;audioVersion.value=Date.now();await loadAll();if(!requestScope.sameContext(operation))return;ElMessage.success(`已切换音频版本，需刷新声音编排并重新混音`)}catch(error){if(!requestScope.sameContext(operation))return;ElMessage.error(error?.response?.data?.message||error?.message||'切换音频版本失败')}finally{if(!requestScope.sameContext(operation))return;versionSwitchingId.value=null}}
 function toggleLineEditor(line,event){if(!isSpeakable(line))return;if(event.target.closest('button,input,textarea,select,a,audio,.el-input,.el-select,.line-tools,[role="slider"]'))return;expandedLineIds.has(line.id)?expandedLineIds.delete(line.id):expandedLineIds.add(line.id)}
 async function autoBind(){const operation=requestScope.capture();autoBinding.value=true;try{const response=await addSmartRoleAndVoice(props.projectId,props.chapterId);if(!requestScope.sameContext(operation))return;if(response?.code!==200)throw new Error(response?.message||'自动分配失败');voiceChanged.value=true;await loadAll();if(!requestScope.sameContext(operation))return;ElMessage.success('已从全部模型来源为人物分配不同音色')}catch(error){if(!requestScope.sameContext(operation))return;ElMessage.error(error?.response?.data?.message||error?.message||'自动分配失败')}finally{if(!requestScope.sameContext(operation))return;autoBinding.value=false}}
 async function generateAudio(){const operation=requestScope.capture();if(!voiceReady.value||!canGenerateAll.value)return ElMessage.warning('请先为每个人物绑定已启用的独立音色');generating.value=true;try{const response=await generateSessionAudio(props.sessionId,voiceChanged.value);if(!requestScope.sameContext(operation))return;if(response?.code!==200)throw new Error(response?.message||'创建任务失败');voiceChanged.value=false;await loadAll();if(!requestScope.sameContext(operation))return;ElMessage.success(response.data?.created?`已加入 ${response.data.created} 条任务`:'没有新的待生成台词')}catch(error){if(!requestScope.sameContext(operation))return;ElMessage.error(error?.response?.data?.message||error?.message||'生成失败')}finally{if(!requestScope.sameContext(operation))return;generating.value=false}}
-async function regenerate(line){const operation=requestScope.capture();regeneratingId.value=line.id;try{const response=await regenerateLineAudio(props.sessionId,line.id,promptMap[line.id]||'');if(!requestScope.sameContext(operation))return;if(response?.code!==200)throw new Error(response?.message||'重新生成失败');audioVersion.value=Date.now();await loadAll();if(!requestScope.sameContext(operation))return;ElMessage.success('已按单句提示词加入生成队列')}catch(error){if(!requestScope.sameContext(operation))return;ElMessage.error(error?.response?.data?.message||error?.message||'重新生成失败')}finally{if(!requestScope.sameContext(operation))return;regeneratingId.value=null}}
-async function saveLine(line){const operation=requestScope.capture();const edit=editMap[line.id];if(!edit?.text_content?.trim())return ElMessage.warning('朗读文本不能为空');if(/[()（）\[\]【】]/.test(edit.text_content))return ElMessage.warning('朗读文本不能包含括号提示，请把提示写到后期说明');savingId.value=line.id;try{const changed=edit.text_content.trim()!==line.text_content;const guidanceChanged=edit.emotion_id!==line.emotion_id||edit.strength_id!==line.strength_id||(edit.production_note?.trim()||'')!==(line.production_note||'');const response=await updateLine(line.id,{text_content:edit.text_content.trim(),emotion_id:edit.emotion_id,strength_id:edit.strength_id,production_note:edit.production_note?.trim()||null});if(!requestScope.sameContext(operation))return;if(response?.code!==200)throw new Error(response?.message||'保存失败');editBaseline[line.id]={...edit};await loadAll();if(!requestScope.sameContext(operation))return;ElMessage.success(changed?'台词已保存，请重新生成本句音频':guidanceChanged?'情绪、强度或声音指导已保存；重新生成后才会反映到音频中':'台词信息已保存')}catch(error){if(!requestScope.sameContext(operation))return;ElMessage.error(error?.response?.data?.message||error?.message||'保存失败')}finally{if(!requestScope.sameContext(operation))return;savingId.value=null}}
+async function regenerate(line){
+  const operation=requestScope.capture()
+  regeneratingId.value=line.id
+  try{
+    const response=await regenerateLineAudio(props.sessionId,line.id,promptMap[line.id]||'')
+    if(!requestScope.sameContext(operation))return
+    if(response?.code!==200)throw new Error(response?.message||'重新生成失败')
+    delete regenerationConflicts[line.id]
+    audioVersion.value=Date.now();await loadAll()
+    if(requestScope.sameContext(operation))ElMessage.success('当前指导已保存，配音任务已加入队列')
+  }catch(error){
+    if(!requestScope.sameContext(operation))return
+    if(error?.response?.status===409&&error.response.data?.data?.task_id)regenerationConflicts[line.id]=error.response.data.data
+    ElMessage.error(error?.response?.data?.message||error?.message||'重新生成失败')
+  }finally{if(requestScope.sameContext(operation))regeneratingId.value=null}
+}
+async function saveLine(line){const operation=requestScope.capture();const edit={...editMap[line.id]};if(!edit?.text_content?.trim())return ElMessage.warning('朗读文本不能为空');if(/[()（）\[\]【】]/.test(edit.text_content))return ElMessage.warning('朗读文本不能包含括号提示，请把提示写到后期说明');savingId.value=line.id;try{const changed=edit.text_content.trim()!==line.text_content;const guidanceChanged=edit.emotion_id!==line.emotion_id||edit.strength_id!==line.strength_id||(edit.production_note?.trim()||'')!==(line.production_note||'');const response=await updateLine(line.id,{text_content:edit.text_content.trim(),emotion_id:edit.emotion_id,strength_id:edit.strength_id,production_note:edit.production_note?.trim()||null});if(!requestScope.sameContext(operation))return;if(response?.code!==200)throw new Error(response?.message||'保存失败');editBaseline[line.id]={...edit,text_content:edit.text_content.trim(),production_note:edit.production_note?.trim()||''};await loadAll();if(!requestScope.sameContext(operation))return;ElMessage.success(changed?'台词已保存，请重新生成本句音频':guidanceChanged?'情绪、强度或声音指导已保存；重新生成后才会反映到音频中':'台词信息已保存')}catch(error){if(!requestScope.sameContext(operation))return;ElMessage.error(error?.response?.data?.message||error?.message||'保存失败')}finally{if(!requestScope.sameContext(operation))return;savingId.value=null}}
 async function processLine(line,payload){const operation=requestScope.capture();try{const response=await createAudioVariant(line.id,payload);if(!requestScope.sameContext(operation))return;if(response?.code!==200)throw new Error(response?.message||'音频版本创建失败');audioVersion.value=Date.now();await loadAll();if(!requestScope.sameContext(operation))return;ElMessage.success('已从原音频保存一个独立处理版本')}catch(error){if(!requestScope.sameContext(operation))return;ElMessage.error(error?.response?.data?.message||error?.message||'音频版本创建失败')}}
 async function activateVariant(line,variant){const operation=requestScope.capture();try{const response=await activateAudioVariant(line.id,variant.id);if(!requestScope.sameContext(operation))return;if(response?.code!==200)throw new Error(response?.message||'切换失败');audioVersion.value=Date.now();await loadAll();if(!requestScope.sameContext(operation))return;ElMessage.success('顶部播放器和导出已切换到这个版本')}catch(error){if(!requestScope.sameContext(operation))return;ElMessage.error(error?.response?.data?.message||error?.message||'切换失败')}}
 async function removeVariant(line,variant){const operation=requestScope.capture();try{const response=await deleteAudioVariant(line.id,variant.id);if(!requestScope.sameContext(operation))return;if(response?.code!==200)throw new Error(response?.message||'删除失败');audioVersion.value=Date.now();await loadAll();if(!requestScope.sameContext(operation))return;ElMessage.success('音频版本已删除')}catch(error){if(!requestScope.sameContext(operation))return;ElMessage.error(error?.response?.data?.message||error?.message||'删除失败')}}

@@ -16,7 +16,7 @@
             {{ uploadingId === role.draft_id ? '上传中…' : '上传头像' }}
             <input type="file" accept="image/png,image/jpeg,image/webp" :disabled="uploadingId === role.draft_id" @change="uploadAvatar(role,$event)" />
           </label>
-          <el-checkbox v-model="role.selected">保留</el-checkbox>
+          <el-checkbox :model-value="role.selected" @update:model-value="updateRole(role.draft_id,{selected:$event})">保留</el-checkbox>
         </div>
         <span class="role-copy">
           <strong>{{ role.name }}</strong>
@@ -24,14 +24,14 @@
           <p>{{ role.speech_style || role.voice_type || '暂无表达特点' }}</p>
         </span>
         <div class="voice-picker">
-          <ModelVoicePicker v-model="role.default_voice_id" :providers="providers" :voices="voices" :previewing-id="previewingId" :is-voice-disabled="id=>voiceUsedByOtherRole(id,role.draft_id)" :label="`为${role.name}选择音色`" clearable @preview="toggleVoicePreview" />
+          <ModelVoicePicker :model-value="role.default_voice_id" @update:model-value="updateRole(role.draft_id,{default_voice_id:$event})" :providers="providers" :voices="voices" :previewing-id="previewingId" :is-voice-disabled="id=>voiceUsedByOtherRole(id,role.draft_id)" :label="`为${role.name}选择音色`" clearable @preview="toggleVoicePreview" />
           <button v-if="selectedVoice(role)?.reference_path" class="selected-preview" type="button" @click="toggleVoicePreview(selectedVoice(role))"><el-icon><component :is="previewingId===role.default_voice_id?VideoPause:VideoPlay" /></el-icon>{{ previewingId===role.default_voice_id?'停止试听':`试听「${selectedVoice(role).name}」` }}</button>
           <small v-else-if="selectedVoice(role)" class="no-preview">该音色暂无试听样音</small>
         </div>
       </article>
     </div>
     <footer>
-      <el-button type="primary" :loading="loading" :disabled="!canConfirm" @click="$emit('confirm', editableRoles)">
+      <el-button type="primary" :loading="loading" :disabled="conflicted || !canConfirm" @click="$emit('confirm', editableRoles)">
         {{ confirmLabel || `确认 ${selectedCount} 个角色并生成剧本` }}
       </el-button>
     </footer>
@@ -41,7 +41,7 @@
 <script setup>
 import ModelVoicePicker from '../ModelVoicePicker.vue'
 import { providerOptions } from '../../utils/voiceGroups'
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { MagicStick, VideoPause, VideoPlay } from '@element-plus/icons-vue'
 import DraftRevisionBar from './DraftRevisionBar.vue'
@@ -49,18 +49,15 @@ import { fetchTTSProviders } from '../../api/provider'
 import { fetchVoicesByTTS, getVoiceAudioUrl } from '../../api/voice'
 import { getRoleAvatarUrl, uploadRoleAvatar } from '../../api/drama'
 
-const props = defineProps({ roles: { type: Array, default: () => [] }, revision: Number, loading: Boolean, confirmLabel: String, sessionId: String })
+const props = defineProps({ roles: { type: Array, default: () => [] }, revision: Number, loading: Boolean, confirmLabel: String, sessionId: String, conflicted:Boolean })
 const emit = defineEmits(['confirm','update:roles'])
-const editableRoles = ref([])
+const editableRoles = computed(()=>props.roles)
 const providers = ref([])
 const voices = ref([])
 const uploadingId = ref('')
 const previewingId = ref(null)
 const voicePlayer = new Audio()
-watch(() => props.roles, (value) => {
-  editableRoles.value = JSON.parse(JSON.stringify(value || []))
-}, { immediate: true, deep: true })
-watch(editableRoles, value => emit('update:roles', JSON.parse(JSON.stringify(value))), { deep:true })
+function updateRole(id, changes){emit('update:roles',props.roles.map(role=>role.draft_id===id?{...role,...changes}:{...role}))}
 const selectedCount = computed(() => editableRoles.value.filter((item) => item.selected !== false).length)
 const selectedRoles = computed(() => editableRoles.value.filter((item) => item.selected !== false))
 const canConfirm = computed(() => selectedCount.value > 0 && selectedRoles.value.every(role => role.default_voice_id))
@@ -94,11 +91,13 @@ function scoreVoice(role, voice) {
 function autoBind() {
   const eligible = providers.value.filter(p => providerOptions(p).quota_status !== 'unavailable').map(p => p.id)
   const unused = voices.value.filter(v => eligible.includes(v.tts_provider_id))
-  selectedRoles.value.forEach(role => {
+  const updated=props.roles.map(role=>({...role}))
+  updated.filter(role=>role.selected!==false).forEach(role => {
     unused.sort((a,b)=>scoreVoice(role,b)-scoreVoice(role,a) || (providerOptions(providers.value.find(p=>p.id===a.tts_provider_id)).selection_priority ?? 50)-(providerOptions(providers.value.find(p=>p.id===b.tts_provider_id)).selection_priority ?? 50))
     const voice = unused.shift()
     role.default_voice_id = voice?.id || null
   })
+  emit('update:roles',updated)
   ElMessage.success('已按人物设定匹配不同来源的独立音色')
 }
 async function uploadAvatar(role,event) {
@@ -106,10 +105,12 @@ async function uploadAvatar(role,event) {
   event.target.value = ''
   if (!file || !props.sessionId) return
   uploadingId.value = role.draft_id
+  const sessionId=props.sessionId, revision=props.revision
   try {
     const response = await uploadRoleAvatar(props.sessionId,file)
     if (response?.code !== 200) throw new Error(response?.message || '上传失败')
-    role.avatar_path = response.data.avatar_path
+    if(sessionId!==props.sessionId || revision!==props.revision)return
+    updateRole(role.draft_id,{avatar_path:response.data.avatar_path})
     ElMessage.success(`已绑定「${role.name}」头像`)
   } catch(error) { ElMessage.error(error?.message || '头像上传失败') }
   finally { uploadingId.value = '' }

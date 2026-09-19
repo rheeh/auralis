@@ -16,7 +16,7 @@ from sqlalchemy import Engine, inspect, text
 
 
 SCHEMA_MIGRATIONS_TABLE = "schema_migrations"
-CURRENT_SCHEMA_VERSION = 11
+CURRENT_SCHEMA_VERSION = 12
 
 
 def _table_exists(engine: Engine, table_name: str) -> bool:
@@ -189,6 +189,21 @@ def _migration_011_single_active_attempt(engine: Engine) -> None:
         conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_active_audio_task_line ON audio_tasks(line_id) WHERE status IN ('queued','processing','completing')"))
 
 
+def _migration_012_assistant_turn_claim(engine: Engine) -> None:
+    _add_columns(engine, 'chat_messages', {'turn_status':'TEXT', 'turn_token':'TEXT'})
+    if not _table_exists(engine, 'chat_messages'):
+        return
+    with engine.begin() as conn:
+        # Historical unfinished turns may already have performed writes. Do not
+        # make them eligible for automatic scheduling on upgrade.
+        conn.execute(text("""UPDATE chat_messages SET turn_status=CASE WHEN EXISTS
+            (SELECT 1 FROM chat_messages reply WHERE reply.session_id=chat_messages.session_id
+             AND reply.client_request_id='reply:' || chat_messages.id)
+            THEN 'completed' ELSE 'interrupted' END
+            WHERE role='user' AND turn_status IS NULL
+            AND json_valid(payload_json) AND json_extract(payload_json,'$.source')='production_assistant'"""))
+
+
 MIGRATIONS = {
     1: _migration_001_legacy_columns,
     2: _migration_002_timeline_foundation,
@@ -201,6 +216,7 @@ MIGRATIONS = {
     9: _migration_009_generation_snapshot,
     10: _migration_010_explicit_voice,
     11: _migration_011_single_active_attempt,
+    12: _migration_012_assistant_turn_claim,
 }
 
 

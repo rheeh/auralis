@@ -8,6 +8,7 @@ import sys
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.encoders import jsonable_encoder
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -18,7 +19,7 @@ from app.db.database import SessionLocal, get_db
 from app.dto.chat_dto import AudioReviewDTO, ChatCommitDTO, ChatConfirmDTO, ChatMessageCreateDTO, ChatSessionCreateDTO, LineAudioRegenerateDTO, SourceDocumentCreateDTO
 from app.dto.line_dto import LineCreateDTO
 from app.models.po import ChatSessionPO, LinePO
-from app.services.audio_task_service import AudioTaskService
+from app.services.audio_task_service import AudioTaskService, ActiveAudioTaskError
 from app.services.production_configuration import chapter_configuration
 from app.services.chat_session_service import ChatSessionService
 from app.services.drama_commit_service import DramaCommitService
@@ -284,24 +285,17 @@ async def regenerate_line_audio(
         return _error(409, "台词不属于当前已完成会话")
     if not line.should_speak or line.track in {"sfx", "bgm"}:
         return _error(409, "当前声音轨不能生成角色配音")
-    from app.services.factory import get_line_service
-    get_line_service(db).update_line(line.id,{'production_note':dto.prompt.strip() or None})
     service = AudioTaskService(db)
-    latest = service.latest_for_line(session_id, line_id)
-    line_dto = LineCreateDTO.model_validate({column.name: getattr(line, column.name) for column in LinePO.__table__.columns})
     try:
-        task = service.enqueue(
-            request.app.state.tts_queue,
-            session.project_id,
-            session.chapter_id,
-            line,
-            line_dto,
-            session_id,
-            latest,
-        )
-        return Res(data=service.serialize(task, line), message="已按新提示词重新生成")
+        task = service.regenerate(request.app.state.tts_queue, session_id, line_id, dto.prompt)
+        return Res(data=service.serialize(task, line), message="当前指导已保存，配音任务已加入队列")
+    except ActiveAudioTaskError as exc:
+        return JSONResponse(status_code=409, content=jsonable_encoder({
+            'code':409, 'message':str(exc), 'data':service.serialize(exc.task, line)}))
     except OverflowError as exc:
         return _error(429, str(exc))
+    except ValueError as exc:
+        return _error(409, str(exc))
 
 
 def _publish_audio_event(db: Session, session: ChatSessionPO, event_type: str, payload: dict) -> None:
@@ -334,11 +328,15 @@ async def send_message(
         user_message = assistant.accept_message(session_id, dto.message, dto.client_request_id)
         queue = getattr(request.app.state, "tts_queue", None)
         queue_proxy = _ThreadsafeQueueProxy(queue, asyncio.get_running_loop()) if queue is not None else None
-        tasks.add_task(_run_assistant, session_id, user_message.id, queue_proxy)
+        if assistant.schedule_turn(user_message.id):
+            tasks.add_task(_run_assistant, session_id, user_message.id, queue_proxy)
+        db.refresh(user_message)
+        turn_status = 'queued' if user_message.turn_status == 'scheduled' else user_message.turn_status
         return Res(data={
             "session_id": session_id,
             "user_message_id": user_message.id,
-        }, code=202, message="制作助手正在处理")
+            "turn_status": turn_status,
+        }, code=202, message='上次执行已中断，请检查结果；未重复执行' if turn_status == 'interrupted' else '已接收，重复请求复用同一轮状态')
     except WorkflowConflictError as exc:
         return _error(409, str(exc))
     except ValueError as exc:

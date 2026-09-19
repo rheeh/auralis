@@ -7,7 +7,8 @@ from typing import Any, Literal
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.dto.line_dto import LineCreateDTO
@@ -189,14 +190,36 @@ class ProductionAssistantAgent:
             content=message.strip(),
             payload_json={"source": "production_assistant"},
             client_request_id=client_request_id,
+            turn_status='queued',
         )
         self.db.add(row)
-        self.db.commit()
+        try:
+            self.db.commit()
+        except IntegrityError:
+            self.db.rollback()
+            existing = self.db.scalar(select(ChatMessagePO).where(ChatMessagePO.session_id == session_id,
+                ChatMessagePO.client_request_id == client_request_id))
+            if existing:
+                return existing
+            raise
         self.db.refresh(row)
         self.events.publish(session, "assistant_message_received", {"message_id": row.id})
         return row
 
-    def run_turn(self, session_id: str, user_message_id: str) -> ChatMessagePO:
+    def schedule_turn(self, user_message_id: str) -> bool:
+        claimed = self.db.execute(update(ChatMessagePO).where(ChatMessagePO.id == user_message_id,
+            ChatMessagePO.turn_status == 'queued').values(turn_status='scheduled'))
+        self.db.commit()
+        return claimed.rowcount == 1
+
+    def _assert_turn(self, message_id, token):
+        owned=self.db.execute(update(ChatMessagePO).where(ChatMessagePO.id==message_id,
+            ChatMessagePO.turn_status=='running',ChatMessagePO.turn_token==token).values(turn_token=token))
+        self.db.commit()
+        if owned.rowcount!=1:
+            raise WorkflowConflictError('本轮执行权已失效，晚到计划未执行')
+
+    def run_turn(self, session_id: str, user_message_id: str) -> ChatMessagePO | None:
         session = self._session(session_id)
         user_message = self.db.get(ChatMessagePO, user_message_id)
         if not user_message or user_message.session_id != session_id or user_message.role != "user":
@@ -212,6 +235,13 @@ class ProductionAssistantAgent:
         if existing:
             return existing
 
+        token = uuid4().hex
+        claimed = self.db.execute(update(ChatMessagePO).where(ChatMessagePO.id == user_message_id,
+            ChatMessagePO.turn_status.in_(['queued', 'scheduled'])).values(turn_status='running', turn_token=token))
+        self.db.commit()
+        if claimed.rowcount != 1:
+            return None
+        self.db.refresh(user_message)
         saved_turn=dict(user_message.payload_json or {})
         observations: list[dict[str, Any]] = list(saved_turn.get("tool_results",[]))
         ui_actions: list[dict[str, Any]] = []
@@ -222,6 +252,7 @@ class ProductionAssistantAgent:
             if saved_turn.get('pending_tool'):
                 raise WorkflowConflictError('上次工具执行中断，结果尚不确定；请检查项目和任务状态，系统不会自动重放')
             for _ in range(self.MAX_ROUNDS):
+                self._assert_turn(user_message_id,token)
                 try:
                     plan = self._plan(session, user_message.content or "", observations)
                 except WorkflowLLMError:
@@ -233,6 +264,7 @@ class ProductionAssistantAgent:
                     reply = plan.reply.strip()
                     break
                 for call in plan.tool_calls:
+                    self._assert_turn(user_message_id,token)
                     signature = json.dumps(call.model_dump(), ensure_ascii=False, sort_keys=True)
                     if signature in executed_calls:
                         continue
@@ -245,10 +277,13 @@ class ProductionAssistantAgent:
                         result=previous['result']
                     else:
                         user_message.payload_json={**(user_message.payload_json or {}),'tool_results':observations,
-                            'pending_tool':{'tool':call.name,'arguments':call.arguments}}
+                            'pending_tool':{'tool':call.name,'arguments':call.arguments,
+                                            'operation_key':f'{user_message_id}:{len(observations)}'}}
                         self.db.commit()
                         result = self._execute_tool(session, call)
-                        observations.append({'tool':call.name,'arguments':call.arguments,'result':result})
+                        self._assert_turn(user_message_id,token)
+                        observations.append({'tool':call.name,'arguments':call.arguments,'result':result,
+                                             'operation_key':f'{user_message_id}:{len(observations)}'})
                         user_message.payload_json={**(user_message.payload_json or {}),'tool_results':list(observations),'pending_tool':None}
                         self.db.commit()
                     ui_actions.extend(result.get("ui_actions") or [])
@@ -262,6 +297,7 @@ class ProductionAssistantAgent:
                 if plan.reply.strip():
                     reply = plan.reply.strip()
             if observations and not terminal_tool_completed:
+                self._assert_turn(user_message_id, token)
                 try:
                     reply = self._final_reply(session, user_message.content or "", observations, reply)
                 except WorkflowLLMError:
@@ -292,6 +328,13 @@ class ProductionAssistantAgent:
             payload_json=payload,
             client_request_id=f"reply:{user_message_id}",
         )
+        final_status='interrupted' if (user_message.payload_json or {}).get('pending_tool') else 'completed'
+        completed=self.db.execute(update(ChatMessagePO).where(ChatMessagePO.id==user_message_id,
+            ChatMessagePO.turn_status=='running',ChatMessagePO.turn_token==token)
+            .values(turn_status=final_status,turn_token=None))
+        if completed.rowcount!=1:
+            self.db.rollback()
+            return None
         self.db.add(row)
         self.db.commit()
         self.db.refresh(row)

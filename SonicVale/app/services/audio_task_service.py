@@ -10,6 +10,12 @@ from sqlalchemy.orm import Session
 from app.models.po import AudioTaskPO, ChatSessionPO, LinePO
 
 
+class ActiveAudioTaskError(ValueError):
+    def __init__(self, task):
+        super().__init__('本句已有活动配音任务；新指导未保存，请等待任务结束后再提交')
+        self.task = task
+
+
 class AudioTaskService:
     def __init__(self, db: Session):
         self.db = db
@@ -32,9 +38,14 @@ class AudioTaskService:
             raise OverflowError("队列已满，请稍后重试")
 
         from app.services.speech.request import prepare_request, output_path
+        # Serialize enqueue and regenerate before reading active attempts. This
+        # SQLite write lock also protects guidance + input snapshot as one unit.
+        self.db.execute(update(LinePO).where(LinePO.id == line.id).values(id=line.id))
+        self.db.refresh(line)
         active = self.db.scalar(select(AudioTaskPO).where(AudioTaskPO.line_id==line.id,
             AudioTaskPO.status.in_(['queued','processing','completing'])).limit(1))
         if active:
+            self.db.commit()
             return active
         request, snapshot, fingerprint = prepare_request(self.db, project_id, line.id)
         token = uuid4().hex
@@ -78,6 +89,31 @@ class AudioTaskService:
             self.db.commit()
             raise
         return task
+
+    def regenerate(self, queue, session_id: str, line_id: int, prompt: str):
+        """Save guidance and queue its snapshot, or reject without changing it."""
+        try:
+            self.db.execute(update(LinePO).where(LinePO.id == line_id).values(id=line_id))
+            self.db.expire_all()
+            session = self.db.get(ChatSessionPO, session_id)
+            line = self.db.get(LinePO, line_id)
+            if not session or session.deleted_at or not line:
+                raise ValueError('会话或台词不存在')
+            self._validate_context(session.project_id, session.chapter_id, line, session_id)
+            if session.current_stage != 'completed' or not line.should_speak or line.track in {'sfx', 'bgm'}:
+                raise ValueError('当前台词不能生成角色配音')
+            active = self.db.scalar(select(AudioTaskPO).where(AudioTaskPO.line_id == line_id,
+                AudioTaskPO.status.in_(['queued', 'processing', 'completing'])))
+            if active:
+                raise ActiveAudioTaskError(active)
+            from app.repositories.line_repository import LineRepository
+            from app.services.production.line_commands import LineCommands
+            LineCommands(LineRepository(self.db)).update(line_id, {'production_note': prompt.strip() or None}, commit=False)
+            self.db.flush()
+            return self.enqueue(queue, session.project_id, session.chapter_id, line, None, session_id)
+        except Exception:
+            self.db.rollback()
+            raise
 
     def claim(self, task_id, token):
         result=self.db.execute(update(AudioTaskPO).where(AudioTaskPO.id==task_id,
@@ -256,6 +292,8 @@ class AudioTaskService:
             "track": line.track if line else None,
             "status": task.status,
             "attempt": task.attempt,
+            "input_fingerprint": task.input_fingerprint,
+            "input_snapshot": task.input_snapshot,
             "error_code": task.error_code,
             "error_message": task.error_message,
             "audio_path": task.audio_path,
