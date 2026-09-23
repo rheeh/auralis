@@ -6,11 +6,12 @@ import { fileURLToPath } from 'node:url'
 import * as Vue from 'vue'
 import { parse, compileScript, compileTemplate } from '@vue/compiler-sfc'
 
-export function workspaceHarness(snapshot) {
+export function workspaceHarness(snapshot, options={}) {
   globalThis.Audio = class { pause(){} removeAttribute(){} load(){} addEventListener(){} removeEventListener(){} play(){return Promise.resolve()} }
   globalThis.window = {addEventListener(){},removeEventListener(){}}
   globalThis.sessionStorage = {getItem(){return null}}
-  const route=Vue.reactive({params:{id:1},query:{chapter_id:snapshot.chapter_id,view:'script'},path:'/project/1/workspace'})
+  globalThis.document = {querySelector(){return null}}
+  const route=Vue.reactive({params:{id:1},query:{chapter_id:snapshot.chapter_id,view:options.view||'script'},path:'/project/1/workspace'})
   const guards={}
   const api={
     IS_STATIC_DEMO:false, getProjectDetail:async()=>({code:200,data:{id:1,name:'测试'}}),
@@ -20,12 +21,13 @@ export function workspaceHarness(snapshot) {
     getRolesByProject:async()=>({code:200,data:[]}), getLinesByChapter:async()=>({code:200,data:[{id:1,text_content:'原句',production_note:'原指导'}]}),
     fetchSessionAudioTasks:async()=>({code:200,data:{tasks:[]}}), fetchAllEmotions:async()=>[],fetchAllStrengths:async()=>[],
     fetchChapterProductionConfiguration:async()=>({code:200,data:{lines:[]}}), getRoleAvatarUrl:()=>'', updateLine:async()=>({code:200}),
+    ...options.api,
   }
   const navigation={async replace(location){Object.assign(route,location)},async push(location){Object.assign(route,location)}}
   const box={confirm:async()=>{throw 'cancel'}}
   const stub={setup:(_,ctx)=>()=>Vue.h('stub',ctx.slots.default?.())}
   const cache=new Map()
-  const targets=['ProjectWorkspace.vue','RoleDraftConfirmCard.vue','ProductionScriptPanel.vue','SelectedTakeInfo.vue']
+  const targets=['ProjectWorkspace.vue','RoleDraftConfirmCard.vue','ProductionScriptPanel.vue','SelectedTakeInfo.vue',...(options.targets||[])]
   function load(filename) {
     if(cache.has(filename))return cache.get(filename)
     let code=fs.readFileSync(filename,'utf8'), exports=[]
@@ -59,7 +61,7 @@ export function workspaceHarness(snapshot) {
     cache.set(filename,result)
     return result
   }
-  const node=(type,text='')=>({type,text,children:[],props:{},style:{},parent:null,addEventListener(){},removeEventListener(){},setAttribute(){},removeAttribute(){}})
+  const node=(type,text='')=>({type,text,children:[],props:{},style:{},parent:null,paused:true,pause(){this.paused=true},addEventListener(){},removeEventListener(){},setAttribute(){},removeAttribute(){}})
   const renderer=Vue.createRenderer({
     createElement:node,createText:text=>node('text',text),createComment:text=>node('comment',text),
     setText:(n,text)=>n.text=text,setElementText:(n,text)=>{n.text=text;n.children=[]},
@@ -71,12 +73,14 @@ export function workspaceHarness(snapshot) {
   const component=load(fileURLToPath(new URL('../src/pages/ProjectWorkspace.vue',import.meta.url))).default
   const app=renderer.createApp(component)
   app.config.warnHandler=()=>{}
-  const root=app.mount(node('root')).$
+  const container=node('root')
+  const root=app.mount(container).$
+  function elements(type,n=container){return [...(n.type===type?[n]:[]),...n.children.flatMap(child=>elements(type,child))]}
   function find(name,vnode=root.subTree) {
     if(vnode?.component?.type.__file?.endsWith(name))return vnode.component
     if(vnode?.component){const found=find(name,vnode.component.subTree);if(found)return found}
     for(const child of Array.isArray(vnode?.children)?vnode.children:[]){const found=find(name,child);if(found)return found}
   }
-  return {api,route,guards,box,root,find,unmount:()=>app.unmount()}
+  return {api,route,guards,box,root,find,elements,unmount:()=>app.unmount()}
 }
 export async function flush(){for(let i=0;i<12;i++){await Promise.resolve();await Vue.nextTick()}}

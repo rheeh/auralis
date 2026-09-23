@@ -86,7 +86,7 @@
         </div>
 
         </section>
-        <ChapterTimeline v-else-if="['timeline','export'].includes(selectedView) && snapshot?.chapter_id" :key="`timeline-${snapshot.chapter_id}-${selectedView}`" :project-id="projectId" :chapter-id="snapshot.chapter_id" :selected-line-id="selectedLineId" :export-only="selectedView==='export'" @focus-line="focusProductionLine" />
+        <ChapterTimeline v-else-if="['timeline','export'].includes(selectedView) && snapshot?.chapter_id" :key="`timeline-${snapshot.chapter_id}-${selectedView}`" :project-id="projectId" :chapter-id="snapshot.chapter_id" :selected-line-id="selectedLineId" :export-only="selectedView==='export'" @focus-line="focusProductionLine" @focus-material="openTimeline" />
         <CharacterCardsArchive v-else-if="resultView==='characters' && selectedView==='script'" :roles="roleDrafts" :session-id="snapshot?.session_id" :project-id="projectId" @voice-changed="voiceRevision++" />
 
         <div v-else-if="!snapshot" class="result-empty">

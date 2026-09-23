@@ -1,0 +1,62 @@
+// Run after browser_smoke.js with fake_workspace.py; all mutations target its disposable fixture.
+const base='http://127.0.0.1:18200';
+const fixture=await (await context.request.get(base+'/test-fixture')).json();
+assert.equal(fixture.fake_models,true);assert.equal(fixture.temporary_storage,true);
+const chapter=(await (await context.request.get(base+'/chapters/project/1')).json()).data.find(c=>c.title==='固定测试章');
+assert(chapter);
+const existing=(await (await context.request.get(base+`/lines/lines/${chapter.id}`)).json()).data;
+if(!existing.some(line=>line.text_content==='待选择的钢琴铺底')){
+const missing=await context.request.post(base+'/lines/1',{data:{chapter_id:chapter.id,text_content:'待选择的钢琴铺底',sound_prompt:'待选择的钢琴铺底',line_type:'bgm',track:'bgm',should_speak:0}});
+assert.equal(missing.status(),200,await missing.text());
+}
+const library=await (await context.request.get(base+'/sound-library/assets')).json();
+const assets=Array.isArray(library.data)?library.data:library.data?.items||library.items||[];
+const bgm=assets.find(a=>a.category==='bgm');assert(bgm,'fixture library needs background music');
+if(!existing.some(line=>line.track==='bgm'&&line.status==='done')){
+const inserted=await context.request.post(base+`/sound-library/assets/${encodeURIComponent(bgm.id)}/insert`,{data:{chapter_id:chapter.id,anchor_line_id:existing.find(line=>line.track==='voice').id,placement:'scene_start',volume_db:-16}});
+assert.equal(inserted.status(),200,await inserted.text());
+}
+const allLines=(await (await context.request.get(base+`/lines/lines/${chapter.id}`)).json()).data;
+const bound=allLines.find(l=>l.track==='bgm'&&l.status==='done');assert(bound);
+const errors=[];page.on('pageerror',e=>errors.push(e.message));
+await page.goto(`http://127.0.0.1:5175/#/projects/1/workspace?chapter_id=${chapter.id}&view=timeline`);
+await expect(page.getByRole('region',{name:'音效与背景音乐'})).toBeVisible();
+await page.getByRole('button',{name:'构建/刷新时间线',exact:true}).click();
+await expect(page.getByRole('button',{name:'构建/刷新时间线',exact:true})).not.toHaveClass(/is-loading/);
+const region=page.getByRole('region',{name:'音效与背景音乐'});
+await expect(region.locator('article')).toHaveCount(3);
+await expect(region.getByText('待选素材 · 当前只有文字说明',{exact:true})).toBeVisible();
+const previews=region.locator('audio');await expect(previews).toHaveCount(2);
+await previews.first().evaluate(audio=>audio.play());
+await expect.poll(()=>previews.first().evaluate(a=>a.readyState>=2&&!a.paused)).toBe(true);
+await previews.nth(1).evaluate(audio=>audio.play());
+await expect.poll(()=>previews.first().evaluate(a=>a.paused)).toBe(true);
+await expect.poll(()=>previews.nth(1).evaluate(a=>a.readyState>=2&&!a.paused)).toBe(true);
+await previews.nth(1).evaluate(audio=>{window.__soundUnderTest=audio});
+await page.getByRole('button',{name:'02 人物与台本',exact:true}).click();
+await expect(page.locator('.production-line')).toHaveCount(2);
+await expect(page.locator('.production-line.track-sfx,.production-line.track-bgm')).toHaveCount(0);
+await expect(page.locator('.production-script .round-play')).toHaveCount(0);
+assert.equal(await page.evaluate(()=>window.__soundUnderTest.paused),true);
+await page.getByRole('button',{name:'03 配音',exact:true}).click();
+await expect(page.locator('.production-line')).toHaveCount(2);
+await expect(page.locator('.production-script .round-play')).toHaveCount(2);
+await page.getByRole('button',{name:'04 声音编排',exact:true}).click();
+const row=page.locator(`[data-sound-line-id="${bound.id}"]`);
+await row.getByRole('button',{name:'编辑时长与位置',exact:true}).click();
+const dialog=page.getByRole('dialog',{name:'编辑时间线片段'});
+await expect(dialog.getByRole('button',{name:'铺满人声',exact:true})).toBeVisible();
+await dialog.getByRole('spinbutton',{name:'片段长度（毫秒）',exact:true}).fill('60000');
+await dialog.getByRole('spinbutton',{name:'片段长度（毫秒）',exact:true}).press('Tab');
+await dialog.getByRole('button',{name:'保存片段',exact:true}).click();
+await expect(dialog).not.toBeVisible();
+const timeline=(await (await context.request.get(base+`/projects/1/chapters/${chapter.id}/timeline`)).json());
+assert.equal(timeline.code,200,JSON.stringify(timeline));
+const saved=timeline.data.tracks.flatMap(t=>t.clips).find(c=>c.line_id===bound.id);
+assert.equal(saved.duration_ms,60000);
+await row.getByRole('button',{name:'修改类型 / 角色',exact:true}).click();
+await expect(page.getByRole('dialog',{name:'修改台词类型与角色'})).toBeVisible();
+await page.getByRole('dialog',{name:'修改台词类型与角色'}).getByRole('button',{name:'取消',exact:true}).click();
+await region.scrollIntoViewIfNeeded();
+assert.deepEqual(errors,[]);
+return {scriptSpokenRows:2,voicePlayers:2,soundRows:3,previews:2,missingCue:true,singlePreview:true,stopOnLeave:true,backgroundDurationMs:saved.duration_ms,errors};

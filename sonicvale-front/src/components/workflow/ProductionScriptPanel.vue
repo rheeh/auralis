@@ -12,18 +12,19 @@
         <el-button @click="$emit('open-timeline',selectedLineId)">声音编排</el-button>
         <el-button :icon="Headset" @click="openSoundLibrary()">快捷加音效</el-button>
         <el-button :icon="Refresh" :loading="loading" @click="loadAll">刷新</el-button>
-        <el-button :icon="MagicStick" :loading="autoBinding" @click="autoBind">AI 自动配音色</el-button>
-        <el-button type="primary" :icon="Headset" :disabled="!voiceReady || !canGenerateAll" :loading="generating" @click="generateAudio">
+        <el-button v-if="!scriptOnly" :icon="MagicStick" :loading="autoBinding" @click="autoBind">AI 自动配音色</el-button>
+        <el-button v-if="!scriptOnly" type="primary" :icon="Headset" :disabled="!voiceReady || !canGenerateAll" :loading="generating" @click="generateAudio">
           {{ bulkGenerateLabel }}
         </el-button>
       </div>
     </header>
 
-    <div class="voice-status" :class="{ ready: voiceReady }">
+    <div v-if="!scriptOnly" class="voice-status" :class="{ ready: voiceReady }">
       <div><strong>{{ voiceReady ? '人物声线已就绪' : '请完成独立音色绑定' }}</strong><span>{{ voiceStatusText }}</span></div>
       <div class="status-metrics"><el-tag effect="plain">人物 {{ speakableRoles.length }}</el-tag><el-tag effect="plain" :type="voiceReady?'success':'warning'">音色 {{ uniqueVoiceCount }}/{{ speakableRoles.length }}</el-tag><el-tag effect="plain" type="success">音频 {{ completedAudioCount }}/{{ speakableLines.length }}</el-tag></div>
     </div>
 
+    <p v-if="materialCount" class="material-location-note">{{ materialCount }} 项音效与背景音乐在声音编排中管理，可试听素材并设置持续时间。<el-button text type="primary" @click="$emit('open-timeline')">去编排声音</el-button></p>
     <div v-if="scenes.length" class="scene-list">
       <section v-for="scene in scenes" :key="scene.title" class="scene-block">
         <header class="scene-head"><div><span>场景</span><strong>{{ scene.title }}</strong></div><el-tag size="small" effect="plain">{{ scene.lines.length }} 句</el-tag></header>
@@ -34,7 +35,7 @@
             <div v-else class="material-icon"><el-icon><Headset /></el-icon></div>
             <div class="line-main">
               <div class="line-meta"><strong>{{ isSpeakable(line) ? roleName(line.role_id) : trackLabel(line) }}</strong><el-tag size="small" effect="plain">{{ trackLabel(line) }}</el-tag><span v-if="activeVariant(line)" class="active-version">当前采用 {{ activeVariant(line).label }}</span><span v-if="isSpeakable(line)" class="line-expand-state">{{ expandedLineIds.has(line.id)?'收起':'展开' }}</span></div>
-              <el-button v-if="!IS_STATIC_DEMO && isSpeakable(line)" text size="small" @click.stop="traceLineId=line.id;traceOpen=true">生成输入与记录</el-button>
+              <el-button v-if="!scriptOnly && !IS_STATIC_DEMO && isSpeakable(line)" text size="small" @click.stop="traceLineId=line.id;traceOpen=true">生成输入与记录</el-button>
               <el-button text size="small" @click.stop="$emit('open-timeline',line.id)">定位到音轨</el-button>
               <el-button text size="small" :aria-label="`修改第${line.line_order}行类型`" @click.stop="openTypeEditor(line)">修改类型 / 角色</el-button>
               <el-button text type="danger" size="small" :aria-label="`删除第${line.line_order}行台词`" :disabled="deletingLineId !== null || line.status === 'processing'" @click.stop="removeLine(line)">删除台词</el-button>
@@ -47,7 +48,7 @@
                 <el-tag size="small" :type="line.strength_id?undefined:'warning'" effect="plain">强度 · {{ strengthName(line.strength_id) }}</el-tag>
                 <span :class="{missing:!line.production_note}">{{ line.production_note || '表演提示待补充' }}</span>
               </div>
-              <div v-if="isSpeakable(line)" class="audio-strip">
+              <div v-if="!scriptOnly && isSpeakable(line)" class="audio-strip">
                 <button class="round-play" :disabled="!hasAudio(line)" @click="playLine(line)"><el-icon><component :is="playingLineId===line.id&&isPlaying?VideoPause:VideoPlay" /></el-icon></button>
                 <span class="time">{{ playingLineId===line.id ? formatTime(currentTime) : '00:00' }}</span>
                 <div class="waveform" :class="{active:playingLineId===line.id}"><i v-for="i in 44" :key="i" :style="{height:`${waveHeight(line.id,i)}%`}" /></div>
@@ -66,15 +67,15 @@
                 <span v-else-if="generatedAudioVersions(line).length" class="audio-version-badge">版本 1/1</span>
                 <span class="time">{{ playingLineId===line.id ? formatTime(duration) : audioVersionLabel(line) }}</span>
               </div>
-              <div v-if="isSpeakable(line)" class="effective-voice"><strong>实际配音：{{ configurationFor(line)?.model || configurationFor(line)?.provider_name || '未配置' }}</strong><span>{{ configurationFor(line)?.voice_name || '未绑定音色' }} · {{ instructionLabel(configurationFor(line)?.instruction_mode) }}</span><small v-if="configurationFor(line)?.enabled===false">此声音已停用，新生成前请在人物卡更换音色。</small><el-tag v-if="configurationFor(line)?.needs_generation" type="warning" size="small">需要重新配音</el-tag></div>
-              <SelectedTakeInfo v-if="isSpeakable(line)" :line="line" :configuration="configurationFor(line)" />
-              <div v-if="isSpeakable(line)" class="line-tools">
+              <div v-if="!scriptOnly && isSpeakable(line)" class="effective-voice"><strong>实际配音：{{ configurationFor(line)?.model || configurationFor(line)?.provider_name || '未配置' }}</strong><span>{{ configurationFor(line)?.voice_name || '未绑定音色' }} · {{ instructionLabel(configurationFor(line)?.instruction_mode) }}</span><small v-if="configurationFor(line)?.enabled===false">此声音已停用，新生成前请在人物卡更换音色。</small><el-tag v-if="configurationFor(line)?.needs_generation" type="warning" size="small">需要重新配音</el-tag></div>
+              <SelectedTakeInfo v-if="!scriptOnly && isSpeakable(line)" :line="line" :configuration="configurationFor(line)" />
+              <div v-if="!scriptOnly && isSpeakable(line)" class="line-tools">
                 <span class="guidance-label">声音指导</span>
                 <el-input v-model="promptMap[line.id]" size="small" placeholder="单句声音提示词：如更克制、语速稍慢、压低声音……" clearable />
                 <el-button size="small" :type="hasAudio(line)?'default':'primary'" :disabled="!configurationFor(line)?.enabled" :loading="regeneratingId===line.id" @click="regenerate(line)">{{ hasAudio(line) ? '按当前指导重新生成本句' : '生成本句音频' }}</el-button>
               </div>
               <p v-if="regenerationConflicts[line.id]" role="status">{{ regenerationConflictText(line.id) }}</p>
-              <small v-if="isSpeakable(line)" class="tts-guidance-hint" :class="{edge:isEdgeLine(line)}">{{ guidanceHint(line) }}</small>
+              <small v-if="!scriptOnly && isSpeakable(line)" class="tts-guidance-hint" :class="{edge:isEdgeLine(line)}">{{ guidanceHint(line) }}</small>
               <div v-if="isSpeakable(line)&&expandedLineIds.has(line.id)" class="line-editor" @click.stop>
                 <div class="metadata-editor">
                   <label class="text-field"><span>纯净朗读文本</span><el-input v-model="editMap[line.id].text_content" type="textarea" :rows="2" resize="vertical" /></label>
@@ -87,9 +88,9 @@
                   <strong>声音事件</strong>
                   <span v-for="(event,index) in line.audio_events" :key="index"><el-tag size="small" effect="plain">{{ event.type }}</el-tag><small>{{ event.type==='sound_library_placement'?'已编排素材位置':'制作备注，未自动执行' }}</small>{{ event.timing }} · {{ event.content }} · {{ event.volume_db }}</span>
                 </div>
-                <div v-if="hasAudio(line)" class="source-audio-label"><strong>从生成原音创建新版本</strong><small>下方变速只预听和处理原音；保存后会自动成为顶部播放器的当前版本。</small></div>
-                <WaveCellPro v-if="hasAudio(line)" :key="`${line.id}-${audioVersion}`" :src="originalLineAudioUrl(line.id)" variant-mode @confirm="payload=>processLine(line,payload)" />
-                <div v-if="line.audio_variants?.length" class="variant-list">
+                <div v-if="!scriptOnly && hasAudio(line)" class="source-audio-label"><strong>从生成原音创建新版本</strong><small>下方变速只预听和处理原音；保存后会自动成为顶部播放器的当前版本。</small></div>
+                <WaveCellPro v-if="!scriptOnly && hasAudio(line)" :key="`${line.id}-${audioVersion}`" :src="originalLineAudioUrl(line.id)" variant-mode @confirm="payload=>processLine(line,payload)" />
+                <div v-if="!scriptOnly && line.audio_variants?.length" class="variant-list">
                   <header><strong>处理版本</strong><small>每个版本都从原始音频生成，互不覆盖</small></header>
                   <div v-for="variant in line.audio_variants" :key="variant.id" class="variant-item" :class="{active:activeVariantId(line)===variant.id}">
                     <span><strong>{{ variant.label }} <el-tag v-if="activeVariantId(line)===variant.id" size="small" type="success">当前采用</el-tag></strong><small>{{ variant.region_action==='speed'?`局部 ${variant.start_ms/1000}–${variant.end_ms/1000}s`:`整段 ${variant.speed}x` }} · {{ variant.volume }}x 音量</small></span>
@@ -98,7 +99,7 @@
                     <el-button size="small" text type="danger" @click="removeVariant(line,variant)">删除</el-button>
                   </div>
                 </div>
-                <p v-else class="editor-empty">还没有处理版本；可调整整段速度，或选择局部区间后只改变其中一段。</p>
+                <p v-else-if="!scriptOnly" class="editor-empty">还没有处理版本；可调整整段速度，或选择局部区间后只改变其中一段。</p>
               </div>
               <small v-if="!isSpeakable(line)">{{ line.sound_prompt || line.text_content || '缺少声音提示，请让 AI 补充。' }}</small>
             </div>
@@ -106,25 +107,13 @@
         </div>
       </section>
     </div>
-    <el-empty v-else description="台本写入后会在这里逐句制作" />
+    <el-empty v-else :description="materialCount ? '本章暂无人物对白或旁白；音效与背景音乐请到声音编排查看' : '台本写入后会在这里逐句制作'" />
 
-    <el-dialog v-model="typeEditorVisible" title="修改台词类型与角色" width="min(520px,92vw)" :close-on-click-modal="!typeSaving">
-      <el-form label-position="top">
-        <el-form-item label="台词类型"><el-select v-model="typeForm.track" aria-label="台词类型"><el-option label="人物台词（含角色笑声、叹气）" value="voice" /><el-option label="旁白" value="narration" /><el-option label="音效（环境、群体反应）" value="sfx" /><el-option label="背景音乐" value="bgm" /></el-select></el-form-item>
-        <el-form-item v-if="typeIsSpoken" label="发声角色"><el-select v-model="typeForm.role_id" filterable aria-label="发声角色" placeholder="选择当前项目的角色"><el-option v-for="role in typeRoleOptions" :key="role.id" :label="role.name" :value="role.id" /></el-select></el-form-item>
-        <el-form-item :label="typeIsSpoken?'实际发声文字':'声音描述'"><el-input v-model="typeForm.text_content" type="textarea" :rows="3" aria-label="转换后的台词文本" /></el-form-item>
-        <p v-if="typeIsSpoken" class="type-editor-hint">独立轻笑可写“呵。”，大笑可写“哈哈。”；“自然轻笑、不要念说明”放在下方，保留该角色声线。</p>
-        <el-form-item label="声音指导"><el-input v-model="typeForm.production_note" type="textarea" :rows="2" aria-label="转换后的声音指导" /></el-form-item>
-        <p class="type-editor-hint">原音频与修改前记录会保留；保存后本句需重新配音或选用素材，声音编排会标记待刷新。</p>
-      </el-form>
-      <template #footer><el-button :disabled="typeSaving" @click="typeEditorVisible=false">取消</el-button><el-button type="primary" :loading="typeSaving" @click="saveTypeChange">保存类型修改</el-button></template>
-    </el-dialog>
+    <LineTypeDialog v-model="typeEditorVisible" :line="typeLine" :project-id="projectId" :chapter-id="chapterId" @saved="onTypeSaved" />
 
-    <el-drawer v-model="soundLibraryOpen" title="挑选场景音效" size="90%" class="sound-library-drawer" append-to-body destroy-on-close>
-      <SoundLibraryPanel :chapter-id="chapterId" :lines="lines" :material-lines="lines.filter(line => !isSpeakable(line))" :target-line-id="soundAnchorId" :initial-view="soundLibraryView" @inserted="onSoundInserted" @bound="onSoundInserted" />
-    </el-drawer>
 
-    <footer v-if="playableLines.length" class="master-player">
+
+    <footer v-if="!scriptOnly && playableLines.length" class="master-player">
       <div class="master-controls">
         <button aria-label="上一句" title="上一句" @click="playPrevious"><el-icon><ArrowLeftBold /></el-icon></button>
         <button class="master-play" :aria-label="isPlaying?'暂停连播':'开始连播'" :title="isPlaying?'暂停':'播放'" @click="togglePlayAll"><el-icon><component :is="isPlaying?VideoPause:VideoPlay" /></el-icon></button>
@@ -149,8 +138,8 @@ import WaveCellPro from '../WaveCellPro.vue'
 import SelectedTakeInfo from '../../features/workspace/components/SelectedTakeInfo.vue'
 import { IS_STATIC_DEMO } from '../../api/config'
 import SpeechTraceDialog from './SpeechTraceDialog.vue'
-import SoundLibraryPanel from '../SoundLibraryPanel.vue'
-import { changeLineType, deleteLine } from '../../api/line'
+import { deleteLine } from '../../api/line'
+import LineTypeDialog from './LineTypeDialog.vue'
 
 const props=defineProps({sessionId:{type:String,required:true},projectId:{type:Number,required:true},chapterId:{type:Number,required:true},ttsProviderId:Number,sourceText:String,voiceRevision:{type:Number,default:0},selectedLineId:[Number,String],scriptOnly:Boolean})
 const emit=defineEmits(['open-timeline'])
@@ -167,23 +156,9 @@ function regenerationConflictText(id){
 const canGenerateAll=computed(()=>productionConfiguration.value.length>0 && productionConfiguration.value.every(item=>item.enabled))
 function configurationFor(line){return productionConfiguration.value.find(item=>item.line_id===line.id)}
 function instructionLabel(mode){return {native:'支持表演指令',structured:'支持结构化指令',mapped:'仅映射语速等参数',none:'不支持表演指令'}[mode]||'能力未确认'}
-const typeEditorVisible=ref(false),typeSaving=ref(false),typeLineId=ref(null)
-const typeForm=reactive({track:'voice',role_id:null,text_content:'',production_note:''})
-const typeIsSpoken=computed(()=>['voice','narration'].includes(typeForm.track))
-const typeRoleOptions=computed(()=>roles.value.filter(role=>!['音效','BGM','背景音乐','环境音'].includes(role.name)))
-function openTypeEditor(line){typeLineId.value=line.id;Object.assign(typeForm,{track:line.track||'voice',role_id:typeRoleOptions.value.some(role=>role.id===line.role_id)?line.role_id:null,text_content:line.text_content||'',production_note:line.production_note||line.sound_prompt||''});typeEditorVisible.value=true}
-async function saveTypeChange(){const operation=requestScope.capture();
-  if(!typeForm.text_content.trim())return ElMessage.warning('请填写台词文本或声音描述')
-  if(typeIsSpoken.value&&!typeForm.role_id)return ElMessage.warning('请选择发声角色')
-  typeSaving.value=true
-  try{
-    const result=await changeLineType(typeLineId.value,{...typeForm,chapter_id:props.chapterId,role_id:typeIsSpoken.value?typeForm.role_id:null})
-    if(!requestScope.sameContext(operation))return;if(result?.code!==200)throw new Error(result?.message||'修改失败')
-    player.pause();playingLineId.value=null;playAllActive.value=false;typeEditorVisible.value=false
-    await loadAll();if(!requestScope.sameContext(operation))return;ElMessage.success('已修改类型；请重新配音或选择素材，原音频保留')
-  }catch(error){if(!requestScope.sameContext(operation))return;ElMessage.error(error?.response?.data?.detail||error?.response?.data?.message||error.message||'修改失败')}
-  finally{if(!requestScope.sameContext(operation))return;typeSaving.value=false}
-}
+const typeEditorVisible=ref(false),typeLine=ref(null)
+function openTypeEditor(line){typeLine.value=line;typeEditorVisible.value=true}
+async function onTypeSaved(){player.pause();playingLineId.value=null;playAllActive.value=false;await loadAll()}
 const deletingLineId = ref(null)
 async function removeLine(line) {const operation=requestScope.capture();
   if (deletingLineId.value !== null) return
@@ -209,10 +184,7 @@ async function removeLine(line) {const operation=requestScope.capture();
     if (error !== 'cancel' && error !== 'close') ElMessage.error(error?.response?.data?.detail || error?.message || '删除失败')
   } finally { if(!requestScope.sameContext(operation))return;deletingLineId.value = null }
 }
-const soundLibraryOpen = ref(false), soundAnchorId = ref(null)
-const soundLibraryView = ref('library')
-function openSoundLibrary(lineId = null, view = 'library') { soundAnchorId.value = lineId; soundLibraryView.value = view; soundLibraryOpen.value = true }
-async function onSoundInserted() { audioVersion.value = Date.now(); await loadAll() }
+function openSoundLibrary(lineId = null) { emit('open-timeline',lineId) }
 const expandedLineIds=reactive(new Set())
 const autoBinding=ref(false),generating=ref(false),voiceChanged=ref(props.voiceRevision>0),regeneratingId=ref(null),savingId=ref(null),versionSwitchingId=ref(null)
 const playingLineId=ref(null),isPlaying=ref(false),currentTime=ref(0),duration=ref(0),playAllActive=ref(false),audioVersion=ref(Date.now())
@@ -230,6 +202,7 @@ const EMOTION_CATEGORIES=[
 ]
 
 const speakableLines=computed(()=>lines.value.filter(isSpeakable))
+const materialCount=computed(()=>lines.value.length-speakableLines.value.length)
 const speakableRoleIds=computed(()=>[...new Set(speakableLines.value.map(line=>line.role_id).filter(Boolean))])
 const speakableRoles=computed(()=>speakableRoleIds.value.map(id=>roles.value.find(role=>role.id===id)).filter(Boolean))
 const selectedVoiceIds=computed(()=>speakableRoleIds.value.map(id=>roleVoiceMap[id]).filter(Boolean))
@@ -241,7 +214,7 @@ const bulkGenerateLabel=computed(()=>voiceChanged.value?'按新音色重新生�
 const currentLine=computed(()=>lines.value.find(line=>line.id===playingLineId.value)||null)
 const emotionGroups=computed(()=>{const used=new Set();const groups=EMOTION_CATEGORIES.map(group=>{const options=group.names.map(name=>emotions.value.find(item=>item.name===name)).filter(Boolean);options.forEach(item=>used.add(item.id));return{label:group.label,options}}).filter(group=>group.options.length);const others=emotions.value.filter(item=>!used.has(item.id));if(others.length)groups.push({label:'其他',options:others});return groups})
 const voiceStatusText=computed(()=>!speakableRoles.value.length?'当前台本还没有可朗读人物。':voices.value.length<speakableRoles.value.length?`全部来源共 ${voices.value.length} 个音色，至少需要 ${speakableRoles.value.length} 个。`:!voiceReady.value?'每个人物必须绑定不同音色；下拉框已按安装模型来源分组。':'可以生成或连续播放；修改音色后需要重新生成。')
-const scenes=computed(()=>{const groups=new Map();for(const line of lines.value){const title=line.scene_title||'未命名场景';if(!groups.has(title))groups.set(title,[]);groups.get(title).push(line)}return[...groups.entries()].map(([title,sceneLines])=>({title,lines:sceneLines}))})
+const scenes=computed(()=>{const groups=new Map();for(const line of speakableLines.value){const title=line.scene_title||'未命名场景';if(!groups.has(title))groups.set(title,[]);groups.get(title).push(line)}return[...groups.entries()].map(([title,sceneLines])=>({title,lines:sceneLines}))})
 
 onMounted(()=>{bindPlayer();loadAll()})
 watch(()=>[props.sessionId,props.chapterId],()=>{
@@ -308,6 +281,7 @@ function seek(event){player.currentTime=Number(event.target.value)||0}function f
 </script>
 
 <style scoped>
+.material-location-note{margin:0;color:var(--el-text-color-secondary);font-size:12px;line-height:1.6}
 .production-script{display:grid;gap:14px;min-width:0}.source-fold{border:1px solid var(--el-border-color-lighter);border-radius:10px;background:var(--el-fill-color-extra-light)}.source-fold summary{display:flex;justify-content:space-between;gap:12px;padding:10px 12px;cursor:pointer}.source-fold summary small{color:var(--el-text-color-secondary)}.source-fold>div{max-height:240px;overflow:auto;padding:12px;border-top:1px solid var(--el-border-color-lighter);white-space:pre-wrap;line-height:1.7}.production-head,.voice-status,.scene-head,.line-meta,.head-actions,.status-metrics{display:flex;align-items:center;gap:10px}.production-head,.voice-status,.scene-head{justify-content:space-between}.production-head{flex-wrap:wrap}.production-head h2,.production-head p,.eyebrow{margin:0}.eyebrow{color:var(--el-color-primary);font-size:11px}.head-actions,.status-metrics{flex-wrap:wrap}.voice-status{padding:10px 12px;border:1px solid color-mix(in srgb,var(--el-color-warning) 38%,var(--el-border-color));border-radius:11px;background:color-mix(in srgb,var(--el-color-warning) 6%,var(--el-bg-color))}.voice-status.ready{border-color:color-mix(in srgb,var(--el-color-success) 36%,var(--el-border-color));background:color-mix(in srgb,var(--el-color-success) 5%,var(--el-bg-color))}.voice-status strong,.voice-status span{display:block}.voice-status span{margin-top:3px;color:var(--el-text-color-secondary);font-size:11px}.scene-list{display:grid;gap:14px;min-width:0}.scene-block{border:1px solid var(--el-border-color-lighter);border-radius:13px;background:var(--el-bg-color);overflow:hidden}.scene-head{padding:10px 14px;background:var(--el-fill-color-light)}.scene-head div{display:flex;align-items:center;gap:8px}.scene-head span{color:var(--el-text-color-secondary);font-size:11px}.timeline{position:relative;padding:8px 10px 8px 34px}.timeline:before{content:"";position:absolute;left:20px;top:12px;bottom:12px;border-left:1px dashed color-mix(in srgb,var(--el-color-primary) 45%,var(--el-border-color))}.production-line{--role-color:#37c9c6;position:relative;display:grid;grid-template-columns:52px minmax(0,1fr);gap:12px;align-items:start;margin:8px 0;padding:12px;border:1px solid color-mix(in srgb,var(--role-color) 28%,var(--el-border-color-lighter));border-left:4px solid var(--role-color);border-radius:12px;background:var(--el-bg-color);box-shadow:0 5px 15px rgba(31,38,67,.05);min-width:0}.production-line.playing{box-shadow:0 0 0 2px color-mix(in srgb,var(--role-color) 45%,transparent),0 10px 24px rgba(31,38,67,.1)}.timeline-dot{position:absolute;left:-30px;top:18px;z-index:1}.timeline-dot span{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;color:white;background:var(--role-color);font-size:10px}.production-line>.el-avatar{border:2px solid color-mix(in srgb,var(--role-color) 55%,white);background:color-mix(in srgb,var(--role-color) 17%,var(--el-fill-color))}.material-icon{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:var(--el-fill-color)}.line-main{min-width:0}.line-meta{flex-wrap:wrap}.line-meta span{color:var(--el-text-color-secondary);font-size:11px}.line-main p{margin:7px 0;line-height:1.6}.line-main>small{color:var(--el-text-color-secondary)}.audio-strip{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--el-border-color-lighter);border-radius:9px;background:var(--el-fill-color-extra-light);min-width:0}.round-play,.master-player button{display:grid;place-items:center;border:0;border-radius:50%;cursor:pointer}.round-play{width:28px;height:28px;flex:0 0 28px}.round-play:disabled{cursor:not-allowed;opacity:.45}.time{color:var(--el-text-color-secondary);font-size:10px}.waveform{display:flex;align-items:center;gap:2px;flex:1;height:26px;min-width:40px;overflow:hidden}.waveform i{width:2px;flex:0 0 2px;max-height:100%;border-radius:2px;background:color-mix(in srgb,var(--role-color) 72%,#fff)}.waveform.active i{background:var(--role-color)}.audio-version-select{width:100px;flex:0 0 100px}.audio-version-badge{flex:0 0 auto;padding:3px 7px;border:1px solid var(--el-border-color);border-radius:7px;color:var(--el-text-color-secondary);background:var(--el-bg-color);font-size:10px}.line-tools{display:flex;gap:8px;margin-top:8px}.line-tools .el-input{flex:1}.voice-cell{grid-column:2;display:grid;grid-template-columns:minmax(180px,240px) minmax(0,1fr);align-items:center;gap:8px}.voice-cell .el-select{width:100%}.voice-cell small{display:block;color:var(--el-text-color-secondary)}.track-sfx,.track-bgm{--role-color:#91a0ad}.master-player{position:sticky;z-index:5;bottom:0;display:grid;grid-template-columns:auto minmax(180px,1fr) minmax(210px,30%);gap:12px;align-items:center;padding:7px 10px;border:1px solid var(--el-border-color-lighter);border-radius:11px;background:var(--el-bg-color);box-shadow:0 -3px 12px rgba(28,34,64,.07);min-width:0}.master-controls{display:flex;align-items:center;gap:4px}.master-player button{width:28px;height:28px;color:var(--el-text-color-secondary);background:var(--el-fill-color-light)}.master-player .master-play{width:36px;height:36px;color:white;background:var(--el-color-primary)}.now-playing{min-width:0}.now-playing small,.now-playing strong{display:block}.now-playing small{margin-bottom:2px;color:var(--el-text-color-secondary);font-size:9px;font-weight:600;letter-spacing:.04em}.now-playing strong{overflow:hidden;font-size:12px;text-overflow:ellipsis;white-space:nowrap}.master-progress{display:grid;grid-template-columns:34px minmax(80px,1fr) 34px;gap:6px;align-items:center;color:var(--el-text-color-secondary);font-size:10px;font-variant-numeric:tabular-nums}.master-progress input{width:100%;height:14px;margin:0;accent-color:var(--el-color-primary)}@media(max-width:760px){.production-head,.voice-status{align-items:flex-start;flex-direction:column}.production-line{grid-template-columns:44px minmax(0,1fr)}.line-tools{flex-direction:column}.voice-cell{grid-template-columns:1fr}.head-actions{width:100%}.master-player{grid-template-columns:auto minmax(0,1fr)}.master-progress{grid-column:1/-1}.now-playing strong{font-size:11px}}
 .line-editor{margin-top:9px;padding-top:10px;border-top:1px solid var(--el-border-color-lighter);cursor:default}.production-line.clickable{cursor:pointer}.production-line.clickable:hover{border-color:color-mix(in srgb,var(--role-color) 58%,var(--el-border-color));box-shadow:0 8px 20px rgba(31,38,67,.08)}.production-line.expanded{border-color:color-mix(in srgb,var(--role-color) 60%,var(--el-border-color));box-shadow:0 9px 24px rgba(31,38,67,.1)}.line-expand-state{margin-left:auto;color:var(--el-color-primary)!important;font-size:10px!important}
 .metadata-editor{display:grid;grid-template-columns:minmax(120px,1fr) minmax(120px,1fr) auto;gap:9px;padding:10px}.metadata-editor label{display:grid;gap:5px}.metadata-editor label>span{color:var(--el-text-color-secondary);font-size:11px}.metadata-editor .text-field,.metadata-editor .note-field{grid-column:1/-1}.metadata-editor>.el-button{align-self:end}.audio-events{display:grid;gap:6px;margin:0 10px 10px;padding:9px;border-radius:8px;background:var(--el-bg-color)}.audio-events>span{display:flex;align-items:center;gap:7px;color:var(--el-text-color-secondary);font-size:11px}.line-editor .wavecell{margin:0 10px 10px}.editor-empty{margin:0 10px 10px!important;padding:10px;border-radius:8px;color:var(--el-text-color-secondary);background:var(--el-bg-color);font-size:11px}.voice-cell{grid-template-columns:minmax(180px,240px)}

@@ -40,7 +40,7 @@
 
     <details v-if="timeline.missing_lines?.length" class="missing-lines">
       <summary>{{ timeline.missing_lines.length }} 条尚未进入时间线 · 渲染时跳过，点击查看</summary>
-      <ul><li v-for="line in timeline.missing_lines" :key="line.line_id"><el-button text size="small" @click="openDubbingProject(line.line_id)">第 {{ line.line_order }} 行 · {{ trackDefinitions.find(track => track.key === line.track)?.label }} · {{ line.text_content }}</el-button></li></ul>
+      <ul><li v-for="line in timeline.missing_lines" :key="line.line_id"><el-button text size="small" @click="openMissingLine(line)">第 {{ line.line_order }} 行 · {{ trackDefinitions.find(track => track.key === line.track)?.label }} · {{ line.text_content }}</el-button></li></ul>
     </details>
     <SceneIllustration v-if="renderResult && visualScenes.length" :scenes="visualScenes" :seconds="renderTime" @seek="seekScene" />
     <section v-if="renderResult" class="render-result">
@@ -48,12 +48,15 @@
         <strong>{{ renderResult.is_partial ? '阶段成片（部分音频）' : '时间线成片' }}</strong>
         <span>{{ formatDuration(renderResult.duration_ms) }} · {{ renderResult.rendered_clip_count }} 个有效片段</span>
       </div>
-      <audio ref="renderPlayer" aria-label="播放时间线成片" controls preload="metadata" :src="renderAudioUrl" @timeupdate="renderTime = $event.target.currentTime" @seeking="renderTime = $event.target.currentTime" @loadedmetadata="renderTime = $event.target.currentTime" />
+      <audio ref="renderPlayer" aria-label="播放时间线成片" controls preload="metadata" :src="renderAudioUrl" @play="soundMaterials?.stopPreviews();stopClipPreview()" @timeupdate="renderTime = $event.target.currentTime" @seeking="renderTime = $event.target.currentTime" @loadedmetadata="renderTime = $event.target.currentTime" />
       <el-button :icon="Download" @click="downloadRender">下载 WAV</el-button>
     </section>
 
     <p v-if="!exportOnly" class="overview-note">拖动片段移动位置，拖动左右边界调整长度；背景音乐和音效超出原长会循环。吸附时显示竖线，按住 Alt 可临时关闭；点击片段可快捷对齐。</p>
     <TimelineTracks v-if="!exportOnly" :snap-marker-ms="snapMarkerMs" :tracks="displayTracks" :duration-ms="displayDurationMs" :pixels-per-second="pixelsPerSecond" :selected-line-id="selectedLineId" editable @select="handleClipClick" @interact="startClipInteraction" />
+
+    <ChapterSoundMaterials v-if="!exportOnly" ref="soundMaterials" :lines="materialLines" :sources="timeline.audio_sources || {}" :audio-revision="audioRevision" @choose="(line,view)=>openSoundLibrary(line.id,view)" @edit="editMaterial" @edit-type="line=>{typeLine=line;typeEditorVisible=true}" @remove="removeMaterial" @preview="stopOtherAudio" />
+    <LineTypeDialog v-model="typeEditorVisible" :line="typeLine" :project-id="projectId" :chapter-id="chapterId" @saved="loadTimeline" />
 
     <el-dialog v-model="soundLibraryVisible" title="给场景加入音效" width="min(1120px, 94vw)" destroy-on-close>
       <SoundLibraryPanel
@@ -87,10 +90,10 @@
         </div>
         <div class="clip-form-grid">
           <el-form-item label="开始时间（毫秒）">
-            <el-input-number v-model="clipForm.start_ms" :min="0" :step="100" controls-position="right" />
+            <el-input-number v-model="clipForm.start_ms" aria-label="开始时间（毫秒）" :min="0" :step="100" controls-position="right" />
           </el-form-item>
           <el-form-item label="片段长度（毫秒）">
-            <el-input-number v-model="clipForm.duration_ms" :min="1" :max="clipForm.max_duration_ms" :step="100" controls-position="right" />
+            <el-input-number v-model="clipForm.duration_ms" aria-label="片段长度（毫秒）" :min="1" :max="clipForm.max_duration_ms" :step="100" controls-position="right" />
           </el-form-item>
           <el-form-item label="音量（dB）">
             <el-input-number v-model="clipForm.volume_db" :min="-60" :max="12" :step="1" controls-position="right" />
@@ -109,7 +112,7 @@
       <template #footer>
         <el-button type="primary" plain @click="openSoundLibrary(clipForm?.line_id, 'recommendations')">标签匹配音效</el-button>
         <el-button :icon="Bell" @click="openSoundLibrary(clipForm?.line_id)">在这句附近加音效</el-button>
-        <el-button @click="openDubbingProject(clipForm?.line_id)">查看对应台词</el-button>
+        <el-button v-if="clipForm && !isMaterialClip(clipForm)" @click="openDubbingProject(clipForm?.line_id)">查看对应台词</el-button>
         <el-button @click="clipEditorVisible = false">取消</el-button>
         <el-button type="primary" :icon="Check" :loading="savingClip" @click="saveClip">保存片段</el-button>
       </template>
@@ -119,10 +122,12 @@
 
 <script setup>
 import { alignClip, changeClipRate, playableSourceDuration, dragClip, durationLimit, isMaterialClip, MAX_TIMELINE_MS } from '../../utils/timelineEditing'
-import { computed, nextTick, ref, toRef, watch } from 'vue'
-import { ElMessage } from 'element-plus'
+import { computed, nextTick, onBeforeUnmount, ref, toRef, watch } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Bell, Check, Download, Film, Headset, Microphone, Refresh, VideoPlay } from '@element-plus/icons-vue'
-import { getLinesByChapter, getLineAudioUrl } from '../../api/line'
+import { getLinesByChapter, getLineAudioUrl, deleteLine } from '../../api/line'
+import ChapterSoundMaterials from './ChapterSoundMaterials.vue'
+import LineTypeDialog from '../workflow/LineTypeDialog.vue'
 import TimelineTracks from './TimelineTracks.vue'
 import SceneIllustration from './SceneIllustration.vue'
 import { nativeSceneSchedule } from '../../demo/sceneImages'
@@ -141,7 +146,7 @@ const allClips = computed(() => (timeline.value.tracks || []).flatMap(track => t
 const displayDurationMs = computed(() => Math.max(timeline.value.duration_ms || 0, ...allClips.value.map(clip => clip.start_ms + clip.duration_ms)) + (clipInteraction.value ? 5000 : 0))
 const alignmentTargets = computed(() => allClips.value.filter(clip => clip.id !== clipForm.value?.id))
 const props=defineProps({projectId:{type:Number,required:true},chapterId:{type:Number,required:true},exportOnly:Boolean,selectedLineId:[Number,String]})
-const emit=defineEmits(['focus-line'])
+const emit=defineEmits(['focus-line','focus-material'])
 const projectId=toRef(props,'projectId'),chapterId=toRef(props,'chapterId')
 const timeline = ref({ status: 'not_built', tracks: [], clip_count: 0, duration_ms: 0 })
 const zoom = ref('normal')
@@ -162,6 +167,9 @@ const soundLibraryVisible = ref(false)
 const soundTargetLineId = ref(null)
 const soundLibraryView = ref('library')
 const chapterLines = ref([])
+const soundMaterials=ref(null),audioRevision=ref(0),typeLine=ref(null),typeEditorVisible=ref(false)
+let disposed=false
+onBeforeUnmount(()=>{disposed=true;stopOtherAudio();soundMaterials.value?.stopPreviews()})
 const materialLines = computed(() => chapterLines.value.filter((line) => ['sfx', 'bgm'].includes(line.track || line.line_type)))
 
 const zoomOptions = [
@@ -194,12 +202,14 @@ async function loadTimeline() {
       fetchChapterTimeline(projectId.value, chapterId.value),
       getLinesByChapter(chapterId.value),
     ])
+    if(disposed)return
     if (linesResponse.code === 200) chapterLines.value = linesResponse.data || []
     if (response.code !== 200) {
       ElMessage.error(response.message || '读取真实时间线失败')
       return
     }
     timeline.value = response.data || { status: 'not_built', tracks: [], clip_count: 0, duration_ms: 0 }
+    audioRevision.value=Date.now()
     renderResult.value = null
     renderAudioUrl.value = ''
     if (timeline.value.status === 'not_built') await rebuildTimeline(true)
@@ -220,10 +230,37 @@ async function loadTimeline() {
 }
 
 function openSoundLibrary(lineId = null, view = 'library') {
+  soundMaterials.value?.stopPreviews();stopOtherAudio()
   soundLibraryView.value = view
   soundTargetLineId.value = lineId || soundTargetLineId.value || chapterLines.value[0]?.id || null
   clipEditorVisible.value = false
   soundLibraryVisible.value = true
+}
+
+function stopOtherAudio(){stopClipPreview();renderPlayer.value?.pause()}
+function openMissingLine(line){
+  if(['sfx','bgm'].includes(line.track)){
+    if(props.exportOnly)emit('focus-material',line.line_id)
+    else openSoundLibrary(line.line_id,'recommendations')
+  }else openDubbingProject(line.line_id)
+}
+async function editMaterial(line){
+  soundMaterials.value?.stopPreviews()
+  let clip=allClips.value.find(item=>item.line_id===line.id)
+  if(!clip && await rebuildTimeline(false))clip=allClips.value.find(item=>item.line_id===line.id)
+  if(disposed)return
+  if(clip)openClipEditor(clip)
+  else ElMessage.warning('当前素材尚未进入时间线，请先选择可用素材并刷新。')
+}
+async function removeMaterial(line){
+  try{
+    await ElMessageBox.confirm(`移除“${(line.sound_prompt||line.text_content||'').slice(0,60)}”及对应音轨？原音频和删除记录会保留。`,'移除声音',{confirmButtonText:'移除',cancelButtonText:'取消',type:'warning'})
+    if(disposed)return
+    const response=await deleteLine(line.id)
+    if(disposed)return
+    if(response?.code!==200)throw new Error(response?.message||'移除失败')
+    soundMaterials.value?.stopPreviews();await loadTimeline()
+  }catch(error){if(!disposed&&error!=='cancel'&&error!=='close')ElMessage.error(apiError(error,'移除声音失败'))}
 }
 
 async function rebuildTimeline(silent = false) {
@@ -231,10 +268,16 @@ async function rebuildTimeline(silent = false) {
   building.value = true
   try {
     const response = await buildChapterTimeline(projectId.value, chapterId.value, { force: true })
+    if(disposed)return false
     if (response.code !== 200) throw new Error(response.message || '构建失败')
     timeline.value = response.data
     renderResult.value = null
     renderAudioUrl.value = ''
+    const linesResponse=await getLinesByChapter(chapterId.value)
+    if(disposed)return false
+    if(linesResponse.code!==200)throw new Error(linesResponse.message||'时间线已更新，但声音条目读取失败，请刷新重试')
+    chapterLines.value=linesResponse.data||[]
+    audioRevision.value=Date.now()
     if (!['ready', 'missing_audio'].includes(timeline.value.status)) throw new Error('时间线未能刷新，请检查音频后重试')
     if (!silent) ElMessage.success(timeline.value.missing_line_count ? `已刷新，${timeline.value.missing_line_count} 条缺少音频，可先渲染已有片段` : '时间线已刷新，手动调整已保留')
     return true
@@ -247,6 +290,7 @@ async function rebuildTimeline(silent = false) {
 }
 
 function openClipEditor(clip) {
+  soundMaterials.value?.stopPreviews();renderPlayer.value?.pause()
   clipForm.value = {
     id: clip.id,
     line_id: clip.line_id,
@@ -502,7 +546,8 @@ function apiError(error, fallback) {
 }
 
 function openDubbingProject(lineId = props.selectedLineId) {
-  emit('focus-line', typeof lineId === 'number' || typeof lineId === 'string' ? lineId : null)
+  const id=typeof lineId==='number'||typeof lineId==='string'?Number(lineId):null
+  emit('focus-line',materialLines.value.some(line=>line.id===id)?null:id)
 }
 </script>
 

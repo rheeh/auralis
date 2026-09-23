@@ -72,7 +72,7 @@ test('regeneration conflict preserves guidance and displays the running input',a
   }finally{h.unmount()}
 })
 test('mounted take labels use resolved source instead of missing processed metadata',async()=>{
-  const h=workspaceHarness(snapshot())
+  const h=workspaceHarness(snapshot(),{view:'voices'})
   try{
     h.api.getLinesByChapter=async()=>({code:200,data:[{id:1,text_content:'原句',track:'voice',should_speak:1,
       active_audio_version_id:'B',active_audio_variant_id:'missing',audio_variants:[{id:'missing',source_audio_version_id:'B'}],

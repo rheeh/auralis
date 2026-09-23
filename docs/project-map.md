@@ -1,6 +1,6 @@
 # Auralis 当前架构与业务调用链
 
-当前事实来源，更新于 2026-09-19，描述 `5a44ee7` 上的 R1–R6 定向修复。[本轮证据与兼容边界](development/reliability/followup-5a44ee7.md)。旧地图保存在 [历史快照](history/project-map-before-reliability-2026-09-16.md)。产品范围见 [PROJECT](../PROJECT.md)，实施状态见 [BACKLOG](../BACKLOG.md)。
+当前事实来源，更新于 2026-09-23，包含 R1–R6 修复及台词/声音编排入口调整。[本轮证据与兼容边界](development/reliability/followup-5a44ee7.md)。旧地图保存在 [历史快照](history/project-map-before-reliability-2026-09-16.md)。产品范围见 [PROJECT](../PROJECT.md)，实施状态见 [BACKLOG](../BACKLOG.md)。
 
 ## 实际模块图
 
@@ -90,6 +90,8 @@ flowchart TD
 | 其他自然语言 `audioEvents`（如呼吸、回声、走远） | 仅保留制作备注，UI 标注未自动执行 | ProductionScriptPanel 的事件状态说明 |
 
 ## 前端与 Demo
+
+台本视图展示对白、旁白和文字编辑，配音视图保留人声试听；音效/BGM 在 ChapterTimeline 的 ChapterSoundMaterials 中集中展示和试听。素材可用性读取时间线的统一 audio_sources，持续时长与循环仍由已有时间线用例处理。LineTypeDialog 供台词和声音条目共用，调用原类型修改 API；不新增模型调用或改写音频。
 
 工作台通过 workspaceDrafts 拥有当前章节的 dirty 草稿，人物卡只发修改事件。相同 revision 刷新保留编辑，新 revision 明确选择；切视图保留，切章/离开提示。保存只确认发送时的快照。`useProductionData` 拥有生产数据、配置和任务轮询；`requestScope` 区分最新查询和操作上下文，章节切换/卸载使迟到响应失效。播放器仍在 ProductionScriptPanel，离开清理；SelectedTakeInfo 展示当前音频的生成文本/指导与适用性。ProjectWorkspace 的 session/history 使用 epoch 和请求 scope。确认/发送动作尚未全部提取为独立 composable。
 
