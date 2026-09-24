@@ -100,6 +100,7 @@ flowchart TD
 ## 配置、启动和迁移
 
 - AURALIS_CONFIG_DIR 决定配置与 `app_test.db`；开发脚本默认 `.local-data` 未改。测试先设临时目录再 import app/engine。
+- macOS 快捷入口 `scripts/Auralis.command` → `scripts/start_local.py`，固定前端 5176、后端 8200 与仓库 `.local-data`，检查进程所属目录和数据库后复用服务。启动只做只读健康/项目/素材检查，不运行测试或模型。`dev.sh` 同样固定 5176 并禁止自动递增端口，避免浏览器来源与后端允许列表不一致。
 - frontend 地址来源：桌面 preload 的 `auralisRuntime`→ VITE_API_BASE_URL → 本地 8200。HTTP/媒体/旧 WebSocket 使用同一实例 token。
 - `/health` 返回 Auralis 身份、API 版本、实际 schema、worker 和 FFmpeg 可用性。Electron readiness 检查身份/ready；安全开关恢复，IPC 检查主 frame、文件选择授权和大小，限制导航与新窗口。
 - 当前 schema 12：9 增加 task 快照/token/指纹；10 增加 nullable provider_voice_id，只回填无歧义旧 description；11 建立活动任务唯一索引并标记升级前中断；12 增加 Agent turn 状态/token，历史未完成 turn 保留检查，不自动重发。

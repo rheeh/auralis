@@ -57,7 +57,7 @@ trap cleanup EXIT
 
 (
   cd "$FRONTEND_DIR"
-  npm run dev -- --host 127.0.0.1
+  VITE_API_BASE_URL=http://127.0.0.1:8200 npm run dev -- --host 127.0.0.1 --port 5176 --strictPort
 ) &
 
 wait

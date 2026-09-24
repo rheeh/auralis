@@ -93,7 +93,7 @@ Start the backend and frontend:
 Default URLs:
 
 ```text
-Frontend: http://127.0.0.1:5173
+Frontend: http://127.0.0.1:5176
 Backend:  http://127.0.0.1:8200
 API docs: http://127.0.0.1:8200/docs
 ```
