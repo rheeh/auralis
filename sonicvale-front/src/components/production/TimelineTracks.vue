@@ -7,7 +7,7 @@
             <span v-for="tick in timelineTicks" :key="tick.ms" class="time-tick" :style="tickStyle(tick)">{{ tick.label }}</span>
           </div>
         </div>
-        <article v-for="track in tracks" :key="track.key" class="track-row" :style="compact ? {} : {minHeight: `${laneLayouts[track.key].count * 100 + 24}px`}">
+        <article v-for="track in tracks" :key="track.key" class="track-row" :style="compact ? {} : {minHeight: `${laneLayouts[track.key].count * 72 + 24}px`}">
           <aside class="track-label">
             <el-icon v-if="track.icon"><component :is="track.icon" /></el-icon>
             <strong>{{ track.label }}</strong>
@@ -19,9 +19,28 @@
           <div class="timeline-canvas" :style="canvasStyle">
             <span v-if="snapMarkerMs !== null && !compact" class="snap-guide" :style="{left: `${snapMarkerMs / 1000 * pixelsPerSecond}px`}" />
             <span v-for="tick in timelineTicks" :key="`grid-${track.key}-${tick.ms}`" class="timeline-grid-line" :style="tickStyle(tick)" />
-            <div
+            <el-tooltip
               v-for="clip in track.clips || []"
               :key="clip.id"
+              placement="top"
+              effect="light"
+              :show-after="250"
+              :hide-after="0"
+              :enterable="true"
+            >
+              <template #content>
+                <div class="clip-detail">
+                  <strong>{{ track.label }}<template v-if="clip.line?.line_order"> · 第 {{ clip.line.line_order }} 行</template></strong>
+                  <p>{{ clip.line?.text_content || clip.asset?.type || '音频片段' }}</p>
+                  <dl>
+                    <div><dt>起止</dt><dd>{{ detailTime(clip.start_ms) }} → {{ detailTime(Number(clip.start_ms || 0) + Number(clip.duration_ms || 0)) }}</dd></div>
+                    <div><dt>时长</dt><dd>{{ detailTime(clip.duration_ms) }}</dd></div>
+                    <div><dt>音量</dt><dd>{{ formatVolume(clip.volume_db) }}{{ clip.is_muted ? ' · 已静音' : '' }}</dd></div>
+                    <div><dt>播放</dt><dd>{{ clip.playback_rate || 1 }}×{{ clip.duration_ms > playableSourceDuration(clip) ? ' · 循环' : '' }}</dd></div>
+                  </dl>
+                </div>
+              </template>
+            <div
               class="clip"
               :class="{ done: clip.line?.is_done === 1 || clip.line?.status === 'done', muted: clip.is_muted, selected: String(clip.line_id) === String(selectedLineId) }"
               :style="clipStyle(clip, track.key)"
@@ -32,13 +51,13 @@
               role="button" tabindex="0" :aria-label="`音轨片段：${clip.line?.text_content || clip.asset?.type || clip.id}`" :data-clip-line-id="clip.line_id"
             >
               <span v-if="editable && !compact" class="clip-handle clip-handle-left" title="拖动左边界调整开始与长度" aria-label="调整片段左边界" @pointerdown.stop="$emit('interact', $event, clip, 'resize-left')" />
-              <strong>{{ clip.line?.scene_title || track.label }}</strong>
               <p>{{ clip.line?.text_content || clip.asset?.type || '音频片段' }}</p>
               <span>
                 {{ formatDuration(clip.start_ms) }} 起 · {{ formatDuration(clip.duration_ms) }} · {{ formatVolume(clip.volume_db) }}{{ (clip.playback_rate || 1) !== 1 ? ` · ${clip.playback_rate}×` : '' }}{{ clip.duration_ms > playableSourceDuration(clip) ? ' · 循环' : '' }}
               </span>
               <span v-if="editable && !compact" class="clip-handle clip-handle-right" title="拖动右边界调整长度，音效和背景音乐可循环延长" aria-label="调整片段右边界" @pointerdown.stop="$emit('interact', $event, clip, 'resize-right')" />
             </div>
+            </el-tooltip>
             <span v-if="!(track.clips?.length)" class="empty-lane">暂无真实音频片段</span>
           </div>
         </article>
@@ -76,6 +95,10 @@ function formatVolume(value = 0) {
   return `${number > 0 ? '+' : ''}${number.toFixed(1)} dB`
 }
 
+function detailTime(milliseconds = 0) {
+  return `${(Math.max(0, Number(milliseconds || 0)) / 1000).toFixed(2)} 秒`
+}
+
 function tickStyle(tick) {
   return { left: `${tick.ms / 1000 * pixelsPerSecond.value}px` }
 }
@@ -84,7 +107,7 @@ function clipStyle(clip, trackKey) {
   const left = Math.max(0, Number(clip.start_ms || 0)) / 1000 * pixelsPerSecond.value
   const width = Math.max(8, Number(clip.duration_ms || 0) / 1000 * pixelsPerSecond.value)
   if (props.compact) return { left: `${Number(clip.start_ms||0)/Math.max(1,props.durationMs)*100}%`, width: `${Number(clip.duration_ms||0)/Math.max(1,props.durationMs)*100}%` }
-  return { left: `${left}px`, width: `${width}px`, top: `${14 + (laneLayouts.value[trackKey]?.lanes[clip.id] || 0) * 100}px` }
+  return { left: `${left}px`, width: `${width}px`, top: `${14 + (laneLayouts.value[trackKey]?.lanes[clip.id] || 0) * 72}px` }
 }
 
 
@@ -95,7 +118,7 @@ function statusLabel(status){return {ready:'已就绪',stale:'需刷新',missing
 .timeline-scroll { min-width: max-content; }
 .timeline-ruler, .track-row { display: grid; grid-template-columns: 160px auto; }
 .timeline-ruler { min-height: 42px; border-bottom: 1px solid var(--el-border-color-light); }
-.track-row { min-height: 118px; border-bottom: 1px solid var(--el-border-color-light); }
+.track-row { min-height: 96px; border-bottom: 1px solid var(--el-border-color-light); }
 .track-row:last-child { border-bottom: 0; }
 .track-label { position: sticky; left: 0; z-index: 4; display: grid; align-content: center; gap: 6px; padding: 14px; border-right: 1px solid var(--el-border-color-light); background: var(--el-fill-color-light); }
 .track-label strong, .track-label span { display: block; }
@@ -104,8 +127,14 @@ function statusLabel(status){return {ready:'已就绪',stale:'需刷新',missing
 .timeline-ruler .timeline-canvas { min-height: 42px; }
 .time-tick { position: absolute; top: 9px; z-index: 2; color: var(--el-text-color-secondary); font-size: 11px; transform: translateX(-50%); }
 .timeline-grid-line { position: absolute; top: 0; bottom: 0; border-left: 1px dashed color-mix(in srgb, var(--el-border-color) 70%, transparent); pointer-events: none; }
-.clip { position: absolute; top: 14px; display: grid; align-content: start; gap: 5px; height: 88px; min-height: 0; padding: 10px; touch-action: none; user-select: none; overflow: hidden; border: 1px solid color-mix(in srgb, var(--el-color-primary) 36%, var(--el-border-color)); border-radius: 8px; background: color-mix(in srgb, var(--el-color-primary-light-9) 82%, var(--el-bg-color)); cursor: pointer; }
-.clip strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.clip { position: absolute; top: 14px; display: grid; align-content: start; gap: 5px; height: 60px; min-height: 0; padding: 10px; touch-action: none; user-select: none; overflow: hidden; border: 1px solid color-mix(in srgb, var(--el-color-primary) 36%, var(--el-border-color)); border-radius: 8px; background: color-mix(in srgb, var(--el-color-primary-light-9) 82%, var(--el-bg-color)); cursor: pointer; }
+.clip-detail { width: max-content; max-width: min(360px, calc(100vw - 48px)); font-size: 12px; line-height: 1.6; }
+.clip-detail > strong { color: var(--el-text-color-secondary); font-size: 11px; }
+.clip-detail p { margin: 6px 0 10px; max-height: 40vh; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
+.clip-detail dl { margin: 0; display: grid; gap: 3px; font-variant-numeric: tabular-nums; }
+.clip-detail dl > div { display: flex; gap: 12px; }
+.clip-detail dt { color: var(--el-text-color-secondary); }
+.clip-detail dd { margin: 0; }
 .clip > span:not(.clip-handle) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .snap-guide { position: absolute; top: 0; bottom: 0; z-index: 5; width: 2px; background: var(--el-color-primary); pointer-events: none; }
 .clip:active { cursor: grabbing; }
