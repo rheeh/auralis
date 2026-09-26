@@ -11,16 +11,22 @@ def generation_state(db,line):
     selected=next((v for v in versions if v.get('id')==version_id),None)
     fingerprint=(selected or {}).get('input_fingerprint')
     applicable=None
+    confirmed=False
     if fingerprint and has_audio:
         from app.services.speech.request import prepare_request
         chapter=db.get(ChapterPO,line.chapter_id)
         try:
             _,_,current=prepare_request(db,chapter.project_id,line.id)
             applicable=fingerprint==current
+            confirmed=any(event.get('type')=='take_selection'
+                          and event.get('source_version_id')==version_id
+                          and event.get('input_fingerprint')==current
+                          for event in audio_items(line.audio_events))
         except ValueError:
             applicable=False
     # Legacy files keep existing compatibility state; their provenance is unknown.
-    ready=has_audio and (applicable if applicable is not None else line.status=='done' and line.is_done==1)
+    ready=has_audio and (confirmed or (applicable if applicable is not None else line.status=='done' and line.is_done==1))
     return {'has_audio':has_audio,'input_current':applicable,'needs_generation':not ready,
+            'selection_confirmed':confirmed,'input_outdated':applicable is False and not confirmed,
             'selected_version_id':version_id,'selected_variant_id':resolution['variant_id'],
             'audio_resolution':resolution}

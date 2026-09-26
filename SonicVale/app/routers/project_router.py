@@ -243,7 +243,7 @@ def repair_project_readiness(
 
     for line in lines:
         try:
-            if sync_audio_status and _audio_ready(selected_audio_path(line)) and generation_state(db,line)["input_current"] is not False:
+            if sync_audio_status and _audio_ready(selected_audio_path(line)) and not generation_state(db,line)["input_outdated"]:
                 if line.status != "done" or line.is_done != 1:
                     line_repository.update(line.id, {"status": "done", "is_done": 1})
                     synced_audio += 1

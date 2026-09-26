@@ -69,3 +69,32 @@ class AudioResolutionTest(unittest.TestCase):
         self.assertEqual(state['selected_version_id'],'B')
         self.assertEqual(state['selected_variant_id'],'processed-B')
         self.assertEqual(selected_audio_path(self.line),variant_path)
+
+    def test_explicit_historical_selection_is_renderable_without_rewriting_provenance(self):
+        import copy
+        a,b=self.takes()
+        original=copy.deepcopy(self.line.audio_versions)
+        self.service.activate_generated_audio_version(self.line.id,'A')
+        state=generation_state(self.db,self.line)
+        self.assertFalse(state['input_current'])
+        self.assertTrue(state['selection_confirmed'])
+        self.assertFalse(state['needs_generation'])
+        self.assertEqual(self.line.audio_versions,original)
+        timeline=TimelineService(self.db).build_chapter_timeline(self.project.id,self.chapter.id)
+        self.assertEqual(timeline['missing_line_count'],0)
+        self.assertEqual(timeline['status'],'ready')
+        result=TimelineRenderService(self.db).render_chapter(self.project.id,self.chapter.id)
+        self.assertFalse(result['is_partial'])
+        self.service.update_line(self.line.id,{'production_note':'之后又改了指导'})
+        state=generation_state(self.db,self.line)
+        self.assertFalse(state['selection_confirmed'])
+        self.assertTrue(state['needs_generation'])
+
+    def test_confirmation_does_not_transfer_to_a_fallback_take(self):
+        a,b=self.takes()
+        self.service.activate_generated_audio_version(self.line.id,'A')
+        self.assertTrue(generation_state(self.db,self.line)['selection_confirmed'])
+        Path(a).unlink()
+        state=generation_state(self.db,self.line)
+        self.assertEqual(state['selected_version_id'],'B')
+        self.assertFalse(state['selection_confirmed'])

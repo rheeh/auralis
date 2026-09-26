@@ -95,8 +95,11 @@ class LineService:
         data = {k: v for k, v in po.__dict__.items() if not k.startswith("_")}
         if isinstance(self.repository,LineRepository):
             from app.services.production.audio_state import generation_state
-            if generation_state(self.repository.db,po)['input_current'] is False:
+            state=generation_state(self.repository.db,po)
+            if state['input_current'] is False and state['needs_generation']:
                 data.update(status='pending',is_done=0)
+            elif state['selection_confirmed'] and po.status != 'processing':
+                data.update(status='done',is_done=1)
         res = LineEntity(**data)
         return res
 
@@ -558,7 +561,20 @@ class LineService:
         audio_path = os.path.abspath(os.path.expanduser(version.get("audio_path") or ""))
         if not os.path.isfile(audio_path):
             raise FileNotFoundError("生成音频版本文件不存在")
-        self.update_line(line_id, {"active_audio_variant_id": None, "active_audio_version_id": version_id})
+        selection={"active_audio_variant_id": None, "active_audio_version_id": version_id}
+        if isinstance(self.repository,LineRepository):
+            from app.models.po import ChapterPO
+            from app.services.speech.request import prepare_request
+            chapter=self.repository.db.get(ChapterPO,line.chapter_id)
+            # Selecting a saved take is an editorial decision. Keep the original
+            # generation fingerprint intact; later input edits revoke acceptance.
+            _,_,fingerprint=prepare_request(self.repository.db,chapter.project_id,line_id)
+            event={"type":"take_selection", "source_version_id":version_id,
+                   "input_fingerprint":fingerprint,
+                   "created_at":datetime.now(timezone.utc).isoformat(),
+                   "content":"选用此录音用于当前台本"}
+            selection.update(audio_events=[*(line.audio_events or []),event],status='done',is_done=1)
+        self.update_line(line_id, selection)
         return version
 
     def create_audio_variant(self, line_id: int, dto: LineAudioVariantDTO) -> dict:

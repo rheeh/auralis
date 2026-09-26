@@ -129,7 +129,7 @@ class TimelineService:
 
         from app.services.production.audio_state import generation_state
         outdated={line.id for line in lines.values() if self._track_type(line) in {'voice','narration'} and
-                  generation_state(self.db,line)['input_current'] is False}
+                  generation_state(self.db,line)['input_outdated']}
         if outdated:
             statuses.append('stale')
         present_line_ids = {clip.line_id for clip in clips} - outdated
@@ -566,7 +566,7 @@ class TimelineService:
         track_type: str,
     ) -> AudioAssetPO | None:
         from app.services.production.audio_state import generation_state
-        if track_type in {'voice','narration'} and generation_state(self.db,line)['input_current'] is False:
+        if track_type in {'voice','narration'} and generation_state(self.db,line)['input_outdated']:
             return None
         candidates: list[tuple[str, str, str | None]] = []
         base_type = track_type if track_type in {"sfx", "bgm"} else "tts_take"

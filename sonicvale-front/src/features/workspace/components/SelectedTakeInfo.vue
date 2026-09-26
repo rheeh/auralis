@@ -16,7 +16,7 @@ const take=computed(()=>{
   const source=props.configuration?.selected_version_id
   return (props.line.audio_versions||[]).find(item=>item.id===source)
 })
-const statusText=computed(()=>props.configuration?.input_current===true?'符合当前输入':props.configuration?.input_current===false?'历史音频，当前内容需要重新配音':'历史音频，输入来源未验证')
+const statusText=computed(()=>props.configuration?.input_current===true?'符合当前输入':props.configuration?.selection_confirmed?'已选用历史录音用于当前台本':props.configuration?.input_current===false?'历史音频，可重新配音或选用原录音':'历史音频，输入来源未验证')
 </script>
 <style scoped>
 .take-source{margin:8px 0;font-size:12px;color:var(--el-text-color-secondary)}

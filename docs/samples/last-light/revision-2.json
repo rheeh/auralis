@@ -1,0 +1,175 @@
+{
+  "title": "最后一盏灯 · 第二版",
+  "project_id": 14,
+  "chapter_id": 10,
+  "speech_changes": [
+    {
+      "line_id": 257,
+      "text_content": "钥匙，刚才付钱的时候我还听见它响。",
+      "production_note": "接上对方的问题，顺口说明刚才钥匙还在。像熟人交谈，按完整短语连贯说出，语气略急。"
+    },
+    {
+      "line_id": 259,
+      "text_content": "这个小袋我翻过了，大的也没有。",
+      "production_note": "边翻包边顺口回答熟人，按完整短语连贯说出，语气略急。"
+    },
+    {
+      "line_id": 262,
+      "text_content": "行，你找包，我看柜台下面。",
+      "production_note": "答应帮她找，随口分工，像熟人之间日常说话，整句连贯说完。"
+    }
+  ],
+  "retained_speech_lines": 27,
+  "restored_original_line": 272,
+  "new_sound_placements": [
+    {
+      "key": "enter",
+      "asset_id": "user_5",
+      "line_id": 297,
+      "name": "室内四步 · CC0",
+      "chapter_id": 10,
+      "anchor_line_id": 256,
+      "placement": "before",
+      "offset_ms": 0,
+      "volume_db": -9.0,
+      "fade_in_ms": 10,
+      "fade_out_ms": 35,
+      "duration_ms": 1200,
+      "source": "https://opengameart.org/content/footsteps-leather-cloth-armor",
+      "author": "HaelDB"
+    },
+    {
+      "key": "bag-place",
+      "asset_id": "user_1",
+      "line_id": 298,
+      "name": "拿起包内物件 · CC0",
+      "chapter_id": 10,
+      "anchor_line_id": 258,
+      "placement": "after",
+      "offset_ms": -900,
+      "volume_db": 12,
+      "fade_in_ms": 10,
+      "fade_out_ms": 35,
+      "source": "https://opengameart.org/content/chips-bag-sounds",
+      "author": "JumboSizedFish"
+    },
+    {
+      "key": "rummage",
+      "asset_id": "user_2",
+      "line_id": 299,
+      "name": "包内翻找 · CC0",
+      "chapter_id": 10,
+      "anchor_line_id": 259,
+      "placement": "with",
+      "offset_ms": 160,
+      "volume_db": 12,
+      "fade_in_ms": 10,
+      "fade_out_ms": 35,
+      "source": "https://opengameart.org/content/chips-bag-sounds",
+      "author": "JumboSizedFish"
+    },
+    {
+      "key": "coat-zip",
+      "asset_id": "builtin_679944dbf71d7a89",
+      "line_id": 300,
+      "name": "衣服拉链",
+      "chapter_id": 10,
+      "anchor_line_id": 261,
+      "placement": "after",
+      "offset_ms": -550,
+      "volume_db": -8.9,
+      "fade_in_ms": 10,
+      "fade_out_ms": 35,
+      "source": "https://opengameart.org/content/zipper",
+      "author": "AntumDeluge"
+    },
+    {
+      "key": "receipts",
+      "asset_id": "user_4",
+      "line_id": 301,
+      "name": "整理几张小票 · CC0",
+      "chapter_id": 10,
+      "anchor_line_id": 270,
+      "placement": "after",
+      "offset_ms": -950,
+      "volume_db": -1.4,
+      "fade_in_ms": 10,
+      "fade_out_ms": 35,
+      "source": "https://opengameart.org/content/various-paper-sound-effects",
+      "author": "Luckius"
+    },
+    {
+      "key": "reveal",
+      "asset_id": "user_3",
+      "line_id": 302,
+      "name": "拨开收据 · CC0",
+      "chapter_id": 10,
+      "anchor_line_id": 274,
+      "placement": "before",
+      "offset_ms": 0,
+      "volume_db": -5.7,
+      "fade_in_ms": 10,
+      "fade_out_ms": 35,
+      "source": "https://opengameart.org/content/various-paper-sound-effects",
+      "author": "Luckius"
+    },
+    {
+      "key": "bag-close",
+      "asset_id": "builtin_679944dbf71d7a89",
+      "line_id": 303,
+      "name": "衣服拉链",
+      "chapter_id": 10,
+      "anchor_line_id": 278,
+      "placement": "after",
+      "offset_ms": -250,
+      "volume_db": -8.9,
+      "fade_in_ms": 10,
+      "fade_out_ms": 35,
+      "source": "https://opengameart.org/content/zipper",
+      "author": "AntumDeluge"
+    },
+    {
+      "key": "leave-start",
+      "asset_id": "user_5",
+      "line_id": 304,
+      "name": "室内四步 · CC0",
+      "chapter_id": 10,
+      "anchor_line_id": 282,
+      "placement": "after",
+      "offset_ms": -220,
+      "volume_db": -9.0,
+      "fade_in_ms": 10,
+      "fade_out_ms": 35,
+      "duration_ms": 800,
+      "source": "https://opengameart.org/content/footsteps-leather-cloth-armor",
+      "author": "HaelDB"
+    },
+    {
+      "key": "leave-end",
+      "asset_id": "user_5",
+      "line_id": 305,
+      "name": "室内四步 · CC0",
+      "chapter_id": 10,
+      "anchor_line_id": 285,
+      "placement": "after",
+      "offset_ms": 900,
+      "volume_db": -9.0,
+      "fade_in_ms": 10,
+      "fade_out_ms": 35,
+      "source": "https://opengameart.org/content/footsteps-leather-cloth-armor",
+      "author": "HaelDB"
+    }
+  ],
+  "mix": {
+    "rain_volume_db": -16,
+    "piano_volume_db": -13,
+    "duration_ms": 108130,
+    "clip_count": 50
+  },
+  "notes": [
+    "三句各生成一次新 take，原 take 及处理版本保留。",
+    "其余录音通过正式选用版本接口保留；历史生成输入未改写。",
+    "新素材通过素材库导入和插入接口保存，位置和音量可在工作台调整。",
+    "波形测量与播放验证不能代替自然度试听。"
+  ]
+}
