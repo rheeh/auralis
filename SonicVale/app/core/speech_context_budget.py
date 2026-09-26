@@ -8,7 +8,7 @@ def instruction_weight(text):
 
 def compile_context_instruction(base, context, budget=2000):
     prefix = '\n以下是理解用上下文，不能朗读或追加到正文；后文只用于接话，不能提前表现角色尚未知晓的事。\n'
-    suffix = '\n沿用当前人物的声线和交谈节奏。共同表演基调优先于场景默认风格，本句具体要求优先；局部变化后回到基调。只合成本句正文。'
+    suffix = '\n沿用人物声线。本句明确要求和项目风格优先于默认表达。只合成本句正文。'
     render = lambda value: base + prefix + json.dumps(value, ensure_ascii=False, separators=(',', ':')) + suffix
     if instruction_weight(render({})) > budget:
         raise ValueError('本句声音指导过长，请缩短具体要求后再生成；完整上下文不能与长指导同时送入当前模型。')

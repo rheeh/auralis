@@ -101,6 +101,37 @@ class ScenePerformanceTest(unittest.TestCase):
         self.assertEqual(f.service.prepare(f.project.id, f.lines[2].id)['effective_strength'], '稍弱')
         self.assertEqual(len(performance_issues(script, '他突然认出了她')), 1)
 
+    def test_request_deduplicates_delivery_but_retains_complete_scene_trace(self):
+        f = self.f
+        direction = '边翻包边顺口回答熟人，按短语连贯说出。'
+        baseline = '熟人间的随口交谈'
+        voice = '成年女声，中音域'
+        f.save(delivery_style=baseline)
+        f.lines[0].production_note = '当前动作：找钥匙。本句：' + direction
+        f.lines[0].voice_profile = voice
+        script = directed_script()
+        scene = script['scenes'][0]
+        scene['performancePlan']['baseline'] = baseline
+        scene['performancePlan']['characters'][0]['baseline'] = voice
+        scene['lines'][0]['performanceCue'].update(intent=direction, delivery=direction)
+        self.bind(script)
+        result = f.service.preview(f.project.id, f.lines[0].id)
+        sent = result['request_preview']['payload']['input']['instruction']
+        for value in (direction, baseline, voice):
+            self.assertEqual(sent.count(value), 1, value)
+        trace = result['context']['scene_performance']
+        self.assertEqual(trace['cue']['intent'], direction)
+        self.assertEqual(trace['plan']['baseline'], baseline)
+        self.assertEqual(result['context']['next_lines'][0]['text'], f.lines[1].text_content)
+
+    def test_distinct_scene_intent_survives_explicit_local_direction(self):
+        f = self.f
+        f.lines[2].production_note = '用户要求：刻意停一下，强调地名。'
+        self.bind()
+        result = f.service.preview(f.project.id, f.lines[2].id)
+        self.assertIn('刻意停一下，强调地名', result['instruction'])
+        self.assertIn('再次确认', result['instruction'])
+
     def test_text_role_or_direction_changes_disable_old_plan(self):
         f = self.f
         for field, value in [('text_content', '改写后的话'), ('production_note', '改为正常回答'), ('role_id', f.other.id), ('strength_id', f.strengths[2].id)]:

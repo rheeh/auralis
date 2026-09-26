@@ -22,6 +22,22 @@ class FakeProviderRepository:
 
 
 class TTSGuidanceTest(unittest.TestCase):
+    def test_default_native_delivery_does_not_assign_word_level_acting(self):
+        for strength in ("微弱", "稍弱", "中等", None):
+            for compact in (False, True):
+                with self.subTest(strength=strength, compact=compact):
+                    instruction = build_voice_instruction("焦急", strength, None, compact=compact)
+                    self.assertIn("连贯", instruction)
+                    for cue in ("重音", "关键词", "句尾", "收住", "轻微着力"):
+                        self.assertNotIn(cue, instruction)
+
+    def test_explicit_word_level_delivery_is_preserved_without_added_cues(self):
+        note = "用户要求：停一拍，强调第二个词，句尾放慢。"
+        instruction = build_voice_instruction("平静", "微弱", note)
+        self.assertEqual(instruction.count(note), 1)
+        self.assertEqual(instruction.count("句尾"), 1)
+        self.assertNotIn("关键词", instruction)
+
     def test_every_emotion_candidate_has_a_nonzero_vector(self):
         for emotion in EMOTION_NAMES:
             with self.subTest(emotion=emotion):

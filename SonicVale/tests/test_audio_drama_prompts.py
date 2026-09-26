@@ -10,6 +10,14 @@ from app.workflows.drama.schemas import DramaScript, DirectedDramaScript, Script
 
 
 class AudioDramaPromptTest(unittest.TestCase):
+    def test_shared_prompts_do_not_require_audible_changes_in_every_line(self):
+        for prompt in (get_audio_drama_adaptation_rules(), get_audio_drama_script_prompt(), get_prompt_str()):
+            with self.subTest(prompt=prompt[:60]):
+                for old_default in ('说话目的 + 一处可听变化', '只轻点疑问词', '每句聚焦一处关键表达变化'):
+                    self.assertNotIn(old_default, prompt)
+                self.assertIn('按短语连贯表达', prompt)
+                self.assertIn('用户明确要求', prompt)
+
     def test_shared_rules_define_narration_gate(self):
         rules = get_audio_drama_adaptation_rules()
         self.assertIn("不按内容类型机械删减", rules)

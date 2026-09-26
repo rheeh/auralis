@@ -77,6 +77,22 @@ class SpeechDirectionTest(unittest.TestCase):
                         [{'term': 'a', 'spoken_as': 'b'}, {'term': 'a', 'spoken_as': 'c'}]):
             with self.assertRaises(ValidationError): ProjectSpeechSettings(pronunciation_entries=entries)
 
+    def test_qwen_preview_uses_fluent_defaults_without_rewriting_authored_text(self):
+        line = self.lines[0]
+        line.text_content = '这个小袋我翻过了，大的也……没有。'
+        line.voice_profile = ''
+        self.db.commit()
+        with patch('app.core.tts_engine.requests.post') as post:
+            preview = self.service.preview(self.project.id, line.id)
+        post.assert_not_called()
+        body = preview['request_preview']['payload']['input']
+        self.assertEqual(body['text'], line.text_content)
+        self.assertIn('连贯', body['instruction'])
+        self.assertNotIn('关键词', body['instruction'])
+        self.assertNotIn('句尾', body['instruction'])
+        self.assertNotIn('rate', body)
+        self.assertEqual(line.production_note, '')
+
     def test_context_and_pronunciation_never_enter_spoken_text(self):
         self.save(story_background='两人并不知道对方的真实身份。', pronunciation_entries=[{'term': '重庆', 'pronunciation': 'chong2 qing4'}])
         with patch('app.core.tts_engine.requests.post') as post, patch('app.core.tts_engine.requests.get') as get:

@@ -88,11 +88,11 @@ EDGE_BASE_PROSODY: Final[dict[str, tuple[float, float]]] = {
 
 # Product defaults for restrained dialogue, not vendor-calibrated intensity values.
 DELIVERY_BY_STRENGTH: Final[dict[str, str]] = {
-    "微弱": "按日常交谈回应，音量和音高保持平稳，只在一个关键词上轻微着力，句尾自然收住",
-    "稍弱": "保持日常交谈的音量和音域，只在一处重音或句尾呈现小幅变化，随后回到平稳",
-    "中等": "以自然交谈为基础，用一处重音或节奏变化传达意图，其他部分保持平稳",
-    "较强": "让关键转折的重音和节奏更清楚，其他部分收住，保持角色原有声线",
-    "强烈": "在关键情节处充分表达情感，保留前后层次，保持台词清晰和角色原有声线",
+    "微弱": "按日常交谈回应，按完整短语连贯说出，语气自然",
+    "稍弱": "像与对方日常交谈，按完整短语连贯表达，语气随意思自然变化",
+    "中等": "以连贯交谈传达本句意图，情绪随语意自然流动",
+    "较强": "按剧情要求表达关键转折，保持语流连贯和角色原有声线",
+    "强烈": "按本句要求充分表达情感，保持语意连贯和角色原有声线",
 }
 
 
@@ -141,7 +141,7 @@ def build_voice_instruction(
     if compact:
         # CosyVoice native instructions have a 100 weighted-character budget.
         # Put the delivery constraint first, so it survives provider truncation.
-        delivery = "关键处充分表达，声线稳定" if strong else "日常交谈，语调起伏小，句尾收住"
+        delivery = "按要求表达，语意连贯" if strong else "日常交谈，按短语连贯表达"
         return "。".join(part for part in (delivery, note or (f"语气{emotion}" if strong and emotion else "")) if part)
 
     parts: list[str] = [DELIVERY_BY_STRENGTH[selected_strength]]

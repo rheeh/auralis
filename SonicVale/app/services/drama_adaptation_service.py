@@ -305,7 +305,7 @@ class DramaAdaptationService:
                     "mood": "情绪",
                     "performancePlan": {"purpose": "本场任务", "baseline": "自然交谈", "pace": "听完再回答",
                         "characters": [{"speaker": "角色名", "objective": "确认对方来意", "relationship": "当下关系", "baseline": "声线稳定"}],
-                        "beats": [{"id": "b1", "purpose": "试探", "delivery": "疑问词轻点"}]},
+                        "beats": [{"id": "b1", "purpose": "试探", "delivery": "顺着对方的话询问"}]},
                     "lines": [
                         {
                             "type": "dialogue|narration|sfx|bgm",

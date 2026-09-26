@@ -19,7 +19,7 @@ from app.services.scene_performance_service import resolve_scene_performance
 from app.core.speech_context_budget import compile_context_instruction
 
 
-POLICY_VERSION = "speech-context-2026-09-12-v2"
+POLICY_VERSION = "speech-context-2026-09-26-v3"
 
 
 def clean_spoken_text(text):
@@ -215,6 +215,13 @@ class SpeechDirectionService:
                         "回应对象": ({"speaker": context["reply_to"]["speaker"], "text": context["reply_to"]["text"][:70]}
                                      if context["reply_to"] else None),
                     }
+                    # Keep the full design in the trace, but send an identical
+                    # direction only once. Distinct intent and authored notes stay.
+                    sent_direction = (delivery_note, compact_context["共同表演基调"], compact_context["声线"])
+                    for field in ("本句意图", "基调", "稳定声线"):
+                        value = compact_context["整场表演"].get(field, "").strip()
+                        if value and any(value in source for source in sent_direction):
+                            compact_context["整场表演"].pop(field)
                     # Deliberately exclude future beats and their acting directions.
                 instruction, omitted = compile_context_instruction(instruction, compact_context, budget=1600 if model.startswith("qwen3") else 2000)
                 if omitted:
