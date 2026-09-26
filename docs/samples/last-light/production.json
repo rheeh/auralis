@@ -1,0 +1,468 @@
+{
+  "id": "last-light-20260926",
+  "title": "最后一盏灯",
+  "subtitle": "打烊前，找一串钥匙。",
+  "scene": "雨夜便利店 · 收银台",
+  "authorship": "本次为 Auralis 原创的导演台本，由 Codex 编写；不是应用内改编工作流的生成记录。",
+  "background": "临近打烊，小区便利店只亮着收银台的一盏灯。常客阿宁刚买完东西，冒雨折返找家门钥匙。店员周岑正在整理零钱和小票。两人是熟人，生活近况并非彼此全都知道；接话只按当前台词之前已知的事实反应。",
+  "delivery_style": "近距离日常交谈，普通音量，声线与音域稳定。听完对方再回应，短问短答自然接续。着急只让节奏略紧，解围后逐渐松下来；保留普通人的犹豫，不用播音腔，不夸张哭笑。",
+  "roles": [
+    {
+      "id": "zhou",
+      "name": "周岑",
+      "voice_id": 50,
+      "voice": "qwen-audio-3.0-tts-plus-longnixiulian",
+      "identity": "25岁，便利店晚班店员；熟悉阿宁，话少，帮忙时也有点笨手笨脚。",
+      "profile": "青年男声，中低音域，近距离自然说话，句尾收住，亲近但不刻意温柔。"
+    },
+    {
+      "id": "ning",
+      "name": "阿宁",
+      "voice_id": 45,
+      "voice": "qwen-audio-3.0-tts-plus-longcanzhuyue",
+      "identity": "26岁，住在附近的常客；刚与室友分开住，今天累了，丢钥匙让她短暂烦躁。",
+      "profile": "成年女声，自然平实，中音域，语速略快，着急时仍清楚；放松后保持同一声线。"
+    }
+  ],
+  "beats": [
+    {
+      "id": "return",
+      "lines": [
+        1,
+        4
+      ],
+      "direction": "折返找钥匙，熟人之间直接说事。"
+    },
+    {
+      "id": "friction",
+      "lines": [
+        5,
+        8
+      ],
+      "direction": "找不到东西的烦躁只露出一点，周岑接住后退半步。"
+    },
+    {
+      "id": "alone",
+      "lines": [
+        9,
+        12
+      ],
+      "direction": "室友搬走是生活事实；短暂沉静，继续处理眼前的事。"
+    },
+    {
+      "id": "listen",
+      "lines": [
+        13,
+        18
+      ],
+      "direction": "回忆刚才的动作，听见金属声后把注意力转向抽屉。"
+    },
+    {
+      "id": "found",
+      "lines": [
+        19,
+        23
+      ],
+      "direction": "先辨认钥匙，再确认解围；释放分两步发生。"
+    },
+    {
+      "id": "leave",
+      "lines": [
+        24,
+        30
+      ],
+      "direction": "恢复熟人拌嘴与普通告别，停在拿伞出门这个动作上。"
+    }
+  ],
+  "lines": [
+    {
+      "id": "01",
+      "role": "zhou",
+      "text": "都关一半灯了。你又忘拿什么？",
+      "emotion": "平静",
+      "strength": "稍弱",
+      "direction": "看到熟客折返，顺口询问；又字轻点一下，句尾自然收住。",
+      "gap_after_ms": 170
+    },
+    {
+      "id": "02",
+      "role": "ning",
+      "text": "钥匙。刚才付钱的时候，我还听见它响。",
+      "emotion": "焦急",
+      "strength": "稍弱",
+      "direction": "直接回答对方，钥匙说清楚；回想刚才，后半句稍慢，焦急收着。",
+      "gap_after_ms": 260
+    },
+    {
+      "id": "03",
+      "role": "zhou",
+      "text": "包放这儿。伞往外挪一点，水要流进抽屉了。",
+      "emotion": "平静",
+      "strength": "稍弱",
+      "direction": "边腾柜台边招呼她，平常音量，后半句是提醒，保持先前声线。",
+      "gap_after_ms": 450
+    },
+    {
+      "id": "04",
+      "role": "ning",
+      "text": "这个小袋我翻过了，大的也……没有。",
+      "emotion": "焦急",
+      "strength": "稍弱",
+      "direction": "边检查包边说，话在翻找动作处停一下，没有二字低一点落下。",
+      "gap_after_ms": 220
+    },
+    {
+      "id": "05",
+      "role": "zhou",
+      "text": "外套呢？",
+      "emotion": "疑惑",
+      "strength": "微弱",
+      "direction": "接她说没有后，提出另一个地方，短促自然的询问。",
+      "gap_after_ms": 120
+    },
+    {
+      "id": "06",
+      "role": "ning",
+      "text": "也找过。你先别问我放哪儿了。",
+      "emotion": "不耐烦",
+      "strength": "中等",
+      "direction": "顺着找不到钥匙的烦躁，节奏稍紧；别问稍有重音，音量保持交谈水平。",
+      "gap_after_ms": 360
+    },
+    {
+      "id": "07",
+      "role": "zhou",
+      "text": "行。你找包，我看柜台下面。",
+      "emotion": "平静",
+      "strength": "稍弱",
+      "direction": "接受她的情绪，行轻轻落下，然后平实地分工。",
+      "gap_after_ms": 420
+    },
+    {
+      "id": "08",
+      "role": "ning",
+      "text": "不是冲你。我今天有点……算了。",
+      "emotion": "低落",
+      "strength": "稍弱",
+      "direction": "察觉刚才语气硬，放缓向熟人解释；有点后犹豫，算了轻收。",
+      "gap_after_ms": 580
+    },
+    {
+      "id": "09",
+      "role": "zhou",
+      "text": "要不先叫你室友开门？",
+      "emotion": "平静",
+      "strength": "稍弱",
+      "direction": "接住她的停顿，给一个实际建议，平常关切，不预知室友已搬走。",
+      "gap_after_ms": 420
+    },
+    {
+      "id": "10",
+      "role": "ning",
+      "text": "她今天搬走了。备用那把，也还给我了。",
+      "emotion": "低落",
+      "strength": "稍弱",
+      "direction": "回答室友的事，第一句平说；第二句短停后接上，困扰落在钥匙上。",
+      "gap_after_ms": 720
+    },
+    {
+      "id": "11",
+      "role": "zhou",
+      "text": "哦。两把都在一起？",
+      "emotion": "疑惑",
+      "strength": "微弱",
+      "direction": "刚知道室友搬走，哦后稍停；把话题落回两把钥匙，保持克制。",
+      "gap_after_ms": 280
+    },
+    {
+      "id": "12",
+      "role": "ning",
+      "text": "嗯。我还觉得这样省事。",
+      "emotion": "低落",
+      "strength": "稍弱",
+      "direction": "承认自己放在一起，后半句带一点对自己的无奈，语尾向下。",
+      "gap_after_ms": 520
+    },
+    {
+      "id": "13",
+      "role": "zhou",
+      "text": "先把这盏开着。你从进门开始想，钱掏出来以后呢？",
+      "emotion": "平静",
+      "strength": "稍弱",
+      "direction": "把注意力拉回找钥匙，前一句顺口，后一句耐心引导她回想动作。",
+      "gap_after_ms": 380
+    },
+    {
+      "id": "14",
+      "role": "ning",
+      "text": "你找我零钱。我把伞靠在这儿，然后……你是不是擦过柜台？",
+      "emotion": "疑惑",
+      "strength": "稍弱",
+      "direction": "跟着回忆说，前两句不急；想到擦柜台，后半句稍快地向他确认。",
+      "gap_after_ms": 180
+    },
+    {
+      "id": "15",
+      "role": "zhou",
+      "text": "擦了。还收了几张小票。",
+      "emotion": "平静",
+      "strength": "稍弱",
+      "direction": "顺着她的问题回忆自己的动作，此刻尚未找到钥匙，普通陈述。",
+      "gap_after_ms": 1150
+    },
+    {
+      "id": "16",
+      "role": "ning",
+      "text": "等一下，那个声音。你再拉一下。",
+      "emotion": "疑惑",
+      "strength": "中等",
+      "direction": "刚听见抽屉里的轻响，集中注意力叫住他；音量小，指令清楚。",
+      "gap_after_ms": 170
+    },
+    {
+      "id": "17",
+      "role": "zhou",
+      "text": "抽屉？",
+      "emotion": "疑惑",
+      "strength": "稍弱",
+      "direction": "短短确认她所指的东西，仍在疑问中，不提前表示找到。",
+      "gap_after_ms": 140
+    },
+    {
+      "id": "18",
+      "role": "ning",
+      "text": "对，里面有东西在响。",
+      "emotion": "平静",
+      "strength": "稍弱",
+      "direction": "接上抽屉的确认，声音压稳，把重音放在里面。",
+      "gap_after_ms": 1000
+    },
+    {
+      "id": "19",
+      "role": "zhou",
+      "text": "找着了，压在小票下面。蓝胶带，是你的吧？",
+      "emotion": "惊喜",
+      "strength": "中等",
+      "direction": "现在才看见钥匙；找着了略提精神，然后放回日常语气请她辨认。",
+      "gap_after_ms": 180
+    },
+    {
+      "id": "20",
+      "role": "ning",
+      "text": "是。两把都在。",
+      "emotion": "欣慰",
+      "strength": "稍弱",
+      "direction": "先认出钥匙，确认两把之后语尾才松开；保留同一音域。",
+      "gap_after_ms": 380
+    },
+    {
+      "id": "21",
+      "role": "zhou",
+      "text": "我收进去的。刚才还让你翻了半天包。",
+      "emotion": "平静",
+      "strength": "稍弱",
+      "direction": "意识到自己帮了倒忙，坦白事实，带一点不好意思，平说。",
+      "gap_after_ms": 200
+    },
+    {
+      "id": "22",
+      "role": "ning",
+      "text": "你先别道歉。给我，我确认一下。",
+      "emotion": "平静",
+      "strength": "稍弱",
+      "direction": "轻轻接断他的歉意，更在意拿回钥匙；语速接近开场但已经不硬。",
+      "gap_after_ms": 780
+    },
+    {
+      "id": "23",
+      "role": "ning",
+      "text": "真是我的。行了，今晚不用找开锁的了。",
+      "emotion": "欣慰",
+      "strength": "稍弱",
+      "direction": "摸过钥匙后再次确认，后一句终于放松，像跟熟人说自己躲过一桩麻烦。",
+      "gap_after_ms": 420
+    },
+    {
+      "id": "24",
+      "role": "zhou",
+      "text": "备用那把，明天分开放。",
+      "emotion": "平静",
+      "strength": "稍弱",
+      "direction": "顺着不用开锁接一个实际提醒，普通聊天，不训人。",
+      "gap_after_ms": 130
+    },
+    {
+      "id": "25",
+      "role": "ning",
+      "text": "知道。你的小票也分开放。",
+      "emotion": "高兴",
+      "strength": "稍弱",
+      "direction": "马上接回去，轻轻揶揄他把钥匙收到小票下面，带浅浅笑意但不笑出声。",
+      "gap_after_ms": 220
+    },
+    {
+      "id": "26",
+      "role": "zhou",
+      "text": "这回记住了。",
+      "emotion": "高兴",
+      "strength": "稍弱",
+      "direction": "接受她的打趣，简短承认，嘴角放松，保持轻平声线。",
+      "gap_after_ms": 520
+    },
+    {
+      "id": "27",
+      "role": "ning",
+      "text": "我走了。谢谢你啊，周岑。",
+      "emotion": "温柔",
+      "strength": "稍弱",
+      "direction": "拿好包准备走，普通告别；谢谢是补上的真心话，名字轻轻说。",
+      "gap_after_ms": 220
+    },
+    {
+      "id": "28",
+      "role": "zhou",
+      "text": "伞。",
+      "emotion": "平静",
+      "strength": "微弱",
+      "direction": "看见她又忘拿伞，平声一个字叫住她，不拔高音量。",
+      "gap_after_ms": 170
+    },
+    {
+      "id": "29",
+      "role": "ning",
+      "text": "啊？哦，伞。你先别关灯，我在这儿撑开。",
+      "emotion": "高兴",
+      "strength": "稍弱",
+      "direction": "先没反应过来，再明白他提醒的是伞；后半句是边拿伞边说的日常请求。",
+      "gap_after_ms": 260
+    },
+    {
+      "id": "30",
+      "role": "zhou",
+      "text": "慢点，别戳着门。",
+      "emotion": "平静",
+      "strength": "稍弱",
+      "direction": "看她在门边撑伞，顺口提醒；平常落下，不做故事结尾式强调。",
+      "gap_after_ms": 2500
+    }
+  ],
+  "sounds": [
+    {
+      "id": "rain",
+      "asset_id": "builtin_1d3e90916196b882",
+      "label": "窗边雨声",
+      "anchor": "01",
+      "placement": "scene_start",
+      "gain_db": -25,
+      "fade_in_ms": 700,
+      "fade_out_ms": 1800,
+      "full_scene": true
+    },
+    {
+      "id": "arrival",
+      "asset_id": "builtin_7187cfd755d38c93",
+      "label": "折返推门",
+      "anchor": "01",
+      "placement": "before",
+      "gain_db": -12
+    },
+    {
+      "id": "zip",
+      "asset_id": "builtin_679944dbf71d7a89",
+      "label": "翻找包袋",
+      "anchor": "04",
+      "placement": "before",
+      "gain_db": -13
+    },
+    {
+      "id": "drawer1",
+      "asset_id": "builtin_7f026525fe248f22",
+      "label": "第一次拉开抽屉",
+      "anchor": "15",
+      "placement": "after",
+      "gain_db": 4
+    },
+    {
+      "id": "hint",
+      "asset_id": "builtin_da4ab54930ae7eba",
+      "label": "抽屉里微弱的钥匙声",
+      "anchor": "15",
+      "placement": "after",
+      "offset_ms": 480,
+      "gain_db": 7
+    },
+    {
+      "id": "drawer2",
+      "asset_id": "builtin_7f026525fe248f22",
+      "label": "循声再拉抽屉",
+      "anchor": "18",
+      "placement": "after",
+      "gain_db": 5
+    },
+    {
+      "id": "found",
+      "asset_id": "builtin_da4ab54930ae7eba",
+      "label": "取出钥匙",
+      "anchor": "18",
+      "placement": "after",
+      "offset_ms": 500,
+      "gain_db": 10
+    },
+    {
+      "id": "check",
+      "asset_id": "builtin_da4ab54930ae7eba",
+      "label": "接过钥匙确认",
+      "anchor": "22",
+      "placement": "after",
+      "gain_db": 8
+    },
+    {
+      "id": "music",
+      "asset_id": "builtin_0ff0d4801e1234d8",
+      "label": "告别时淡入的平静钢琴",
+      "anchor": "27",
+      "placement": "with",
+      "gain_db": -19,
+      "fade_in_ms": 2500,
+      "fade_out_ms": 3200,
+      "through_end": true
+    },
+    {
+      "id": "exit",
+      "asset_id": "builtin_35a098f292867d68",
+      "label": "关上店门",
+      "anchor": "30",
+      "placement": "after",
+      "offset_ms": 1300,
+      "gain_db": -12
+    },
+    {
+      "id": "light",
+      "asset_id": "builtin_100e95c058d73cd6",
+      "label": "关掉最后一盏灯",
+      "anchor": "30",
+      "placement": "after",
+      "offset_ms": 2200,
+      "gain_db": -10
+    }
+  ],
+  "direction_integration": "场景设计通过现有 bind_scene_performance / save_chapter_performances 保存；30句绑定当前表演阶段及前一句实际台词ID；所有 turningPoint 均为 false。",
+  "mix": {
+    "intro_ms": 1200,
+    "tail_ms": 5200,
+    "voice_target_rms_db": -23,
+    "voice_gain_range_db": [
+      -4,
+      5
+    ],
+    "voice_peak_ceiling_db": -2,
+    "gap_note": "gap_after_ms 表示两句可听语音之间的目标停顿；排布时扣除源文件首尾静音，最多让静音区重叠 100 ms。",
+    "take_adjustments": [
+      {
+        "line": "17",
+        "trim_end_ms": 1128,
+        "reason": "原始 1728 ms 录音尾部有约 830 ms 低于 -45 dB 的静音，保留约 230 ms 尾部后裁切；原 take 保留。"
+      }
+    ]
+  }
+}
